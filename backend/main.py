@@ -48,6 +48,10 @@ from backend.qr_detector import qr_detector_service, validate_strict_two_digit, 
 from backend.telemetry_sync import telemetry_sync, TimeSyncStatus
 from backend.georeferencing import georeferencer_service, GeorefHonestyLevel, CameraIntrinsics3D
 from backend.heatmap_engine import heatmap_engine
+from backend.network_manager import network_manager
+from backend.coordinate_validator import coordinate_validator
+from backend.coordinate_package import coordinate_package_manager
+from backend.coverage_tracker import coverage_tracker
 from backend.hardware_verification import hardware_verification_service
 from backend.cloud_sync import cloud_sync_service
 
@@ -1127,6 +1131,131 @@ def flask_receive_cloud_events():
         "success": True,
         "receivedAt": datetime.now(timezone.utc).isoformat()
     }, code=200)
+
+
+# =============================================================================
+# 15. MULTI-HOTSPOT NETWORK, COORDINATE VALIDATION & COVERAGE TRACKER
+# =============================================================================
+
+@app.route("/api/network/status", methods=["GET"])
+def flask_network_status():
+    """Returns network link health, active hotspot, and failover status."""
+    return api_response(data=network_manager.get_status(), code=200)
+
+
+@app.route("/api/network/hotspots", methods=["GET"])
+def flask_get_hotspot_profiles():
+    """Lists configured mobile hotspot profiles with priorities (zero secrets)."""
+    return api_response(data={
+        "profiles": [p.to_dict() for p in network_manager.profiles],
+        "active_ssid": network_manager.current_ssid,
+        "status": network_manager.get_status()
+    }, code=200)
+
+
+@app.route("/api/network/hotspots/configure", methods=["POST"])
+def flask_configure_hotspot_profile():
+    """Configures or updates a mobile hotspot profile with priority."""
+    body = request.get_json(silent=True) or {}
+    ssid = body.get("ssid", "")
+    password = body.get("password", "")
+    priority = int(body.get("priority", 1))
+    is_hidden = bool(body.get("is_hidden", False))
+
+    res = network_manager.configure_hotspot_profile(
+        ssid=ssid,
+        password=password,
+        priority=priority,
+        is_hidden=is_hidden
+    )
+    return api_response(data=res, code=200 if res.get("success") else 400)
+
+
+@app.route("/api/network/hotspots/<path:ssid>", methods=["DELETE"])
+def flask_delete_hotspot_profile(ssid):
+    """Deletes a configured hotspot profile."""
+    res = network_manager.delete_hotspot_profile(ssid=ssid)
+    return api_response(data=res, code=200)
+
+
+@app.route("/api/network/reconnect", methods=["POST"])
+def flask_trigger_network_reconnect():
+    """Triggers an immediate network probe and OS reconnection attempt."""
+    state = network_manager.probe_network()
+    return api_response(data={
+        "success": True,
+        "state": state.value,
+        "status": network_manager.get_status()
+    }, code=200)
+
+
+@app.route("/api/navigation/coordinate/validate", methods=["POST"])
+def flask_validate_coordinate():
+    """Validates an individual coordinate against geofence and safety invariants."""
+    body = request.get_json(silent=True) or {}
+    lat = float(body.get("lat", 0.0))
+    lon = float(body.get("lon", 0.0))
+    alt = float(body.get("altitude_m", body.get("altitude", 10.0)))
+
+    result = coordinate_validator.validate_coordinate(
+        lat=lat,
+        lon=lon,
+        altitude_m=alt,
+        current_drone_lat=body.get("current_drone_lat"),
+        current_drone_lon=body.get("current_drone_lon"),
+        home_lat=body.get("home_lat"),
+        home_lon=body.get("home_lon"),
+        boundary_polygon=body.get("boundary_polygon"),
+        geofence_max_radius_m=float(body.get("geofence_max_radius_m", 150.0)),
+        source_image_id=body.get("source_image_id"),
+        image_timestamp=body.get("image_timestamp"),
+        horizontal_uncertainty_m=float(body.get("horizontal_uncertainty_m", 1.5)),
+        consecutive_frames_verified=int(body.get("consecutive_frames_verified", 3)),
+        camera_calibrated=bool(body.get("camera_calibrated", False)),
+        target_label=body.get("target_label", "TARGET_CANDIDATE")
+    )
+    return api_response(data=result.to_dict(), code=200)
+
+
+@app.route("/api/navigation/coordinate-package/receive", methods=["POST"])
+def flask_receive_coordinate_package():
+    """Ingests versioned coordinate package, validates all coordinates independently on Pi 4."""
+    body = request.get_json(silent=True) or {}
+    pkg_data = body.get("package", body)
+
+    is_approved, pkg, rejection_reasons = coordinate_package_manager.receive_and_validate_package(
+        package_data=pkg_data,
+        current_drone_lat=body.get("current_drone_lat"),
+        current_drone_lon=body.get("current_drone_lon"),
+        home_lat=body.get("home_lat", mission_engine.home_location.get("lat")),
+        home_lon=body.get("home_lon", mission_engine.home_location.get("lon")),
+        boundary_polygon=body.get("boundary_polygon"),
+        geofence_max_radius_m=float(body.get("geofence_max_radius_m", 150.0))
+    )
+    return api_response(data={
+        "package": pkg.to_dict(),
+        "rejection_reasons": rejection_reasons
+    }, code=200 if is_approved else 422)
+
+
+@app.route("/api/navigation/coordinate-package/latest", methods=["GET"])
+def flask_latest_coordinate_package():
+    """Returns the latest validated coordinate package."""
+    pkg = coordinate_package_manager.active_package
+    return api_response(data=pkg.to_dict() if pkg else None, code=200)
+
+
+@app.route("/api/spatial/coverage/tracker", methods=["GET"])
+def flask_coverage_tracker_status():
+    """Returns real-time local cell coverage matrix and scan metrics."""
+    return api_response(data=coverage_tracker.get_status(), code=200)
+
+
+@app.route("/api/spatial/coverage/reset", methods=["POST"])
+def flask_reset_coverage_tracker():
+    """Resets local cell coverage tracker for a new sortie."""
+    coverage_tracker.reset()
+    return api_response(data={"message": "Coverage tracker reset."}, code=200)
 
 
 # =============================================================================

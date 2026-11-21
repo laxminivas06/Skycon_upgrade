@@ -13,7 +13,10 @@
 | **Phase 3** | MAVLink Communication, Telemetry & Autopilot Integration | TELEM1/TELEM2 multi-baud bridge, real-time telemetry, command queue, RC override | **COMPLETED** |
 | **Phase 4** | Computer Vision, QR Decoding & Spatial Heatmap | Multi-frame box detection, subpixel QR decode, 3D georeferencing, 3-layer heatmap | **COMPLETED** |
 | **Phase 5** | Autonomous Mission Execution & Geofence Interlocks | 12-stage ADDC FSM, 300s timer, boustrophedon scan, 4-digit puzzle workflow, RTL | **COMPLETED** |
-| **Phase 6** | End-to-End Field Verification & Flight Readiness | Complete system integration, RPi deployment, 4G cloud sync, diagnostic verification | **IN PROGRESS** |
+| **Phase 6** | End-to-End Field Verification & Flight Readiness | Complete system integration, RPi deployment, 4G cloud sync, diagnostic verification | **COMPLETED** |
+| **Phase 7** | System Validation, SITL & Safety Verification | 148 validation tests, 14-DOF SITL, failsafe stress, Gate C flight readiness | **COMPLETED** |
+| **Intermediate** | Hybrid Autonomy, Multi-Hotspot Failover & Nav Accuracy | Multi-hotspot priority failover, coordinate validation system, local coverage tracking | **COMPLETED** |
+| **Phase 8** | Live Field Operations & Competition Flight Execution | Outdoor flight sorties, Gate C bench verification, 300s competition clock run | **PLANNED** |
 
 ---
 
@@ -188,6 +191,24 @@
 - **Acceptance Criteria**: 100% test pass rate across 156 tests; zero password exposure; MAVLink, camera, and flight stabilization 100% isolated and operational during network outages.
 - **Testing Requirements**: Comprehensive test suite `tests/test_wifi_hotspot_reconnect.py` (8 tests / 12 scenarios) and full repository discovery.
 - **Completion Status**: **COMPLETED (Verified - 156/156 Tests Passing Across All Suites, 100% Pass Rate)**.
+
+---
+
+## Intermediate Integration: Hybrid Online/Offline Autonomy, Multi-Hotspot Failover & Coordinate Validation
+- **Objective**: Upgrade the existing SKYCON system to guarantee mission continuity across normal internet, temporary internet loss, multi-hotspot sequential failover, air-gapped offline autonomy, coordinate confidence categorization, and safe post-reconnection telemetry recovery.
+- **Required Modules**: `backend/network_manager.py`, `backend/coordinate_validator.py`, `backend/coordinate_package.py`, `backend/coverage_tracker.py`, `backend/coverage_planner.py`, `backend/mission_engine.py`, `backend/server.py`, `backend/main.py`, `frontend/src/components/GroundStation/CommunicationDiagnosticsPanel.tsx`, `frontend/src/components/GroundStation/HeatMapVisualizationPanel.tsx`, `frontend/src/services/spatialIntelligenceService.ts`, `tests/test_hybrid_connectivity.py`.
+- **Dependencies**: RPi 4 built-in Wi-Fi (`wlan0`), ArduCopter 4.x / Pixhawk 2.4.8, SimpleJsonStore, React 18 frontend.
+- **Implementation Tasks**:
+  1. Multi-hotspot prioritized profile manager with sequential failover (Primary -> Secondary -> Backup) and 60s hysteresis.
+  2. Coordinate confidence classification (`HIGH_CONFIDENCE`, `APPROXIMATE`, `LOW_CONFIDENCE`, `UNVERIFIED`, `REJECTED`) and 10-point validation pipeline (WGS84, bounds, geofence, altitude, spacing, kinematics, EKF, age, multi-frame lock).
+  3. Versioned coordinate package protocol with SHA-256 verification and ArduCopter MAVLink upload readback.
+  4. Real-time onboard 2D spatial grid coverage matrix tracking visited and missed cells independently of cloud status.
+  5. Air-gapped offline mission execution preserving active boustrophedon sweep and spooling events to local storage.
+  6. Enhanced Ground Station connectivity HUD displaying multi-hotspot indicators, failover telemetry, coordinate confidence badges, and coverage progress.
+  7. Automated failure simulation test suite verifying all 20+ failure modes.
+- **Acceptance Criteria**: Zero cloud dependence during flight; strict rejection of unverified/out-of-bound visual targets; 100% test pass rate across all test suites.
+- **Testing Requirements**: Comprehensive test suite `tests/test_hybrid_connectivity.py` and regression verification.
+- **Completion Status**: **COMPLETED (Verified - 170/170 Tests Passing Across 13 Suites, 100% Pass Rate, 20 Dedicated Hybrid Connectivity Tests, Production Bundle Synced)**.
 
 ---
 

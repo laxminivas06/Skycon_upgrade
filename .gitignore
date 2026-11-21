@@ -35,6 +35,8 @@ android/.cxx/
 .env.local
 .env.*.local
 !.env.example
+config/.hotspot_secrets.json
+*.secrets.json
 
 # IDE & Editor files
 .idea/

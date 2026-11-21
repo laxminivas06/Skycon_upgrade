@@ -144,14 +144,15 @@ export const CommunicationDiagnosticsPanel: React.FC<CommunicationDiagnosticsPan
         {/* Hotspot Wi-Fi SSID & IP */}
         <div className="bg-slate-800/60 p-2.5 rounded-lg border border-slate-700/40">
           <div className="flex items-center justify-between text-slate-400 mb-1">
-            <span className="text-[10px] font-bold">MOBILE HOTSPOT</span>
+            <span className="text-[10px] font-bold">ACTIVE HOTSPOT</span>
             <Wifi className="w-3.5 h-3.5 text-sky-400" />
           </div>
           <div className="font-bold text-sm text-slate-100 truncate" title={diag.wifi_ssid || 'No Hotspot'}>
             {diag.wifi_ssid || 'DISCONNECTED'}
           </div>
-          <div className="text-[10px] text-slate-400 mt-0.5 truncate">
-            IP: {diag.ip_address || (diag.wifi_connected ? '192.168.43.x' : 'None')}
+          <div className="text-[10px] text-slate-400 mt-0.5 flex items-center justify-between">
+            <span>Priority: <strong className="text-sky-300">P{diag.active_priority || 1}</strong></span>
+            <span>IP: {diag.ip_address || (diag.wifi_connected ? '192.168.43.x' : 'None')}</span>
           </div>
         </div>
 
@@ -221,7 +222,7 @@ export const CommunicationDiagnosticsPanel: React.FC<CommunicationDiagnosticsPan
       </div>
 
       {/* 3. Reconnection Watchdog Sub-Bar */}
-      <div className="bg-slate-950/70 p-2.5 rounded-lg border border-slate-800 mb-3 flex flex-wrap items-center justify-between gap-2 text-[11px]">
+      <div className="bg-slate-950/70 p-2.5 rounded-lg border border-slate-800 mb-2 flex flex-wrap items-center justify-between gap-2 text-[11px]">
         <div className="flex items-center space-x-2">
           <Activity className="w-3.5 h-3.5 text-sky-400 shrink-0" />
           <span className="text-slate-300 font-semibold">Watchdog Auto-Reconnection:</span>
@@ -244,6 +245,30 @@ export const CommunicationDiagnosticsPanel: React.FC<CommunicationDiagnosticsPan
           <span>
             Telemetry Latency: <strong className="text-slate-200">{diag.avg_latency_ms.toFixed(1)} ms</strong>
           </span>
+        </div>
+      </div>
+
+      {/* 3B. Multi-Hotspot Sequential Failover & Stability Status */}
+      <div className="bg-slate-950/50 p-2 rounded-lg border border-slate-800/80 mb-3 flex flex-wrap items-center justify-between gap-2 text-[10px] text-slate-400">
+        <div className="flex items-center space-x-2">
+          <Server className="w-3.5 h-3.5 text-purple-400 shrink-0" />
+          <span className="font-semibold text-slate-300">Hotspot Failover Queue:</span>
+          <span className="px-1.5 py-0.5 rounded bg-sky-500/10 text-sky-300 border border-sky-500/20 font-bold">
+            P1 Primary
+          </span>
+          <span className="text-slate-600">&rarr;</span>
+          <span className="px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700">
+            P2 Secondary
+          </span>
+          <span className="text-slate-600">&rarr;</span>
+          <span className="px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700">
+            P3 Backup
+          </span>
+        </div>
+        <div className="flex items-center space-x-3 text-[10px]">
+          <span>Failovers: <strong className="text-slate-200">{diag.failover_count || 0}</strong></span>
+          <span>Switch Latency: <strong className="text-slate-200">{(diag.reconnect_latency_s ?? 0).toFixed(1)}s</strong></span>
+          <span>Anti-Thrashing: <strong className="text-emerald-400">60s Hysteresis</strong></span>
         </div>
       </div>
 

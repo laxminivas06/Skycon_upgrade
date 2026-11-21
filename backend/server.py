@@ -36,6 +36,9 @@ from backend.qr_detector import qr_detector_service, validate_strict_two_digit, 
 from backend.hardware_verification import hardware_verification_service
 from backend.cloud_sync import cloud_sync_service
 from backend.network_manager import network_manager, NetworkState
+from backend.coordinate_validator import coordinate_validator, ValidatedCoordinate, CoordinateQualityState
+from backend.coordinate_package import coordinate_package_manager, CoordinatePackage
+from backend.coverage_tracker import coverage_tracker
 
 logging.basicConfig(level=logging.INFO, format="[%(asctime)s] [%(levelname)s] [%(name)s] %(message)s")
 logger = logging.getLogger("SkyconServer")
@@ -78,11 +81,19 @@ async def telemetry_broadcast_loop():
                 telem = mavlink_mux.get_telemetry()
                 mission_status = mission_engine.get_status()
 
+                # Update local spatial grid coverage
+                t_lat = telem.get("lat", 0.0)
+                t_lon = telem.get("lon", 0.0)
+                t_alt = telem.get("alt", 0.0)
+                if abs(t_lat) > 0.001 and t_alt > 1.0:
+                    coverage_tracker.update_coverage(t_lat, t_lon, t_alt)
+
                 # Build consolidated HUD packet
                 packet = {
                     "type": "TELEMETRY_PACKET",
                     "telemetry": telem,
                     "mission": mission_status,
+                    "coverage": coverage_tracker.get_status(),
                     "timestamp": int(time.time() * 1000)
                 }
                 msg_text = json.dumps(packet)
@@ -464,6 +475,10 @@ async def generate_navigation_plan(req: Request):
             plan = coverage_planner_instance.plan_circular_coverage(
                 center["lat"], center["lon"], radius, alt, speed, overlap, strategy
             )
+
+        if plan and plan.original_boundary:
+            coverage_tracker.initialize_grid(plan.original_boundary)
+
         return {"success": True, "plan": plan.to_dict()}
     except Exception as e:
         logger.error(f"Error generating navigation plan: {e}")
@@ -899,6 +914,125 @@ def trigger_network_reconnect():
         "state": state.value,
         "data": network_manager.get_status()
     }
+
+
+@app.get("/api/network/hotspots")
+def get_hotspot_profiles():
+    """Lists configured mobile hotspot profiles with priorities (zero secrets exposed)."""
+    return {
+        "success": True,
+        "profiles": [p.to_dict() for p in network_manager.profiles],
+        "active_ssid": network_manager.current_ssid,
+        "status": network_manager.get_status()
+    }
+
+
+@app.post("/api/network/hotspots/configure")
+async def configure_hotspot_profile(req: Request):
+    """Configures or updates a mobile hotspot profile with priority."""
+    body = await req.json()
+    ssid = body.get("ssid", "")
+    password = body.get("password", "")
+    priority = int(body.get("priority", 1))
+    is_hidden = bool(body.get("is_hidden", False))
+
+    result = network_manager.configure_hotspot_profile(
+        ssid=ssid,
+        password=password,
+        priority=priority,
+        is_hidden=is_hidden
+    )
+    return result
+
+
+@app.delete("/api/network/hotspots/{ssid}")
+def delete_hotspot_profile(ssid: str):
+    """Deletes a configured hotspot profile."""
+    return network_manager.delete_hotspot_profile(ssid=ssid)
+
+
+# -----------------------------------------------------------------------------
+# Navigation Target Validation & Versioned Coordinate Packages
+# -----------------------------------------------------------------------------
+
+@app.post("/api/navigation/coordinate/validate")
+async def validate_single_coordinate(req: Request):
+    """Validates an individual coordinate against geofence and safety invariants."""
+    body = await req.json()
+    lat = float(body.get("lat", 0.0))
+    lon = float(body.get("lon", 0.0))
+    alt = float(body.get("altitude_m", body.get("altitude", 10.0)))
+
+    result = coordinate_validator.validate_coordinate(
+        lat=lat,
+        lon=lon,
+        altitude_m=alt,
+        current_drone_lat=body.get("current_drone_lat"),
+        current_drone_lon=body.get("current_drone_lon"),
+        home_lat=body.get("home_lat"),
+        home_lon=body.get("home_lon"),
+        boundary_polygon=body.get("boundary_polygon"),
+        geofence_max_radius_m=float(body.get("geofence_max_radius_m", 150.0)),
+        source_image_id=body.get("source_image_id"),
+        image_timestamp=body.get("image_timestamp"),
+        horizontal_uncertainty_m=float(body.get("horizontal_uncertainty_m", 1.5)),
+        consecutive_frames_verified=int(body.get("consecutive_frames_verified", 3)),
+        camera_calibrated=bool(body.get("camera_calibrated", False)),
+        target_label=body.get("target_label", "TARGET_CANDIDATE")
+    )
+    return {"success": True, "coordinate": result.to_dict()}
+
+
+@app.post("/api/navigation/coordinate-package/receive")
+async def receive_coordinate_package(req: Request):
+    """Ingests versioned coordinate package, validates all coordinates independently on Pi 4."""
+    body = await req.json()
+    pkg_data = body.get("package", body)
+
+    is_approved, pkg, rejection_reasons = coordinate_package_manager.receive_and_validate_package(
+        package_data=pkg_data,
+        current_drone_lat=body.get("current_drone_lat"),
+        current_drone_lon=body.get("current_drone_lon"),
+        home_lat=body.get("home_lat", mission_engine.home_location.get("lat")),
+        home_lon=body.get("home_lon", mission_engine.home_location.get("lon")),
+        boundary_polygon=body.get("boundary_polygon"),
+        geofence_max_radius_m=float(body.get("geofence_max_radius_m", 150.0))
+    )
+    return {
+        "success": is_approved,
+        "package": pkg.to_dict(),
+        "rejection_reasons": rejection_reasons
+    }
+
+
+@app.get("/api/navigation/coordinate-package/latest")
+def get_latest_coordinate_package():
+    """Returns the latest validated coordinate package."""
+    pkg = coordinate_package_manager.active_package
+    return {
+        "success": True,
+        "package": pkg.to_dict() if pkg else None
+    }
+
+
+# -----------------------------------------------------------------------------
+# Onboard Real-Time Grid Coverage Tracker
+# -----------------------------------------------------------------------------
+
+@app.get("/api/spatial/coverage/tracker")
+def get_coverage_tracker_status():
+    """Returns real-time local cell coverage matrix and scan metrics (100% offline)."""
+    return {
+        "success": True,
+        "coverage": coverage_tracker.get_status()
+    }
+
+
+@app.post("/api/spatial/coverage/reset")
+def reset_coverage_tracker():
+    """Resets local cell coverage tracker for a new sortie."""
+    coverage_tracker.reset()
+    return {"success": True, "message": "Coverage tracker reset."}
 
 
 

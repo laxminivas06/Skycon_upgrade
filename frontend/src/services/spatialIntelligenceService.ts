@@ -76,12 +76,82 @@ export interface ReconStageStatus {
   timestamp: number;
 }
 
+export interface HotspotProfileData {
+  ssid: string;
+  priority: number;
+  is_hidden: boolean;
+  security: string;
+  last_connected?: string | null;
+  is_active: boolean;
+  configured_at?: string | null;
+}
+
+export interface HotspotStatusData {
+  state: 'ONLINE' | 'OFFLINE' | 'RECONNECTING' | 'STALE' | 'UNKNOWN';
+  wifi_connected: boolean;
+  ssid?: string | null;
+  active_priority?: number | null;
+  interface: string;
+  rssi_dbm: number;
+  signal_strength_pct: number;
+  ip_address?: string | null;
+  internet_accessible: boolean;
+  cloud_accessible: boolean;
+  hotspot_profiles: HotspotProfileData[];
+  failover: {
+    in_progress: boolean;
+    failover_count: number;
+    last_failover_time: number;
+    last_failover_reason?: string | null;
+    reconnect_latency_s: number;
+    attempts: number;
+    backoff_delay_s: number;
+  };
+  hysteresis: {
+    stability_period_s: number;
+    active_uptime_s: number;
+  };
+}
+
+export interface CoverageTrackerData {
+  initialized: boolean;
+  total_cells: number;
+  visited_cells: number;
+  missed_cells: number;
+  coverage_pct: number;
+  total_area_m2: number;
+  scanned_area_m2: number;
+  cell_size_m: number;
+  last_update_time: number;
+}
+
+export interface ValidatedCoordinateData {
+  lat: number;
+  lon: number;
+  altitude_m: number;
+  alt_reference: string;
+  quality_state: 'HIGH_CONFIDENCE' | 'APPROXIMATE' | 'LOW_CONFIDENCE' | 'UNVERIFIED' | 'REJECTED';
+  validation_status: 'APPROVED' | 'PENDING_REVIEW' | 'REJECTED';
+  confidence_score: number;
+  horizontal_uncertainty_m: number;
+  consecutive_frames_verified: number;
+  validation_reasons: string[];
+  rejection_errors: string[];
+  target_label: string;
+}
+
 export interface CommunicationDiagnosticsData {
   health_status: 'HEALTHY' | 'DEGRADED' | 'CRITICAL' | 'OFFLINE';
   network_state?: 'ONLINE' | 'OFFLINE' | 'RECONNECTING' | 'STALE' | 'UNKNOWN';
   esp32_connected: boolean;
   wifi_connected: boolean;
   wifi_ssid: string;
+  active_priority?: number | null;
+  hotspot_profiles?: HotspotProfileData[];
+  failover_count?: number;
+  reconnect_latency_s?: number;
+  stability_period_s?: number;
+  active_uptime_s?: number;
   rssi_dbm: number;
   signal_strength_pct?: number;
   ip_address?: string | null;
@@ -349,6 +419,65 @@ class SpatialIntelligenceService {
         this.notifyDiagnostics();
       }
     }
+  }
+
+  public async fetchHotspots(): Promise<HotspotStatusData | null> {
+    try {
+      const res = await fetch('/api/network/hotspots');
+      if (res.ok) {
+        const json = await res.json();
+        return json.status || json.data || null;
+      }
+    } catch {}
+    return null;
+  }
+
+  public async configureHotspot(ssid: string, password?: string, priority: number = 1, isHidden: boolean = false): Promise<boolean> {
+    try {
+      const res = await fetch('/api/network/hotspots/configure', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ssid, password, priority, is_hidden: isHidden })
+      });
+      return res.ok;
+    } catch {
+      return false;
+    }
+  }
+
+  public async deleteHotspot(ssid: string): Promise<boolean> {
+    try {
+      const res = await fetch(`/api/network/hotspots/${encodeURIComponent(ssid)}`, { method: 'DELETE' });
+      return res.ok;
+    } catch {
+      return false;
+    }
+  }
+
+  public async fetchCoverageTracker(): Promise<CoverageTrackerData | null> {
+    try {
+      const res = await fetch('/api/spatial/coverage/tracker');
+      if (res.ok) {
+        const json = await res.json();
+        return json.coverage || json.data || null;
+      }
+    } catch {}
+    return null;
+  }
+
+  public async validateCoordinate(target: { lat: number; lon: number; altitude_m?: number }): Promise<ValidatedCoordinateData | null> {
+    try {
+      const res = await fetch('/api/navigation/coordinate/validate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(target)
+      });
+      if (res.ok) {
+        const json = await res.json();
+        return json.coordinate || json.data || null;
+      }
+    } catch {}
+    return null;
   }
 
   private notifySpatial() {

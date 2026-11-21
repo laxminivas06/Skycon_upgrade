@@ -1,0 +1,12 @@
+[
+  {
+    "ssid": "My_Phone_Hotspot",
+    "priority": 1,
+    "is_hidden": false,
+    "security": "WPA2/WPA3",
+    "last_connected": null,
+    "is_active": true,
+    "consecutive_failures": 0,
+    "configured_at": "2026-11-21T07:15:20.357818+00:00"
+  }
+]

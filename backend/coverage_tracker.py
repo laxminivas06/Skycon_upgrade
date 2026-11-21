@@ -1,133 +1,228 @@
 """
 =====================================================================================
-SKYCON MASTER ARCHITECTURE - AUTONOMOUS RECONNAISSANCE
+SKYCON MASTER ARCHITECTURE - ONBOARD REAL-TIME GRID COVERAGE TRACKER
 MODULE: coverage_tracker.py
-Real-Time Coverage Progress, Hole Detection & Mission Time-Budget Watchdog
+Discrete Spatial Cell Matrix, Optical Footprint Accounting & Missed Cell Detection
 =====================================================================================
 Features:
-  - Tracks Real-Time Explored vs Unexplored Area Percentage
-  - Detects Incomplete Coverage Regions & Geometric Holes
-  - Mission Time-Budget Gating (warns at 240s, enforces RTL at 280s / 300s)
-  - Synchronizes Directly with SpatialGrid & HeatmapEngine
+  - 100% Air-Gapped Local Operation: Zero Cloud or Internet Access Required
+  - Metric Cell Discretization (2.0m x 2.0m default resolution) over Search Boundary
+  - Real-Time Camera Optical Footprint Projection based on Vehicle Altitude & FOV
+  - Dynamic Visited Cell Accumulation & Multi-Pass Accounting
+  - Missed Coverage Detection & Percentage Calculations (0.0% - 100.0%)
+  - GeoJSON-Compatible Bounding Box and Cell Grid for Ground Station HUD
 =====================================================================================
 """
 
-import time
 import math
-import logging
-from typing import Dict, Any, List, Optional, Tuple
-try:
-    from .spatial_grid import SpatialGrid, CoverageStatus
-except ImportError:
-    from backend.spatial_grid import SpatialGrid, CoverageStatus
+import time
+import threading
+from dataclasses import dataclass, field, asdict
+from typing import List, Dict, Any, Tuple, Optional, Set
 
-logger = logging.getLogger("CoverageTracker")
+from backend.route_validator import haversine_distance, point_in_polygon
+
+EARTH_RADIUS_M = 6378137.0
+
+
+@dataclass
+class GridCell:
+    cell_id: str
+    row: int
+    col: int
+    center_lat: float
+    center_lon: float
+    visited: bool = False
+    visit_count: int = 0
+    first_visited_at: Optional[float] = None
+    last_visited_at: Optional[float] = None
+
+    def to_dict(self) -> Dict[str, Any]:
+        return asdict(self)
 
 
 class CoverageTracker:
     """
-    Monitors reconnaissance progress, calculates coverage metrics,
-    and enforces time-budget boundaries during flight.
+    Onboard real-time spatial grid coverage tracker computing physical ground coverage
+    from live telemetry and camera footprint without requiring cloud connectivity.
     """
+
     def __init__(
         self,
-        grid: Optional[SpatialGrid] = None,
-        max_mission_duration_s: float = 300.0,
-        time_warning_threshold_s: float = 240.0,
-        coverage_completion_threshold_pct: float = 90.0
+        cell_size_m: float = 2.0,
+        camera_hfov_deg: float = 68.0,
+        camera_vfov_deg: float = 54.0
     ):
-        self.grid = grid
-        self.max_duration_s = max_mission_duration_s
-        self.warning_threshold_s = time_warning_threshold_s
-        self.completion_threshold_pct = coverage_completion_threshold_pct
+        self.cell_size_m = cell_size_m
+        self.camera_hfov_deg = camera_hfov_deg
+        self.camera_vfov_deg = camera_vfov_deg
 
-        self.mission_start_time: float = 0.0
-        self.is_active: bool = False
-        self.active_waypoint_index: int = 0
-        self.total_waypoints: int = 0
+        self._lock = threading.RLock()
+        self.is_initialized: bool = False
+        self.origin_lat: float = 0.0
+        self.origin_lon: float = 0.0
+        self.min_lat: float = 0.0
+        self.max_lat: float = 0.0
+        self.min_lon: float = 0.0
+        self.max_lon: float = 0.0
 
-    def set_grid(self, grid: SpatialGrid):
-        self.grid = grid
+        self.rows: int = 0
+        self.cols: int = 0
+        self.cells: Dict[str, GridCell] = {}
+        self.visited_cell_ids: Set[str] = set()
+        self.boundary_polygon: Optional[List[Tuple[float, float]]] = None
 
-    def start_mission(self, total_waypoints: int = 0):
-        self.mission_start_time = time.time()
-        self.is_active = True
-        self.total_waypoints = total_waypoints
-        self.active_waypoint_index = 0
-        logger.info("CoverageTracker started: time budget %.0fs", self.max_duration_s)
+        self.total_scanned_area_m2: float = 0.0
+        self.total_target_area_m2: float = 0.0
+        self.last_update_time: float = 0.0
 
-    def stop_mission(self):
-        self.is_active = False
-
-    def update_waypoint_index(self, index: int):
-        self.active_waypoint_index = index
-
-    def get_elapsed_time_s(self) -> float:
-        if not self.is_active or self.mission_start_time == 0.0:
-            return 0.0
-        return time.time() - self.mission_start_time
-
-    def get_remaining_time_s(self) -> float:
-        elapsed = self.get_elapsed_time_s()
-        return max(0.0, self.max_duration_s - elapsed)
-
-    def is_time_critical(self) -> bool:
-        """Returns True if remaining time is under warning threshold (e.g. >240s elapsed)."""
-        return self.get_elapsed_time_s() >= self.warning_threshold_s
-
-    def is_time_exhausted(self) -> bool:
-        """Returns True if mission duration has exceeded 285s (requires immediate RTL)."""
-        return self.get_elapsed_time_s() >= (self.max_duration_s - 15.0)
-
-    def get_coverage_percentage(self) -> float:
-        if self.grid is None:
-            return 0.0
-        metrics = self.grid.get_coverage_metrics()
-        return metrics.get("coverage_pct", 0.0)
-
-    def is_coverage_sufficient(self) -> bool:
-        """Returns True if coverage exceeds completion threshold (e.g. >= 90%)."""
-        return self.get_coverage_percentage() >= self.completion_threshold_pct
-
-    def detect_coverage_holes(self, max_holes_to_return: int = 10) -> List[Tuple[float, float]]:
+    def initialize_grid(
+        self,
+        boundary: List[Tuple[float, float]],
+        center_lat: Optional[float] = None,
+        center_lon: Optional[float] = None,
+        radius_m: Optional[float] = None
+    ):
         """
-        Scans spatial grid for contiguous clusters of unexplored cells inside the search area.
-        Returns list of (lat, lon) coordinates representing gap centroids.
+        Initializes a discrete cell grid matching either a polygon or circular boundary.
         """
-        if self.grid is None:
-            return []
+        with self._lock:
+            self.cells.clear()
+            self.visited_cell_ids.clear()
+            self.boundary_polygon = boundary
 
-        unexplored = [
-            (c.latitude, c.longitude)
-            for c in self.grid.cells.values()
-            if c.coverage_status == CoverageStatus.UNEXPLORED
-        ]
-        return unexplored[:max_holes_to_return]
+            if not boundary or len(boundary) < 3:
+                # If circular boundary given with radius
+                if center_lat and center_lon and radius_m:
+                    d_lat = (radius_m / EARTH_RADIUS_M) * (180.0 / math.pi)
+                    d_lon = (radius_m / (EARTH_RADIUS_M * math.cos(math.radians(center_lat)))) * (180.0 / math.pi)
+                    self.min_lat = center_lat - d_lat
+                    self.max_lat = center_lat + d_lat
+                    self.min_lon = center_lon - d_lon
+                    self.max_lon = center_lon + d_lon
+                else:
+                    return
+            else:
+                lats = [p[0] for p in boundary]
+                lons = [p[1] for p in boundary]
+                self.min_lat, self.max_lat = min(lats), max(lats)
+                self.min_lon, self.max_lon = min(lons), max(lons)
 
-    def get_progress_report(self) -> Dict[str, Any]:
-        metrics = self.grid.get_coverage_metrics() if self.grid else {"total_cells": 0, "explored_cells": 0, "coverage_pct": 0.0}
-        elapsed = self.get_elapsed_time_s()
+            self.origin_lat = self.min_lat
+            self.origin_lon = self.min_lon
 
-        status = "IN_PROGRESS"
-        if not self.is_active:
-            status = "IDLE"
-        elif self.is_time_exhausted():
-            status = "TIME_EXHAUSTED_RTL"
-        elif self.is_time_critical():
-            status = "TIME_CRITICAL"
-        elif self.is_coverage_sufficient():
-            status = "COVERAGE_SUFFICIENT"
+            # Convert bounding box to metric dimensions
+            lat_dist_m = haversine_distance(self.min_lat, self.min_lon, self.max_lat, self.min_lon)
+            lon_dist_m = haversine_distance(self.min_lat, self.min_lon, self.min_lat, self.max_lon)
 
-        return {
-            "status": status,
-            "elapsed_time_s": round(elapsed, 1),
-            "remaining_time_s": round(self.get_remaining_time_s(), 1),
-            "time_budget_s": self.max_duration_s,
-            "coverage_pct": metrics.get("coverage_pct", 0.0),
-            "total_cells": metrics.get("total_cells", 0),
-            "explored_cells": metrics.get("explored_cells", 0),
-            "active_waypoint": self.active_waypoint_index,
-            "total_waypoints": self.total_waypoints,
-            "is_sufficient": self.is_coverage_sufficient(),
-            "timestamp": int(time.time() * 1000)
-        }
+            # Cap grid dimension to 50x50 maximum to keep memory bounded on RPi
+            self.rows = max(2, min(50, int(math.ceil(lat_dist_m / self.cell_size_m))))
+            self.cols = max(2, min(50, int(math.ceil(lon_dist_m / self.cell_size_m))))
+
+            lat_step = (self.max_lat - self.min_lat) / max(1, self.rows)
+            lon_step = (self.max_lon - self.min_lon) / max(1, self.cols)
+
+            for r in range(self.rows):
+                for c in range(self.cols):
+                    c_lat = self.min_lat + (r + 0.5) * lat_step
+                    c_lon = self.min_lon + (c + 0.5) * lon_step
+                    cell_id = f"c_{r}_{c}"
+
+                    # Filter cells outside polygon if polygon boundary provided
+                    if boundary and len(boundary) >= 3:
+                        if not point_in_polygon(c_lat, c_lon, boundary):
+                            continue
+
+                    self.cells[cell_id] = GridCell(
+                        cell_id=cell_id,
+                        row=r,
+                        col=c,
+                        center_lat=round(c_lat, 7),
+                        center_lon=round(c_lon, 7)
+                    )
+
+            self.total_target_area_m2 = len(self.cells) * (self.cell_size_m ** 2)
+            self.total_scanned_area_m2 = 0.0
+            self.is_initialized = True
+            self.last_update_time = time.time()
+
+    def update_coverage(
+        self,
+        drone_lat: float,
+        drone_lon: float,
+        altitude_agl_m: float,
+        heading_deg: float = 0.0
+    ) -> int:
+        """
+        Updates grid coverage based on current drone pose and camera optical footprint.
+        Returns number of newly visited cells in this update.
+        """
+        if not self.is_initialized or abs(drone_lat) < 0.001 or altitude_agl_m < 1.0:
+            return 0
+
+        with self._lock:
+            now = time.time()
+            self.last_update_time = now
+
+            # Calculate camera ground footprint radius at current altitude
+            # Footprint half-width = alt * tan(HFOV / 2)
+            fp_w = altitude_agl_m * math.tan(math.radians(self.camera_hfov_deg / 2.0))
+            fp_h = altitude_agl_m * math.tan(math.radians(self.camera_vfov_deg / 2.0))
+            footprint_radius_m = max(self.cell_size_m, max(fp_w, fp_h))
+
+            newly_visited = 0
+            for cell_id, cell in self.cells.items():
+                dist_m = haversine_distance(drone_lat, drone_lon, cell.center_lat, cell.center_lon)
+                if dist_m <= footprint_radius_m:
+                    if not cell.visited:
+                        cell.visited = True
+                        cell.first_visited_at = now
+                        self.visited_cell_ids.add(cell_id)
+                        newly_visited += 1
+                    cell.visit_count += 1
+                    cell.last_visited_at = now
+
+            self.total_scanned_area_m2 = len(self.visited_cell_ids) * (self.cell_size_m ** 2)
+            return newly_visited
+
+    def get_status(self) -> Dict[str, Any]:
+        """Returns comprehensive coverage metrics for Ground Station telemetry."""
+        with self._lock:
+            total = len(self.cells)
+            visited = len(self.visited_cell_ids)
+            missed = max(0, total - visited)
+            pct = (visited / total * 100.0) if total > 0 else 0.0
+
+            return {
+                "initialized": self.is_initialized,
+                "total_cells": total,
+                "visited_cells": visited,
+                "missed_cells": missed,
+                "coverage_pct": round(pct, 1),
+                "total_area_m2": round(self.total_target_area_m2, 1),
+                "scanned_area_m2": round(self.total_scanned_area_m2, 1),
+                "cell_size_m": self.cell_size_m,
+                "grid_dimensions": {"rows": self.rows, "cols": self.cols},
+                "bounds": {
+                    "min_lat": self.min_lat,
+                    "max_lat": self.max_lat,
+                    "min_lon": self.min_lon,
+                    "max_lon": self.max_lon
+                },
+                "last_update_time": self.last_update_time
+            }
+
+    def reset(self):
+        """Resets all coverage data for a new sortie."""
+        with self._lock:
+            for cell in self.cells.values():
+                cell.visited = False
+                cell.visit_count = 0
+                cell.first_visited_at = None
+                cell.last_visited_at = None
+            self.visited_cell_ids.clear()
+            self.total_scanned_area_m2 = 0.0
+
+
+# Global singleton tracker instance
+coverage_tracker = CoverageTracker()
