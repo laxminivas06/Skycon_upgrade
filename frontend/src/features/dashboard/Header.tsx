@@ -21,6 +21,7 @@ import { AppRole } from '../../types/mission';
 import { gcsConnectionService, GCSConnectionState } from '../../services/gcsConnectionService';
 import { mavlinkService } from '../../services/mavlinkService';
 import { FlightModeSelector } from '../../components/common/FlightModeSelector';
+import { dronePortStreamingService, DronePortStreamState } from '../../services/dronePortStreamingService';
 
 interface HeaderProps {
   telemetry: DashboardTelemetryData;
@@ -55,154 +56,231 @@ export const Header: React.FC<HeaderProps> = ({
 }) => {
   const isArmed = telemetry.isArmed;
   const [connState, setConnState] = useState<GCSConnectionState>(() => gcsConnectionService.getState());
+  const [dronePortState, setDronePortState] = useState<DronePortStreamState>(() => dronePortStreamingService.getStreamState());
   const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false);
 
   useEffect(() => {
-    const unsub = gcsConnectionService.subscribe((st) => {
+    const unsubConn = gcsConnectionService.subscribe((st) => {
       setConnState(st);
     });
-    return () => unsub();
+    const unsubStream = dronePortStreamingService.subscribe((st) => {
+      setDronePortState(st);
+    });
+    return () => {
+      unsubConn();
+      unsubStream();
+    };
   }, []);
 
   const handleStartConnections = async () => {
     await gcsConnectionService.start();
   };
 
-  // Helper styles for Wi-Fi Indicator (Connected / Connecting / Disconnected)
+  // 1. Wi-Fi Connection Indicator (Green: Connected, Red: Disconnected, Yellow: Connecting, Grey: Unavailable)
   const getWifiBadgeConfig = () => {
-    if (!connState.isStarted) {
+    const isOnline = typeof navigator !== 'undefined' ? navigator.onLine : false;
+    if (connState.wifiStatus === 'CONNECTING') {
       return {
-        bg: 'bg-[#161B22] border-[var(--uav-card-border)] text-slate-400',
-        dot: 'bg-slate-500',
-        label: 'Wi-Fi: Disconnected',
-        pulse: false
+        bg: 'bg-[#2d2208] border-[#785412] text-amber-300',
+        dot: 'bg-amber-400 animate-pulse',
+        label: 'WI-FI: CONNECTING',
+        pulse: true
       };
     }
-    switch (connState.wifiStatus) {
-      case 'VERIFIED':
-        return {
-          bg: 'bg-[#0f291e] border-[#1b4d36] text-[#22C55E]',
-          dot: 'bg-[#22C55E]',
-          label: 'Wi-Fi: Connected',
-          pulse: true
-        };
-      case 'CONNECTING':
-        return {
-          bg: 'bg-[#2d2208] border-[#785412] text-amber-300',
-          dot: 'bg-amber-400',
-          label: 'Wi-Fi: Connecting',
-          pulse: true
-        };
-      case 'FAILED':
-      default:
-        return {
-          bg: 'bg-[#3b1212] border-[#7f1d1d] text-rose-300',
-          dot: 'bg-rose-500',
-          label: 'Wi-Fi: Disconnected',
-          pulse: false
-        };
-    }
-  };
-
-  // Helper styles for MAVLink Indicator (Connected / Connecting / Disconnected)
-  const getMavlinkBadgeConfig = () => {
-    const isActuallyConnected = Boolean(connState.isStarted && telemetry.isConnected && connState.mavlinkStatus === 'ACTIVE');
-    if (!connState.isStarted) {
-      return {
-        bg: 'bg-[#161B22] border-[var(--uav-card-border)] text-slate-400',
-        dot: 'bg-slate-500',
-        label: 'MAVLink: Disconnected',
-        pulse: false
-      };
-    }
-    if (isActuallyConnected) {
+    if ((connState.isStarted && connState.wifiStatus === 'VERIFIED') || isOnline) {
       return {
         bg: 'bg-[#0f291e] border-[#1b4d36] text-[#22C55E]',
         dot: 'bg-[#22C55E]',
-        label: 'MAVLink: Connected',
-        pulse: true
+        label: 'WI-FI: CONNECTED',
+        pulse: false
       };
     }
-    if (connState.mavlinkStatus === 'CONNECTING' || connState.wifiStatus === 'CONNECTING' || connState.wifiStatus === 'VERIFIED') {
+    if (connState.wifiStatus === 'FAILED' || !isOnline) {
       return {
-        bg: 'bg-[#2d2208] border-[#785412] text-amber-300',
-        dot: 'bg-amber-400',
-        label: 'MAVLink: Connecting',
-        pulse: true
+        bg: 'bg-[#3b1212] border-[#7f1d1d] text-rose-300',
+        dot: 'bg-rose-500',
+        label: 'WI-FI: DISCONNECTED',
+        pulse: false
       };
     }
     return {
-      bg: 'bg-[#3b1212] border-[#7f1d1d] text-rose-300',
-      dot: 'bg-rose-500',
-      label: 'MAVLink: Disconnected',
+      bg: 'bg-[#161B22] border-[var(--uav-card-border)] text-slate-400',
+      dot: 'bg-slate-500',
+      label: 'WI-FI: STATUS UNAVAILABLE',
       pulse: false
     };
   };
 
+  // 2. MAVLink Connection Indicator (Green: Connected, Red: Disconnected, Yellow: Connecting, Grey: Unavailable)
+  const getMavlinkBadgeConfig = () => {
+    const isActuallyConnected = Boolean(
+      telemetry.isConnected &&
+      (telemetry.isTelemetryAvailable || connState.mavlinkStatus === 'ACTIVE' || telemetry.rawConnectionState.bytesReceived > 0)
+    );
+    if (isActuallyConnected) {
+      return {
+        bg: 'bg-[#0f291e] border-[#1b4d36] text-[#22C55E]',
+        dot: 'bg-[#22C55E]',
+        label: 'MAVLINK: CONNECTED',
+        pulse: false
+      };
+    }
+    if (telemetry.isConnecting || connState.mavlinkStatus === 'CONNECTING') {
+      return {
+        bg: 'bg-[#2d2208] border-[#785412] text-amber-300',
+        dot: 'bg-amber-400 animate-pulse',
+        label: 'MAVLINK: CONNECTING',
+        pulse: true
+      };
+    }
+    if (telemetry.rawConnectionState.phase === 'DISCONNECTED' || !telemetry.isConnected) {
+      return {
+        bg: 'bg-[#3b1212] border-[#7f1d1d] text-rose-300',
+        dot: 'bg-rose-500',
+        label: 'MAVLINK: NOT CONNECTED',
+        pulse: false
+      };
+    }
+    return {
+      bg: 'bg-[#161B22] border-[var(--uav-card-border)] text-slate-400',
+      dot: 'bg-slate-500',
+      label: 'MAVLINK: STATUS UNAVAILABLE',
+      pulse: false
+    };
+  };
+
+  // 3. Pixhawk Connectivity Indicator (Green: Connected, Red: Not Connected, Yellow: Connecting, Grey: Status Unavailable)
+  const getPixhawkBadgeConfig = () => {
+    if (telemetry.isConnected) {
+      return {
+        bg: 'bg-[#0f291e] border-[#1b4d36] text-[#22C55E]',
+        dot: 'bg-[#22C55E]',
+        label: 'PIXHAWK: CONNECTED',
+        pulse: false
+      };
+    }
+    if (telemetry.isConnecting) {
+      return {
+        bg: 'bg-[#2d2208] border-[#785412] text-amber-300',
+        dot: 'bg-amber-400 animate-pulse',
+        label: 'PIXHAWK: CONNECTING',
+        pulse: true
+      };
+    }
+    if (telemetry.isLinkLost && telemetry.rawConnectionState.lastHeartbeat > 0) {
+      return {
+        bg: 'bg-red-950 border-red-500 text-red-200 animate-pulse',
+        dot: 'bg-red-500 animate-ping',
+        label: 'PIXHAWK: LINK LOST',
+        pulse: true
+      };
+    }
+    if (!telemetry.isConnected) {
+      return {
+        bg: 'bg-[#3b1212] border-[#7f1d1d] text-rose-300',
+        dot: 'bg-rose-500',
+        label: 'PIXHAWK: NOT CONNECTED',
+        pulse: false
+      };
+    }
+    return {
+      bg: 'bg-[#161B22] border-[var(--uav-card-border)] text-slate-400',
+      dot: 'bg-slate-500',
+      label: 'PIXHAWK: STATUS UNAVAILABLE',
+      pulse: false
+    };
+  };
+
+  // 4. GPS Indicator (Green: Fix Valid, Red: No Fix, Yellow: Acquiring, Grey: Unavailable)
   const isGpsActuallyLocked = Boolean(
     (connState.isStarted && connState.gpsStatus === 'LOCKED') ||
     telemetry.isGpsLocked ||
     telemetry.isGpsValid
   );
 
-  // Helper styles for GPS Indicator (GPS Fix Valid / Acquiring GPS / GPS Unavailable)
   const getGpsBadgeConfig = () => {
     const satsCount = telemetry.satellites || connState.satellites || 0;
-    if (isGpsActuallyLocked) {
+    if (telemetry.isGpsValid || isGpsActuallyLocked) {
       return {
         bg: 'bg-[#0f291e] border-[#1b4d36] text-[#22C55E]',
         dot: 'bg-[#22C55E]',
-        label: `GPS: GPS Fix Valid (${satsCount} Sats)`,
+        label: `GPS: LOCKED (${satsCount} SATS)`,
         pulse: false
       };
     }
-    if (!connState.isStarted && satsCount === 0) {
-      return {
-        bg: 'bg-[#161B22] border-[var(--uav-card-border)] text-slate-400',
-        dot: 'bg-slate-500',
-        label: 'GPS: GPS Unavailable',
-        pulse: false
-      };
-    }
-    if (connState.gpsStatus === 'ACQUIRING' || satsCount > 0) {
+    if (connState.gpsStatus === 'ACQUIRING' || (telemetry.isConnected && satsCount > 0)) {
       return {
         bg: 'bg-[#2d2208] border-[#785412] text-amber-300',
-        dot: 'bg-amber-400',
-        label: `GPS: Acquiring GPS (${satsCount} Sats)`,
+        dot: 'bg-amber-400 animate-pulse',
+        label: `GPS: ACQUIRING (${satsCount} SATS)`,
         pulse: true
       };
     }
+    if (telemetry.isConnected && satsCount === 0) {
+      return {
+        bg: 'bg-[#3b1212] border-[#7f1d1d] text-rose-300',
+        dot: 'bg-rose-500',
+        label: 'GPS: NO FIX',
+        pulse: false
+      };
+    }
     return {
-      bg: 'bg-[#3b1212] border-[#7f1d1d] text-rose-300',
-      dot: 'bg-rose-500',
-      label: 'GPS: GPS Unavailable',
+      bg: 'bg-[#161B22] border-[var(--uav-card-border)] text-slate-400',
+      dot: 'bg-slate-500',
+      label: 'GPS: STATUS UNAVAILABLE',
       pulse: false
     };
   };
 
+  // 5. Drone Port Indicator (Green: Active, Red: Off, Yellow: Starting, Grey: Unavailable)
+  const getDronePortBadgeConfig = () => {
+    switch (dronePortState) {
+      case 'STREAMING_ACTIVE':
+        return {
+          bg: 'bg-[#0f291e] border-[#1b4d36] text-[#22C55E]',
+          dot: 'bg-[#22C55E]',
+          label: 'DRONE PORT: STREAMING ACTIVE',
+          pulse: false
+        };
+      case 'STARTING':
+        return {
+          bg: 'bg-[#2d2208] border-[#785412] text-amber-300',
+          dot: 'bg-amber-400 animate-pulse',
+          label: 'DRONE PORT: STARTING',
+          pulse: true
+        };
+      case 'STREAMING_OFF':
+        return {
+          bg: 'bg-[#3b1212] border-[#7f1d1d] text-rose-300',
+          dot: 'bg-rose-500',
+          label: 'DRONE PORT: STREAMING OFF',
+          pulse: false
+        };
+      case 'CONNECTION_UNAVAILABLE':
+      default:
+        return {
+          bg: 'bg-[#161B22] border-[var(--uav-card-border)] text-slate-400',
+          dot: 'bg-slate-500',
+          label: 'DRONE PORT: CONNECTION UNAVAILABLE',
+          pulse: false
+        };
+    }
+  };
+
   const wifiConfig = getWifiBadgeConfig();
   const mavlinkConfig = getMavlinkBadgeConfig();
+  const pixhawkConfig = getPixhawkBadgeConfig();
   const gpsConfig = getGpsBadgeConfig();
+  const dronePortConfig = getDronePortBadgeConfig();
 
-  // Short status diagnostic string if Wi-Fi is connected but telemetry or GPS is not ready:
-  // e.g. "Wi-Fi Connected | MAVLink Disconnected | GPS Acquiring"
-  const isWifiConnected = connState.isStarted && connState.wifiStatus === 'VERIFIED';
-  const isMavlinkConnected = Boolean(connState.isStarted && telemetry.isConnected && connState.mavlinkStatus === 'ACTIVE');
-  const isGpsLocked = isGpsActuallyLocked;
-  const showDiagnosticMessage = isWifiConnected && (!isMavlinkConnected || !isGpsLocked);
+  // Short status diagnostic string
+  const isWifiConnected = wifiConfig.dot === 'bg-[#22C55E]';
+  const isMavlinkConnected = mavlinkConfig.dot === 'bg-[#22C55E]';
+  const isPixhawkConnected = pixhawkConfig.dot === 'bg-[#22C55E]';
+  const isGpsLocked = gpsConfig.dot === 'bg-[#22C55E]';
+  const showDiagnosticMessage = isWifiConnected && (!isMavlinkConnected || !isPixhawkConnected || !isGpsLocked);
 
-  const diagnosticWifiText = 'Wi-Fi Connected';
-  const diagnosticMavText = isMavlinkConnected
-    ? 'MAVLink Connected'
-    : (connState.mavlinkStatus === 'CONNECTING' || connState.wifiStatus === 'CONNECTING' || connState.wifiStatus === 'VERIFIED')
-    ? 'MAVLink Connecting'
-    : 'MAVLink Disconnected';
-  const diagnosticGpsText = isGpsActuallyLocked
-    ? 'GPS Fix Valid'
-    : (connState.gpsStatus === 'ACQUIRING' || (telemetry.satellites || connState.satellites) > 0)
-    ? 'GPS Acquiring'
-    : 'GPS Unavailable';
-  const shortDiagnosticString = `${diagnosticWifiText} | ${diagnosticMavText} | ${diagnosticGpsText}`;
+  const shortDiagnosticString = `${wifiConfig.label} | ${pixhawkConfig.label} | ${mavlinkConfig.label} | ${gpsConfig.label}`;
 
   return (
     <header className="h-[68px] w-full px-2 sm:px-4 bg-[var(--uav-header)] border-b border-[var(--uav-card-border)] flex items-center justify-between select-none shrink-0 z-40 shadow-sm gap-1.5 flex-nowrap overflow-x-hidden">
@@ -274,21 +352,10 @@ export const Header: React.FC<HeaderProps> = ({
             <span>🤖</span>
             <span>AUTONOMOUS</span>
           </button>
-          {onOpenPhoneMission && (
-            <button
-              type="button"
-              onClick={onOpenPhoneMission}
-              className="flex items-center gap-1.5 px-3 py-1 rounded-[6px] text-[11px] font-bold font-sans tracking-wide bg-cyan-950/70 border border-cyan-500/40 text-cyan-300 hover:bg-cyan-900/60 transition cursor-pointer shadow-sm ml-1"
-              title="Autonomous Phone-to-Drone Vision & Mission Dashboard"
-            >
-              <span>📱</span>
-              <span>PHONE MISSION</span>
-            </button>
-          )}
         </div>
       </div>
 
-      {/* 2. Center: START Button, Indicators & Short Diagnostic Status */}
+      {/* 2. Center: START Button, Diagnostics & Unified 5-Component Connection Status Monitoring */}
       <div className="hidden xl:flex flex-col items-center justify-center gap-1 shrink-0">
         <div className="flex items-center gap-1.5 sm:gap-2">
           {/* START BUTTON: Operator initiates connection verification workflow */}
@@ -298,8 +365,8 @@ export const Header: React.FC<HeaderProps> = ({
             disabled={connState.isInitializing}
             title={
               connState.isStarted
-                ? 'Re-verify connections (Wi-Fi, MAVLink, Pixhawk GPS)'
-                : 'Start GCS: Initialize and verify Wi-Fi, MAVLink, and Pixhawk GPS connections'
+                ? 'Re-verify connections (Wi-Fi, MAVLink, Pixhawk, GPS, Drone Port)'
+                : 'Start GCS: Initialize and verify Wi-Fi, MAVLink, Pixhawk, GPS, and Drone Port'
             }
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-[8px] text-[11px] font-bold font-sans tracking-wide transition shadow-sm cursor-pointer ${
               connState.isInitializing
@@ -339,61 +406,69 @@ export const Header: React.FC<HeaderProps> = ({
               title="Activate SITL Simulator for complete desktop testing without physical drone hardware"
             >
               <span>⚡</span>
-              <span>BENCH SITL</span>
+              <span>BENCH TEST</span>
             </button>
           )}
 
-          {/* S500 Complete Pixhawk Diagnostic Audit Button */}
+          {/* TL Diagnostics System Button */}
           <button
             type="button"
             onClick={onOpenDiagnostics}
             className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-[8px] border border-amber-500/50 bg-amber-950/40 hover:bg-amber-900/60 text-amber-300 text-[11px] font-mono font-bold transition shadow-sm cursor-pointer"
-            title="Open Complete S500 / Pixhawk 2.4.8 Diagnostic System (12 Subsystem Checks & 13 Core Answers)"
+            title="Open Telemetry Link (TL) & Complete Pixhawk 2.4.8 Diagnostic System"
           >
             <Activity className="w-3.5 h-3.5 text-amber-400" />
-            <span>DIAGNOSTICS</span>
+            <span>TL DIAGNOSTICS</span>
           </button>
 
-          {/* Indicator A: Wi-Fi / Network Status */}
+          {/* UNIFIED MONITORING: Component 1 — Wi-Fi */}
           <div
             className={`flex items-center gap-1 px-2 py-1 rounded-[6px] border text-[10px] font-mono shrink-0 transition-colors ${wifiConfig.bg}`}
-            title={
-              !connState.isStarted
-                ? 'Wi-Fi: Disconnected. Click START to initialize.'
-                : `Network Connectivity: ${connState.wifiStatus}`
-            }
+            title={`Wi-Fi Connection: ${wifiConfig.label}`}
           >
             <Wifi className="w-3.5 h-3.5 shrink-0" />
             <span className={`w-1.5 h-1.5 rounded-full ${wifiConfig.dot} ${wifiConfig.pulse ? 'animate-pulse' : ''}`} />
             <span className="font-semibold">{wifiConfig.label}</span>
           </div>
 
-          {/* Indicator B: MAVLink Connection Status */}
+          {/* UNIFIED MONITORING: Component 2 — MAVLink */}
           <div
             className={`flex items-center gap-1 px-2 py-1 rounded-[6px] border text-[10px] font-mono shrink-0 transition-colors ${mavlinkConfig.bg}`}
-            title={
-              !connState.isStarted
-                ? 'MAVLink: Disconnected. Click START to connect.'
-                : `MAVLink Telemetry Bridge: ${connState.mavlinkStatus}`
-            }
+            title={`MAVLink Stream: ${mavlinkConfig.label}`}
           >
             <Radio className="w-3.5 h-3.5 shrink-0" />
             <span className={`w-1.5 h-1.5 rounded-full ${mavlinkConfig.dot} ${mavlinkConfig.pulse ? 'animate-pulse' : ''}`} />
             <span className="font-semibold">{mavlinkConfig.label}</span>
           </div>
 
-          {/* Indicator C: Pixhawk GPS / Satellites Status */}
+          {/* UNIFIED MONITORING: Component 3 — Pixhawk */}
+          <div
+            className={`flex items-center gap-1 px-2 py-1 rounded-[6px] border text-[10px] font-mono shrink-0 transition-colors ${pixhawkConfig.bg}`}
+            title={`Pixhawk Flight Controller: ${pixhawkConfig.label}`}
+          >
+            <Crosshair className="w-3.5 h-3.5 shrink-0" />
+            <span className={`w-1.5 h-1.5 rounded-full ${pixhawkConfig.dot} ${pixhawkConfig.pulse ? 'animate-pulse' : ''}`} />
+            <span className="font-semibold">{pixhawkConfig.label}</span>
+          </div>
+
+          {/* UNIFIED MONITORING: Component 4 — GPS */}
           <div
             className={`flex items-center gap-1 px-2 py-1 rounded-[6px] border text-[10px] font-mono shrink-0 transition-colors ${gpsConfig.bg}`}
-            title={
-              !connState.isStarted
-                ? 'GPS: GPS Unavailable. Click START to monitor Pixhawk GPS.'
-                : `Pixhawk GPS Fix: ${connState.gpsFixType} (${connState.satellites} Sats, HDOP ${connState.hdop})`
-            }
+            title={`Pixhawk GPS: ${gpsConfig.label}`}
           >
             <Satellite className="w-3.5 h-3.5 shrink-0" />
             <span className={`w-1.5 h-1.5 rounded-full ${gpsConfig.dot} ${gpsConfig.pulse ? 'animate-pulse' : ''}`} />
             <span className="font-semibold">{gpsConfig.label}</span>
+          </div>
+
+          {/* UNIFIED MONITORING: Component 5 — Drone Port */}
+          <div
+            className={`flex items-center gap-1 px-2 py-1 rounded-[6px] border text-[10px] font-mono shrink-0 transition-colors ${dronePortConfig.bg}`}
+            title={`Drone Port & Video Streaming: ${dronePortConfig.label}`}
+          >
+            <span className="text-[10px]">📹</span>
+            <span className={`w-1.5 h-1.5 rounded-full ${dronePortConfig.dot} ${dronePortConfig.pulse ? 'animate-pulse' : ''}`} />
+            <span className="font-semibold">{dronePortConfig.label}</span>
           </div>
         </div>
 
@@ -476,7 +551,7 @@ export const Header: React.FC<HeaderProps> = ({
             {telemetry.batteryVoltage > 0 ? `${telemetry.batteryPercent}%` : '--%'}
           </span>
           <span className="text-[var(--uav-muted)]">
-            {telemetry.batteryVoltage > 0 ? `${telemetry.batteryVoltage.toFixed(1)}V` : 'NO SENSOR'}
+            {telemetry.batteryVoltage > 0 ? `${telemetry.batteryVoltage.toFixed(1)}V` : 'UNAVAILABLE'}
           </span>
         </div>
 
@@ -543,16 +618,6 @@ export const Header: React.FC<HeaderProps> = ({
                 <span>🤖</span>
                 <span>AUTONOMOUS</span>
               </button>
-              {onOpenPhoneMission && (
-                <button
-                  type="button"
-                  onClick={() => { onOpenPhoneMission(); setMobileMenuOpen(false); }}
-                  className="col-span-2 sm:col-span-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs font-bold font-sans bg-cyan-950/80 border border-cyan-500/50 text-cyan-300"
-                >
-                  <span>📱</span>
-                  <span>PHONE CAM</span>
-                </button>
-              )}
             </div>
           </div>
 
@@ -575,7 +640,7 @@ export const Header: React.FC<HeaderProps> = ({
                 className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-cyan-950/60 border border-cyan-500/40 text-cyan-300 text-xs font-bold font-mono transition active:scale-95"
               >
                 <span>⚡</span>
-                <span>BENCH SITL</span>
+                <span>BENCH TEST</span>
               </button>
               <button
                 type="button"
@@ -583,7 +648,7 @@ export const Header: React.FC<HeaderProps> = ({
                 className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-amber-950/60 border border-amber-500/40 text-amber-300 text-xs font-bold font-mono transition active:scale-95"
               >
                 <Activity className="w-3.5 h-3.5 text-amber-400" />
-                <span>DIAGNOSTICS</span>
+                <span>TL DIAGNOSTICS</span>
               </button>
               <button
                 type="button"
@@ -598,21 +663,34 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
           </div>
 
-          {/* C. Link Health Badges */}
+          {/* C. Unified Connection Status Monitoring */}
           <div className="space-y-1.5">
-            <div className="text-[10px] font-mono text-slate-400 uppercase tracking-wider font-bold">Link &amp; Avionics Status:</div>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            <div className="text-[10px] font-mono text-slate-400 uppercase tracking-wider font-bold">Unified Connection Status Monitoring:</div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2">
               <div className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-xs font-mono ${wifiConfig.bg}`}>
                 <Wifi className="w-4 h-4 shrink-0" />
+                <span className={`w-2 h-2 rounded-full ${wifiConfig.dot}`} />
                 <span>{wifiConfig.label}</span>
               </div>
               <div className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-xs font-mono ${mavlinkConfig.bg}`}>
                 <Radio className="w-4 h-4 shrink-0" />
+                <span className={`w-2 h-2 rounded-full ${mavlinkConfig.dot}`} />
                 <span>{mavlinkConfig.label}</span>
+              </div>
+              <div className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-xs font-mono ${pixhawkConfig.bg}`}>
+                <Crosshair className="w-4 h-4 shrink-0" />
+                <span className={`w-2 h-2 rounded-full ${pixhawkConfig.dot}`} />
+                <span>{pixhawkConfig.label}</span>
               </div>
               <div className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-xs font-mono ${gpsConfig.bg}`}>
                 <Satellite className="w-4 h-4 shrink-0" />
+                <span className={`w-2 h-2 rounded-full ${gpsConfig.dot}`} />
                 <span>{gpsConfig.label}</span>
+              </div>
+              <div className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-xs font-mono ${dronePortConfig.bg}`}>
+                <span>📹</span>
+                <span className={`w-2 h-2 rounded-full ${dronePortConfig.dot}`} />
+                <span>{dronePortConfig.label}</span>
               </div>
             </div>
           </div>

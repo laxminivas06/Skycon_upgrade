@@ -505,7 +505,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
       />
 
       {/* Alert Banners (Link Lost / Stale Heartbeat / Connecting) */}
-      {telemetry.isLinkLost && (
+      {telemetry.isLinkLost && telemetry.rawConnectionState.lastHeartbeat > 0 && (
         <div className="w-full bg-red-600/95 border-b border-red-500 text-white px-4 py-1.5 flex items-center justify-between z-30 shrink-0 shadow-lg">
           <div className="flex items-center gap-2 text-[12px] font-bold tracking-wide">
             <AlertTriangle className="w-4 h-4 animate-pulse text-amber-300" />
@@ -709,6 +709,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                   onEmergencyRTL={handleEmergencyRTL}
                   rtlConfirmPending={rtlConfirmPending}
                   activeMissionTime={activeMissionData || undefined}
+                  onOpenPhoneMission={() => setShowPhoneMissionModal(true)}
                 />
               </>
             )}

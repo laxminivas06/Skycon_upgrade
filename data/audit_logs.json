@@ -1,8 +1,8 @@
 {
   "_schema_version": "2.0",
   "_collection": "audit_logs",
-  "_updated_at": "2026-11-21T06:33:33.728079+00:00",
-  "_checksum_sha256": "37cd8b994116860fe4c57f165ef3a843a0110acb42b682afcb8d6c5f1d5ba0d9",
+  "_updated_at": "2026-11-21T14:43:31.364739+00:00",
+  "_checksum_sha256": "3c6601d937c60fbadaabb292afdb0970aaa232d55a422cffed75cfc44b9fdc2f",
   "_data": [
     {
       "timestamp": 1795213548517,
@@ -7600,6 +7600,2678 @@
         "elapsed": 0
       },
       "details": "LANDING -> COMPLETED"
+    },
+    {
+      "timestamp": "2026-11-21T09:08:19.900270+00:00",
+      "event_type": "COORDINATE_PACKAGE_SAVED",
+      "source": "COORDINATE_PACKAGE_MANAGER",
+      "details": {
+        "package_id": "PKG_TEST_01",
+        "version": 1,
+        "created_at_utc": "2026-11-21T09:08:19Z",
+        "source": "LOCAL_VISION",
+        "execution_strategy": "INSPECT_CANDIDATE",
+        "coordinates": [
+          {
+            "lat": 13.0827,
+            "lon": 80.2707,
+            "altitude_m": 10.0,
+            "alt_reference": "AGL",
+            "source_image_id": null,
+            "image_timestamp": null,
+            "vehicle_pose_timestamp": null,
+            "gps_fix_quality": 3,
+            "gps_hdop": 1.0,
+            "ekf_healthy": true,
+            "horizontal_uncertainty_m": 1.0,
+            "vertical_uncertainty_m": 1.0,
+            "camera_calibrated": false,
+            "georef_method": "3D_ATTITUDE_PINHOLE",
+            "confidence_score": 0.85,
+            "consecutive_frames_verified": 3,
+            "quality_state": "APPROXIMATE",
+            "validation_status": "APPROVED",
+            "validation_reasons": [
+              "Altitude 10.0m compliant with envelope [5.0m - 25.0m]",
+              "Autopilot estimator healthy: Fix 3, HDOP 1.00, EKF Nominal",
+              "Multi-frame visual lock confirmed (3 consecutive frames)"
+            ],
+            "rejection_errors": [],
+            "target_label": "TARGET_CANDIDATE",
+            "created_at_utc": "2026-11-21T09:08:19Z"
+          },
+          {
+            "lat": 13.0828,
+            "lon": 80.2708,
+            "altitude_m": 12.0,
+            "alt_reference": "AGL",
+            "source_image_id": null,
+            "image_timestamp": null,
+            "vehicle_pose_timestamp": null,
+            "gps_fix_quality": 3,
+            "gps_hdop": 1.0,
+            "ekf_healthy": true,
+            "horizontal_uncertainty_m": 1.0,
+            "vertical_uncertainty_m": 1.0,
+            "camera_calibrated": false,
+            "georef_method": "3D_ATTITUDE_PINHOLE",
+            "confidence_score": 0.85,
+            "consecutive_frames_verified": 3,
+            "quality_state": "APPROXIMATE",
+            "validation_status": "APPROVED",
+            "validation_reasons": [
+              "Altitude 12.0m compliant with envelope [5.0m - 25.0m]",
+              "Autopilot estimator healthy: Fix 3, HDOP 1.00, EKF Nominal",
+              "Multi-frame visual lock confirmed (3 consecutive frames)"
+            ],
+            "rejection_errors": [],
+            "target_label": "TARGET_CANDIDATE",
+            "created_at_utc": "2026-11-21T09:08:19Z"
+          }
+        ],
+        "checksum_sha256": "17c992be92baa4b6762bbe0a70fdc785038d2b9edd98ed2a562bd5edb57854ef",
+        "is_validated_by_companion": true,
+        "validation_passed": true,
+        "validation_notes": [],
+        "rejection_reasons": []
+      }
+    },
+    {
+      "timestamp": "2026-11-21T09:08:19.954784+00:00",
+      "event_type": "COORDINATE_PACKAGE_SAVED",
+      "source": "COORDINATE_PACKAGE_MANAGER",
+      "details": {
+        "package_id": "PKG_MAV_01",
+        "version": 2,
+        "created_at_utc": "2026-11-21T09:08:19Z",
+        "source": "LOCAL_VISION",
+        "execution_strategy": "INSPECT_CANDIDATE",
+        "coordinates": [
+          {
+            "lat": 13.0827,
+            "lon": 80.2707,
+            "altitude_m": 10.0,
+            "alt_reference": "AGL",
+            "source_image_id": null,
+            "image_timestamp": null,
+            "vehicle_pose_timestamp": null,
+            "gps_fix_quality": 3,
+            "gps_hdop": 1.0,
+            "ekf_healthy": true,
+            "horizontal_uncertainty_m": 1.0,
+            "vertical_uncertainty_m": 1.0,
+            "camera_calibrated": false,
+            "georef_method": "3D_ATTITUDE_PINHOLE",
+            "confidence_score": 0.85,
+            "consecutive_frames_verified": 3,
+            "quality_state": "APPROXIMATE",
+            "validation_status": "APPROVED",
+            "validation_reasons": [
+              "Altitude 10.0m compliant with envelope [5.0m - 25.0m]",
+              "Autopilot estimator healthy: Fix 3, HDOP 1.00, EKF Nominal",
+              "Multi-frame visual lock confirmed (3 consecutive frames)"
+            ],
+            "rejection_errors": [],
+            "target_label": "TARGET_A",
+            "created_at_utc": "2026-11-21T09:08:19Z"
+          }
+        ],
+        "checksum_sha256": "168d69b875bc2090b0519841f7ce15130db676f962b7b5bd397659e005ef9113",
+        "is_validated_by_companion": true,
+        "validation_passed": true,
+        "validation_notes": [],
+        "rejection_reasons": []
+      }
+    },
+    {
+      "timestamp": "2026-11-21T09:10:05.568541+00:00",
+      "event_type": "COORDINATE_PACKAGE_SAVED",
+      "source": "COORDINATE_PACKAGE_MANAGER",
+      "details": {
+        "package_id": "PKG_TEST_01",
+        "version": 1,
+        "created_at_utc": "2026-11-21T09:10:05Z",
+        "source": "LOCAL_VISION",
+        "execution_strategy": "INSPECT_CANDIDATE",
+        "coordinates": [
+          {
+            "lat": 13.0827,
+            "lon": 80.2707,
+            "altitude_m": 10.0,
+            "alt_reference": "AGL",
+            "source_image_id": null,
+            "image_timestamp": null,
+            "vehicle_pose_timestamp": null,
+            "gps_fix_quality": 3,
+            "gps_hdop": 1.0,
+            "ekf_healthy": true,
+            "horizontal_uncertainty_m": 1.0,
+            "vertical_uncertainty_m": 1.0,
+            "camera_calibrated": false,
+            "georef_method": "3D_ATTITUDE_PINHOLE",
+            "confidence_score": 0.85,
+            "consecutive_frames_verified": 3,
+            "quality_state": "APPROXIMATE",
+            "validation_status": "APPROVED",
+            "validation_reasons": [
+              "Altitude 10.0m compliant with envelope [5.0m - 25.0m]",
+              "Autopilot estimator healthy: Fix 3, HDOP 1.00, EKF Nominal",
+              "Multi-frame visual lock confirmed (3 consecutive frames)"
+            ],
+            "rejection_errors": [],
+            "target_label": "TARGET_CANDIDATE",
+            "created_at_utc": "2026-11-21T09:10:05Z"
+          },
+          {
+            "lat": 13.0828,
+            "lon": 80.2708,
+            "altitude_m": 12.0,
+            "alt_reference": "AGL",
+            "source_image_id": null,
+            "image_timestamp": null,
+            "vehicle_pose_timestamp": null,
+            "gps_fix_quality": 3,
+            "gps_hdop": 1.0,
+            "ekf_healthy": true,
+            "horizontal_uncertainty_m": 1.0,
+            "vertical_uncertainty_m": 1.0,
+            "camera_calibrated": false,
+            "georef_method": "3D_ATTITUDE_PINHOLE",
+            "confidence_score": 0.85,
+            "consecutive_frames_verified": 3,
+            "quality_state": "APPROXIMATE",
+            "validation_status": "APPROVED",
+            "validation_reasons": [
+              "Altitude 12.0m compliant with envelope [5.0m - 25.0m]",
+              "Autopilot estimator healthy: Fix 3, HDOP 1.00, EKF Nominal",
+              "Multi-frame visual lock confirmed (3 consecutive frames)"
+            ],
+            "rejection_errors": [],
+            "target_label": "TARGET_CANDIDATE",
+            "created_at_utc": "2026-11-21T09:10:05Z"
+          }
+        ],
+        "checksum_sha256": "ac8e5450c1ab3993ce79c4447dc1f5b219ed10c18b699b7e1645be7c78b43725",
+        "is_validated_by_companion": true,
+        "validation_passed": true,
+        "validation_notes": [],
+        "rejection_reasons": []
+      }
+    },
+    {
+      "timestamp": "2026-11-21T09:10:05.626068+00:00",
+      "event_type": "COORDINATE_PACKAGE_SAVED",
+      "source": "COORDINATE_PACKAGE_MANAGER",
+      "details": {
+        "package_id": "PKG_MAV_01",
+        "version": 2,
+        "created_at_utc": "2026-11-21T09:10:05Z",
+        "source": "LOCAL_VISION",
+        "execution_strategy": "INSPECT_CANDIDATE",
+        "coordinates": [
+          {
+            "lat": 13.0827,
+            "lon": 80.2707,
+            "altitude_m": 10.0,
+            "alt_reference": "AGL",
+            "source_image_id": null,
+            "image_timestamp": null,
+            "vehicle_pose_timestamp": null,
+            "gps_fix_quality": 3,
+            "gps_hdop": 1.0,
+            "ekf_healthy": true,
+            "horizontal_uncertainty_m": 1.0,
+            "vertical_uncertainty_m": 1.0,
+            "camera_calibrated": false,
+            "georef_method": "3D_ATTITUDE_PINHOLE",
+            "confidence_score": 0.85,
+            "consecutive_frames_verified": 3,
+            "quality_state": "APPROXIMATE",
+            "validation_status": "APPROVED",
+            "validation_reasons": [
+              "Altitude 10.0m compliant with envelope [5.0m - 25.0m]",
+              "Autopilot estimator healthy: Fix 3, HDOP 1.00, EKF Nominal",
+              "Multi-frame visual lock confirmed (3 consecutive frames)"
+            ],
+            "rejection_errors": [],
+            "target_label": "TARGET_A",
+            "created_at_utc": "2026-11-21T09:10:05Z"
+          }
+        ],
+        "checksum_sha256": "a40f1225a3bf30c515a8c8c883039f5416590eaeb638a2d79fc7bf62b48fc165",
+        "is_validated_by_companion": true,
+        "validation_passed": true,
+        "validation_notes": [],
+        "rejection_reasons": []
+      }
+    },
+    {
+      "timestamp": "2026-11-21T09:10:06.104026+00:00",
+      "event_type": "AUTH_FAILED",
+      "source": "AUTH",
+      "details": {
+        "username": "admin"
+      }
+    },
+    {
+      "timestamp": "2026-11-21T09:10:06.234455+00:00",
+      "event_type": "AUTH_SUCCESS",
+      "source": "AUTH",
+      "details": {
+        "username": "admin",
+        "role": "OPERATOR"
+      }
+    },
+    {
+      "timestamp": "2026-11-21T09:10:07.339133+00:00",
+      "event_type": "MOTOR_ARMED",
+      "source": "OPERATOR",
+      "details": {
+        "bench_mode": true
+      }
+    },
+    {
+      "timestamp": "2026-11-21T09:10:07.385690+00:00",
+      "event_type": "TAKEOFF_COMMANDED",
+      "source": "OPERATOR",
+      "details": {
+        "target_altitude_m": 10.0,
+        "result": {
+          "status": "STATE_CONFIRMED",
+          "target_altitude_m": 10.0,
+          "confirmed": true,
+          "message": "Autonomous TAKEOFF initiated to 10.0m (Simulation)"
+        }
+      }
+    },
+    {
+      "timestamp": "2026-11-21T09:10:07.420015+00:00",
+      "event_type": "FLIGHT_MODE_SWITCH",
+      "source": "OPERATOR",
+      "details": {
+        "mode": "GUIDED",
+        "success": true,
+        "detail": {
+          "status": "STATE_CONFIRMED",
+          "flight_mode": "GUIDED",
+          "custom_mode": 4,
+          "confirmed": true,
+          "message": "Flight mode set to GUIDED"
+        }
+      }
+    },
+    {
+      "timestamp": "2026-11-21T09:10:07.468327+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Emergency RTL triggered: TEST_FAILSAFE",
+        "elapsed": 0
+      },
+      "details": "IDLE -> FAILSAFE"
+    },
+    {
+      "timestamp": "2026-11-21T09:10:07.513372+00:00",
+      "event_type": "EMERGENCY_RTL_TRIGGERED",
+      "source": "SAFETY",
+      "details": {
+        "reason": "TEST_FAILSAFE",
+        "detail": {
+          "status": "STATE_CONFIRMED",
+          "flight_mode": "RTL",
+          "custom_mode": 6,
+          "confirmed": true,
+          "message": "Flight mode set to RTL"
+        }
+      }
+    },
+    {
+      "timestamp": "2026-11-21T09:10:38.906689+00:00",
+      "event_type": "COORDINATE_PACKAGE_SAVED",
+      "source": "COORDINATE_PACKAGE_MANAGER",
+      "details": {
+        "package_id": "PKG_TEST_01",
+        "version": 1,
+        "created_at_utc": "2026-11-21T09:10:38Z",
+        "source": "LOCAL_VISION",
+        "execution_strategy": "INSPECT_CANDIDATE",
+        "coordinates": [
+          {
+            "lat": 13.0827,
+            "lon": 80.2707,
+            "altitude_m": 10.0,
+            "alt_reference": "AGL",
+            "source_image_id": null,
+            "image_timestamp": null,
+            "vehicle_pose_timestamp": null,
+            "gps_fix_quality": 3,
+            "gps_hdop": 1.0,
+            "ekf_healthy": true,
+            "horizontal_uncertainty_m": 1.0,
+            "vertical_uncertainty_m": 1.0,
+            "camera_calibrated": false,
+            "georef_method": "3D_ATTITUDE_PINHOLE",
+            "confidence_score": 0.85,
+            "consecutive_frames_verified": 3,
+            "quality_state": "APPROXIMATE",
+            "validation_status": "APPROVED",
+            "validation_reasons": [
+              "Altitude 10.0m compliant with envelope [5.0m - 25.0m]",
+              "Autopilot estimator healthy: Fix 3, HDOP 1.00, EKF Nominal",
+              "Multi-frame visual lock confirmed (3 consecutive frames)"
+            ],
+            "rejection_errors": [],
+            "target_label": "TARGET_CANDIDATE",
+            "created_at_utc": "2026-11-21T09:10:38Z"
+          },
+          {
+            "lat": 13.0828,
+            "lon": 80.2708,
+            "altitude_m": 12.0,
+            "alt_reference": "AGL",
+            "source_image_id": null,
+            "image_timestamp": null,
+            "vehicle_pose_timestamp": null,
+            "gps_fix_quality": 3,
+            "gps_hdop": 1.0,
+            "ekf_healthy": true,
+            "horizontal_uncertainty_m": 1.0,
+            "vertical_uncertainty_m": 1.0,
+            "camera_calibrated": false,
+            "georef_method": "3D_ATTITUDE_PINHOLE",
+            "confidence_score": 0.85,
+            "consecutive_frames_verified": 3,
+            "quality_state": "APPROXIMATE",
+            "validation_status": "APPROVED",
+            "validation_reasons": [
+              "Altitude 12.0m compliant with envelope [5.0m - 25.0m]",
+              "Autopilot estimator healthy: Fix 3, HDOP 1.00, EKF Nominal",
+              "Multi-frame visual lock confirmed (3 consecutive frames)"
+            ],
+            "rejection_errors": [],
+            "target_label": "TARGET_CANDIDATE",
+            "created_at_utc": "2026-11-21T09:10:38Z"
+          }
+        ],
+        "checksum_sha256": "c23b37ae7615bb9134ed622599e7b8e4028a45187078c290d65560c79d53edcb",
+        "is_validated_by_companion": true,
+        "validation_passed": true,
+        "validation_notes": [],
+        "rejection_reasons": []
+      }
+    },
+    {
+      "timestamp": "2026-11-21T09:10:38.972744+00:00",
+      "event_type": "COORDINATE_PACKAGE_SAVED",
+      "source": "COORDINATE_PACKAGE_MANAGER",
+      "details": {
+        "package_id": "PKG_MAV_01",
+        "version": 2,
+        "created_at_utc": "2026-11-21T09:10:38Z",
+        "source": "LOCAL_VISION",
+        "execution_strategy": "INSPECT_CANDIDATE",
+        "coordinates": [
+          {
+            "lat": 13.0827,
+            "lon": 80.2707,
+            "altitude_m": 10.0,
+            "alt_reference": "AGL",
+            "source_image_id": null,
+            "image_timestamp": null,
+            "vehicle_pose_timestamp": null,
+            "gps_fix_quality": 3,
+            "gps_hdop": 1.0,
+            "ekf_healthy": true,
+            "horizontal_uncertainty_m": 1.0,
+            "vertical_uncertainty_m": 1.0,
+            "camera_calibrated": false,
+            "georef_method": "3D_ATTITUDE_PINHOLE",
+            "confidence_score": 0.85,
+            "consecutive_frames_verified": 3,
+            "quality_state": "APPROXIMATE",
+            "validation_status": "APPROVED",
+            "validation_reasons": [
+              "Altitude 10.0m compliant with envelope [5.0m - 25.0m]",
+              "Autopilot estimator healthy: Fix 3, HDOP 1.00, EKF Nominal",
+              "Multi-frame visual lock confirmed (3 consecutive frames)"
+            ],
+            "rejection_errors": [],
+            "target_label": "TARGET_A",
+            "created_at_utc": "2026-11-21T09:10:38Z"
+          }
+        ],
+        "checksum_sha256": "36d5393cd2a47c270d8b8b2d715677a6122a40b127d6776d69c8de6c13e10562",
+        "is_validated_by_companion": true,
+        "validation_passed": true,
+        "validation_notes": [],
+        "rejection_reasons": []
+      }
+    },
+    {
+      "timestamp": "2026-11-21T09:10:39.460218+00:00",
+      "event_type": "AUTH_FAILED",
+      "source": "AUTH",
+      "details": {
+        "username": "admin"
+      }
+    },
+    {
+      "timestamp": "2026-11-21T09:10:39.585591+00:00",
+      "event_type": "AUTH_SUCCESS",
+      "source": "AUTH",
+      "details": {
+        "username": "admin",
+        "role": "OPERATOR"
+      }
+    },
+    {
+      "timestamp": "2026-11-21T09:10:40.532450+00:00",
+      "event_type": "MOTOR_ARMED",
+      "source": "OPERATOR",
+      "details": {
+        "bench_mode": true
+      }
+    },
+    {
+      "timestamp": "2026-11-21T09:10:40.601883+00:00",
+      "event_type": "MOTOR_ARMED",
+      "source": "OPERATOR",
+      "details": {
+        "bench_mode": true
+      }
+    },
+    {
+      "timestamp": "2026-11-21T09:10:40.660757+00:00",
+      "event_type": "TAKEOFF_COMMANDED",
+      "source": "OPERATOR",
+      "details": {
+        "target_altitude_m": 10.0,
+        "result": {
+          "status": "STATE_CONFIRMED",
+          "target_altitude_m": 10.0,
+          "confirmed": true,
+          "message": "Autonomous TAKEOFF initiated to 10.0m (Simulation)"
+        }
+      }
+    },
+    {
+      "timestamp": "2026-11-21T09:10:40.709986+00:00",
+      "event_type": "FLIGHT_MODE_SWITCH",
+      "source": "OPERATOR",
+      "details": {
+        "mode": "GUIDED",
+        "success": true,
+        "detail": {
+          "status": "STATE_CONFIRMED",
+          "flight_mode": "GUIDED",
+          "custom_mode": 4,
+          "confirmed": true,
+          "message": "Flight mode set to GUIDED"
+        }
+      }
+    },
+    {
+      "timestamp": "2026-11-21T09:10:40.764458+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Emergency RTL triggered: TEST_FAILSAFE",
+        "elapsed": 0
+      },
+      "details": "IDLE -> FAILSAFE"
+    },
+    {
+      "timestamp": "2026-11-21T09:10:40.805611+00:00",
+      "event_type": "EMERGENCY_RTL_TRIGGERED",
+      "source": "SAFETY",
+      "details": {
+        "reason": "TEST_FAILSAFE",
+        "detail": {
+          "status": "STATE_CONFIRMED",
+          "flight_mode": "RTL",
+          "custom_mode": 6,
+          "confirmed": true,
+          "message": "Flight mode set to RTL"
+        }
+      }
+    },
+    {
+      "timestamp": "2026-11-21T09:34:52.063894+00:00",
+      "event_type": "COORDINATE_PACKAGE_SAVED",
+      "source": "COORDINATE_PACKAGE_MANAGER",
+      "details": {
+        "package_id": "PKG_TEST_01",
+        "version": 1,
+        "created_at_utc": "2026-11-21T09:34:52Z",
+        "source": "LOCAL_VISION",
+        "execution_strategy": "INSPECT_CANDIDATE",
+        "coordinates": [
+          {
+            "lat": 13.0827,
+            "lon": 80.2707,
+            "altitude_m": 10.0,
+            "alt_reference": "AGL",
+            "source_image_id": null,
+            "image_timestamp": null,
+            "vehicle_pose_timestamp": null,
+            "gps_fix_quality": 3,
+            "gps_hdop": 1.0,
+            "ekf_healthy": true,
+            "horizontal_uncertainty_m": 1.0,
+            "vertical_uncertainty_m": 1.0,
+            "camera_calibrated": false,
+            "georef_method": "3D_ATTITUDE_PINHOLE",
+            "confidence_score": 0.85,
+            "consecutive_frames_verified": 3,
+            "quality_state": "APPROXIMATE",
+            "validation_status": "APPROVED",
+            "validation_reasons": [
+              "Altitude 10.0m compliant with envelope [5.0m - 25.0m]",
+              "Autopilot estimator healthy: Fix 3, HDOP 1.00, EKF Nominal",
+              "Multi-frame visual lock confirmed (3 consecutive frames)"
+            ],
+            "rejection_errors": [],
+            "target_label": "TARGET_CANDIDATE",
+            "created_at_utc": "2026-11-21T09:34:52Z"
+          },
+          {
+            "lat": 13.0828,
+            "lon": 80.2708,
+            "altitude_m": 12.0,
+            "alt_reference": "AGL",
+            "source_image_id": null,
+            "image_timestamp": null,
+            "vehicle_pose_timestamp": null,
+            "gps_fix_quality": 3,
+            "gps_hdop": 1.0,
+            "ekf_healthy": true,
+            "horizontal_uncertainty_m": 1.0,
+            "vertical_uncertainty_m": 1.0,
+            "camera_calibrated": false,
+            "georef_method": "3D_ATTITUDE_PINHOLE",
+            "confidence_score": 0.85,
+            "consecutive_frames_verified": 3,
+            "quality_state": "APPROXIMATE",
+            "validation_status": "APPROVED",
+            "validation_reasons": [
+              "Altitude 12.0m compliant with envelope [5.0m - 25.0m]",
+              "Autopilot estimator healthy: Fix 3, HDOP 1.00, EKF Nominal",
+              "Multi-frame visual lock confirmed (3 consecutive frames)"
+            ],
+            "rejection_errors": [],
+            "target_label": "TARGET_CANDIDATE",
+            "created_at_utc": "2026-11-21T09:34:52Z"
+          }
+        ],
+        "checksum_sha256": "c6c3673282b2dcb3a123a49520d135753a4e57532aed6b12517e1d74b1ba47d3",
+        "is_validated_by_companion": true,
+        "validation_passed": true,
+        "validation_notes": [],
+        "rejection_reasons": []
+      }
+    },
+    {
+      "timestamp": "2026-11-21T09:34:52.106240+00:00",
+      "event_type": "COORDINATE_PACKAGE_SAVED",
+      "source": "COORDINATE_PACKAGE_MANAGER",
+      "details": {
+        "package_id": "PKG_MAV_01",
+        "version": 2,
+        "created_at_utc": "2026-11-21T09:34:52Z",
+        "source": "LOCAL_VISION",
+        "execution_strategy": "INSPECT_CANDIDATE",
+        "coordinates": [
+          {
+            "lat": 13.0827,
+            "lon": 80.2707,
+            "altitude_m": 10.0,
+            "alt_reference": "AGL",
+            "source_image_id": null,
+            "image_timestamp": null,
+            "vehicle_pose_timestamp": null,
+            "gps_fix_quality": 3,
+            "gps_hdop": 1.0,
+            "ekf_healthy": true,
+            "horizontal_uncertainty_m": 1.0,
+            "vertical_uncertainty_m": 1.0,
+            "camera_calibrated": false,
+            "georef_method": "3D_ATTITUDE_PINHOLE",
+            "confidence_score": 0.85,
+            "consecutive_frames_verified": 3,
+            "quality_state": "APPROXIMATE",
+            "validation_status": "APPROVED",
+            "validation_reasons": [
+              "Altitude 10.0m compliant with envelope [5.0m - 25.0m]",
+              "Autopilot estimator healthy: Fix 3, HDOP 1.00, EKF Nominal",
+              "Multi-frame visual lock confirmed (3 consecutive frames)"
+            ],
+            "rejection_errors": [],
+            "target_label": "TARGET_A",
+            "created_at_utc": "2026-11-21T09:34:52Z"
+          }
+        ],
+        "checksum_sha256": "a4d410fe2759970d620f32c34b9cb44472945ad9ee8b46363580036a081ce68d",
+        "is_validated_by_companion": true,
+        "validation_passed": true,
+        "validation_notes": [],
+        "rejection_reasons": []
+      }
+    },
+    {
+      "timestamp": "2026-11-21T09:34:52.226367+00:00",
+      "event_type": "MOTOR_ARMED",
+      "source": "OPERATOR",
+      "details": {
+        "bench_mode": true
+      }
+    },
+    {
+      "timestamp": "2026-11-21T09:34:52.258579+00:00",
+      "event_type": "TAKEOFF_COMMANDED",
+      "source": "OPERATOR",
+      "details": {
+        "target_altitude_m": 10.0,
+        "result": {
+          "status": "STATE_CONFIRMED",
+          "target_altitude_m": 10.0,
+          "confirmed": true,
+          "message": "Autonomous TAKEOFF initiated to 10.0m (Simulation)"
+        }
+      }
+    },
+    {
+      "timestamp": "2026-11-21T09:34:52.288475+00:00",
+      "event_type": "FLIGHT_MODE_SWITCH",
+      "source": "OPERATOR",
+      "details": {
+        "mode": "GUIDED",
+        "success": true,
+        "detail": {
+          "status": "STATE_CONFIRMED",
+          "flight_mode": "GUIDED",
+          "custom_mode": 4,
+          "confirmed": true,
+          "message": "Flight mode set to GUIDED"
+        }
+      }
+    },
+    {
+      "timestamp": "2026-11-21T09:34:52.322099+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Emergency RTL triggered: TEST_FAILSAFE",
+        "elapsed": 0
+      },
+      "details": "IDLE -> FAILSAFE"
+    },
+    {
+      "timestamp": "2026-11-21T09:34:52.351302+00:00",
+      "event_type": "EMERGENCY_RTL_TRIGGERED",
+      "source": "SAFETY",
+      "details": {
+        "reason": "TEST_FAILSAFE",
+        "detail": {
+          "status": "STATE_CONFIRMED",
+          "flight_mode": "RTL",
+          "custom_mode": 6,
+          "confirmed": true,
+          "message": "Flight mode set to RTL"
+        }
+      }
+    },
+    {
+      "timestamp": "2026-11-21T09:44:31.866167+00:00",
+      "event_type": "COORDINATE_PACKAGE_SAVED",
+      "source": "COORDINATE_PACKAGE_MANAGER",
+      "details": {
+        "package_id": "PKG_TEST_01",
+        "version": 1,
+        "created_at_utc": "2026-11-21T09:44:31Z",
+        "source": "LOCAL_VISION",
+        "execution_strategy": "INSPECT_CANDIDATE",
+        "coordinates": [
+          {
+            "lat": 13.0827,
+            "lon": 80.2707,
+            "altitude_m": 10.0,
+            "alt_reference": "AGL",
+            "source_image_id": null,
+            "image_timestamp": null,
+            "vehicle_pose_timestamp": null,
+            "gps_fix_quality": 3,
+            "gps_hdop": 1.0,
+            "ekf_healthy": true,
+            "horizontal_uncertainty_m": 1.0,
+            "vertical_uncertainty_m": 1.0,
+            "camera_calibrated": false,
+            "georef_method": "3D_ATTITUDE_PINHOLE",
+            "confidence_score": 0.85,
+            "consecutive_frames_verified": 3,
+            "quality_state": "APPROXIMATE",
+            "validation_status": "APPROVED",
+            "validation_reasons": [
+              "Altitude 10.0m compliant with envelope [5.0m - 25.0m]",
+              "Autopilot estimator healthy: Fix 3, HDOP 1.00, EKF Nominal",
+              "Multi-frame visual lock confirmed (3 consecutive frames)"
+            ],
+            "rejection_errors": [],
+            "target_label": "TARGET_CANDIDATE",
+            "created_at_utc": "2026-11-21T09:44:31Z"
+          },
+          {
+            "lat": 13.0828,
+            "lon": 80.2708,
+            "altitude_m": 12.0,
+            "alt_reference": "AGL",
+            "source_image_id": null,
+            "image_timestamp": null,
+            "vehicle_pose_timestamp": null,
+            "gps_fix_quality": 3,
+            "gps_hdop": 1.0,
+            "ekf_healthy": true,
+            "horizontal_uncertainty_m": 1.0,
+            "vertical_uncertainty_m": 1.0,
+            "camera_calibrated": false,
+            "georef_method": "3D_ATTITUDE_PINHOLE",
+            "confidence_score": 0.85,
+            "consecutive_frames_verified": 3,
+            "quality_state": "APPROXIMATE",
+            "validation_status": "APPROVED",
+            "validation_reasons": [
+              "Altitude 12.0m compliant with envelope [5.0m - 25.0m]",
+              "Autopilot estimator healthy: Fix 3, HDOP 1.00, EKF Nominal",
+              "Multi-frame visual lock confirmed (3 consecutive frames)"
+            ],
+            "rejection_errors": [],
+            "target_label": "TARGET_CANDIDATE",
+            "created_at_utc": "2026-11-21T09:44:31Z"
+          }
+        ],
+        "checksum_sha256": "a48b8438d52d50a8a454ac861281aa314c23bc4428065059f08490fba3f015ac",
+        "is_validated_by_companion": true,
+        "validation_passed": true,
+        "validation_notes": [],
+        "rejection_reasons": []
+      }
+    },
+    {
+      "timestamp": "2026-11-21T09:44:31.913136+00:00",
+      "event_type": "COORDINATE_PACKAGE_SAVED",
+      "source": "COORDINATE_PACKAGE_MANAGER",
+      "details": {
+        "package_id": "PKG_MAV_01",
+        "version": 2,
+        "created_at_utc": "2026-11-21T09:44:31Z",
+        "source": "LOCAL_VISION",
+        "execution_strategy": "INSPECT_CANDIDATE",
+        "coordinates": [
+          {
+            "lat": 13.0827,
+            "lon": 80.2707,
+            "altitude_m": 10.0,
+            "alt_reference": "AGL",
+            "source_image_id": null,
+            "image_timestamp": null,
+            "vehicle_pose_timestamp": null,
+            "gps_fix_quality": 3,
+            "gps_hdop": 1.0,
+            "ekf_healthy": true,
+            "horizontal_uncertainty_m": 1.0,
+            "vertical_uncertainty_m": 1.0,
+            "camera_calibrated": false,
+            "georef_method": "3D_ATTITUDE_PINHOLE",
+            "confidence_score": 0.85,
+            "consecutive_frames_verified": 3,
+            "quality_state": "APPROXIMATE",
+            "validation_status": "APPROVED",
+            "validation_reasons": [
+              "Altitude 10.0m compliant with envelope [5.0m - 25.0m]",
+              "Autopilot estimator healthy: Fix 3, HDOP 1.00, EKF Nominal",
+              "Multi-frame visual lock confirmed (3 consecutive frames)"
+            ],
+            "rejection_errors": [],
+            "target_label": "TARGET_A",
+            "created_at_utc": "2026-11-21T09:44:31Z"
+          }
+        ],
+        "checksum_sha256": "f67d79217f9b1a9d622b4a8cbc0b2b8241bd5e12be3684614d7de1574d403189",
+        "is_validated_by_companion": true,
+        "validation_passed": true,
+        "validation_notes": [],
+        "rejection_reasons": []
+      }
+    },
+    {
+      "timestamp": "2026-11-21T09:44:32.030845+00:00",
+      "event_type": "MOTOR_ARMED",
+      "source": "OPERATOR",
+      "details": {
+        "bench_mode": true
+      }
+    },
+    {
+      "timestamp": "2026-11-21T09:44:32.063772+00:00",
+      "event_type": "TAKEOFF_COMMANDED",
+      "source": "OPERATOR",
+      "details": {
+        "target_altitude_m": 10.0,
+        "result": {
+          "status": "STATE_CONFIRMED",
+          "target_altitude_m": 10.0,
+          "confirmed": true,
+          "message": "Autonomous TAKEOFF initiated to 10.0m (Simulation)"
+        }
+      }
+    },
+    {
+      "timestamp": "2026-11-21T09:44:32.094705+00:00",
+      "event_type": "FLIGHT_MODE_SWITCH",
+      "source": "OPERATOR",
+      "details": {
+        "mode": "GUIDED",
+        "success": true,
+        "detail": {
+          "status": "STATE_CONFIRMED",
+          "flight_mode": "GUIDED",
+          "custom_mode": 4,
+          "confirmed": true,
+          "message": "Flight mode set to GUIDED"
+        }
+      }
+    },
+    {
+      "timestamp": "2026-11-21T09:44:32.125170+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Emergency RTL triggered: TEST_FAILSAFE",
+        "elapsed": 0
+      },
+      "details": "IDLE -> FAILSAFE"
+    },
+    {
+      "timestamp": "2026-11-21T09:44:32.156188+00:00",
+      "event_type": "EMERGENCY_RTL_TRIGGERED",
+      "source": "SAFETY",
+      "details": {
+        "reason": "TEST_FAILSAFE",
+        "detail": {
+          "status": "STATE_CONFIRMED",
+          "flight_mode": "RTL",
+          "custom_mode": 6,
+          "confirmed": true,
+          "message": "Flight mode set to RTL"
+        }
+      }
+    },
+    {
+      "timestamp": "2026-11-21T09:56:47.155284+00:00",
+      "event_type": "COORDINATE_PACKAGE_SAVED",
+      "source": "COORDINATE_PACKAGE_MANAGER",
+      "details": {
+        "package_id": "PKG_TEST_01",
+        "version": 1,
+        "created_at_utc": "2026-11-21T09:56:47Z",
+        "source": "LOCAL_VISION",
+        "execution_strategy": "INSPECT_CANDIDATE",
+        "coordinates": [
+          {
+            "lat": 13.0827,
+            "lon": 80.2707,
+            "altitude_m": 10.0,
+            "alt_reference": "AGL",
+            "source_image_id": null,
+            "image_timestamp": null,
+            "vehicle_pose_timestamp": null,
+            "gps_fix_quality": 3,
+            "gps_hdop": 1.0,
+            "ekf_healthy": true,
+            "horizontal_uncertainty_m": 1.0,
+            "vertical_uncertainty_m": 1.0,
+            "camera_calibrated": false,
+            "georef_method": "3D_ATTITUDE_PINHOLE",
+            "confidence_score": 0.85,
+            "consecutive_frames_verified": 3,
+            "quality_state": "APPROXIMATE",
+            "validation_status": "APPROVED",
+            "validation_reasons": [
+              "Altitude 10.0m compliant with envelope [5.0m - 25.0m]",
+              "Autopilot estimator healthy: Fix 3, HDOP 1.00, EKF Nominal",
+              "Multi-frame visual lock confirmed (3 consecutive frames)"
+            ],
+            "rejection_errors": [],
+            "target_label": "TARGET_CANDIDATE",
+            "created_at_utc": "2026-11-21T09:56:47Z"
+          },
+          {
+            "lat": 13.0828,
+            "lon": 80.2708,
+            "altitude_m": 12.0,
+            "alt_reference": "AGL",
+            "source_image_id": null,
+            "image_timestamp": null,
+            "vehicle_pose_timestamp": null,
+            "gps_fix_quality": 3,
+            "gps_hdop": 1.0,
+            "ekf_healthy": true,
+            "horizontal_uncertainty_m": 1.0,
+            "vertical_uncertainty_m": 1.0,
+            "camera_calibrated": false,
+            "georef_method": "3D_ATTITUDE_PINHOLE",
+            "confidence_score": 0.85,
+            "consecutive_frames_verified": 3,
+            "quality_state": "APPROXIMATE",
+            "validation_status": "APPROVED",
+            "validation_reasons": [
+              "Altitude 12.0m compliant with envelope [5.0m - 25.0m]",
+              "Autopilot estimator healthy: Fix 3, HDOP 1.00, EKF Nominal",
+              "Multi-frame visual lock confirmed (3 consecutive frames)"
+            ],
+            "rejection_errors": [],
+            "target_label": "TARGET_CANDIDATE",
+            "created_at_utc": "2026-11-21T09:56:47Z"
+          }
+        ],
+        "checksum_sha256": "e730ab5b4c446872e1b6a6c058289d147508852f6076fb655c0044ef2d246dc1",
+        "is_validated_by_companion": true,
+        "validation_passed": true,
+        "validation_notes": [],
+        "rejection_reasons": []
+      }
+    },
+    {
+      "timestamp": "2026-11-21T09:56:47.200796+00:00",
+      "event_type": "COORDINATE_PACKAGE_SAVED",
+      "source": "COORDINATE_PACKAGE_MANAGER",
+      "details": {
+        "package_id": "PKG_MAV_01",
+        "version": 2,
+        "created_at_utc": "2026-11-21T09:56:47Z",
+        "source": "LOCAL_VISION",
+        "execution_strategy": "INSPECT_CANDIDATE",
+        "coordinates": [
+          {
+            "lat": 13.0827,
+            "lon": 80.2707,
+            "altitude_m": 10.0,
+            "alt_reference": "AGL",
+            "source_image_id": null,
+            "image_timestamp": null,
+            "vehicle_pose_timestamp": null,
+            "gps_fix_quality": 3,
+            "gps_hdop": 1.0,
+            "ekf_healthy": true,
+            "horizontal_uncertainty_m": 1.0,
+            "vertical_uncertainty_m": 1.0,
+            "camera_calibrated": false,
+            "georef_method": "3D_ATTITUDE_PINHOLE",
+            "confidence_score": 0.85,
+            "consecutive_frames_verified": 3,
+            "quality_state": "APPROXIMATE",
+            "validation_status": "APPROVED",
+            "validation_reasons": [
+              "Altitude 10.0m compliant with envelope [5.0m - 25.0m]",
+              "Autopilot estimator healthy: Fix 3, HDOP 1.00, EKF Nominal",
+              "Multi-frame visual lock confirmed (3 consecutive frames)"
+            ],
+            "rejection_errors": [],
+            "target_label": "TARGET_A",
+            "created_at_utc": "2026-11-21T09:56:47Z"
+          }
+        ],
+        "checksum_sha256": "78113837c8cfe23aafedefb4502ad7c7e7bcd7aebb249b4d1a09701b6d4bf7d1",
+        "is_validated_by_companion": true,
+        "validation_passed": true,
+        "validation_notes": [],
+        "rejection_reasons": []
+      }
+    },
+    {
+      "timestamp": "2026-11-21T09:56:47.320168+00:00",
+      "event_type": "MOTOR_ARMED",
+      "source": "OPERATOR",
+      "details": {
+        "bench_mode": true
+      }
+    },
+    {
+      "timestamp": "2026-11-21T09:56:47.361201+00:00",
+      "event_type": "TAKEOFF_COMMANDED",
+      "source": "OPERATOR",
+      "details": {
+        "target_altitude_m": 10.0,
+        "result": {
+          "status": "STATE_CONFIRMED",
+          "target_altitude_m": 10.0,
+          "confirmed": true,
+          "message": "Autonomous TAKEOFF initiated to 10.0m (Simulation)"
+        }
+      }
+    },
+    {
+      "timestamp": "2026-11-21T09:56:47.439665+00:00",
+      "event_type": "FLIGHT_MODE_SWITCH",
+      "source": "OPERATOR",
+      "details": {
+        "mode": "GUIDED",
+        "success": true,
+        "detail": {
+          "status": "STATE_CONFIRMED",
+          "flight_mode": "GUIDED",
+          "custom_mode": 4,
+          "confirmed": true,
+          "message": "Flight mode set to GUIDED"
+        }
+      }
+    },
+    {
+      "timestamp": "2026-11-21T09:56:47.505742+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Emergency RTL triggered: TEST_FAILSAFE",
+        "elapsed": 0
+      },
+      "details": "IDLE -> FAILSAFE"
+    },
+    {
+      "timestamp": "2026-11-21T09:56:47.555303+00:00",
+      "event_type": "EMERGENCY_RTL_TRIGGERED",
+      "source": "SAFETY",
+      "details": {
+        "reason": "TEST_FAILSAFE",
+        "detail": {
+          "status": "STATE_CONFIRMED",
+          "flight_mode": "RTL",
+          "custom_mode": 6,
+          "confirmed": true,
+          "message": "Flight mode set to RTL"
+        }
+      }
+    },
+    {
+      "timestamp": "2026-11-21T10:06:56.851197+00:00",
+      "event_type": "COORDINATE_PACKAGE_SAVED",
+      "source": "COORDINATE_PACKAGE_MANAGER",
+      "details": {
+        "package_id": "PKG_TEST_01",
+        "version": 1,
+        "created_at_utc": "2026-11-21T10:06:56Z",
+        "source": "LOCAL_VISION",
+        "execution_strategy": "INSPECT_CANDIDATE",
+        "coordinates": [
+          {
+            "lat": 13.0827,
+            "lon": 80.2707,
+            "altitude_m": 10.0,
+            "alt_reference": "AGL",
+            "source_image_id": null,
+            "image_timestamp": null,
+            "vehicle_pose_timestamp": null,
+            "gps_fix_quality": 3,
+            "gps_hdop": 1.0,
+            "ekf_healthy": true,
+            "horizontal_uncertainty_m": 1.0,
+            "vertical_uncertainty_m": 1.0,
+            "camera_calibrated": false,
+            "georef_method": "3D_ATTITUDE_PINHOLE",
+            "confidence_score": 0.85,
+            "consecutive_frames_verified": 3,
+            "quality_state": "APPROXIMATE",
+            "validation_status": "APPROVED",
+            "validation_reasons": [
+              "Altitude 10.0m compliant with envelope [5.0m - 25.0m]",
+              "Autopilot estimator healthy: Fix 3, HDOP 1.00, EKF Nominal",
+              "Multi-frame visual lock confirmed (3 consecutive frames)"
+            ],
+            "rejection_errors": [],
+            "target_label": "TARGET_CANDIDATE",
+            "created_at_utc": "2026-11-21T10:06:56Z"
+          },
+          {
+            "lat": 13.0828,
+            "lon": 80.2708,
+            "altitude_m": 12.0,
+            "alt_reference": "AGL",
+            "source_image_id": null,
+            "image_timestamp": null,
+            "vehicle_pose_timestamp": null,
+            "gps_fix_quality": 3,
+            "gps_hdop": 1.0,
+            "ekf_healthy": true,
+            "horizontal_uncertainty_m": 1.0,
+            "vertical_uncertainty_m": 1.0,
+            "camera_calibrated": false,
+            "georef_method": "3D_ATTITUDE_PINHOLE",
+            "confidence_score": 0.85,
+            "consecutive_frames_verified": 3,
+            "quality_state": "APPROXIMATE",
+            "validation_status": "APPROVED",
+            "validation_reasons": [
+              "Altitude 12.0m compliant with envelope [5.0m - 25.0m]",
+              "Autopilot estimator healthy: Fix 3, HDOP 1.00, EKF Nominal",
+              "Multi-frame visual lock confirmed (3 consecutive frames)"
+            ],
+            "rejection_errors": [],
+            "target_label": "TARGET_CANDIDATE",
+            "created_at_utc": "2026-11-21T10:06:56Z"
+          }
+        ],
+        "checksum_sha256": "0a1efe7ed88351d9ee50555bff44a2797b62fec88b5a8b255fe0c6d5e22fdf4d",
+        "is_validated_by_companion": true,
+        "validation_passed": true,
+        "validation_notes": [],
+        "rejection_reasons": []
+      }
+    },
+    {
+      "timestamp": "2026-11-21T10:06:56.935425+00:00",
+      "event_type": "COORDINATE_PACKAGE_SAVED",
+      "source": "COORDINATE_PACKAGE_MANAGER",
+      "details": {
+        "package_id": "PKG_MAV_01",
+        "version": 2,
+        "created_at_utc": "2026-11-21T10:06:56Z",
+        "source": "LOCAL_VISION",
+        "execution_strategy": "INSPECT_CANDIDATE",
+        "coordinates": [
+          {
+            "lat": 13.0827,
+            "lon": 80.2707,
+            "altitude_m": 10.0,
+            "alt_reference": "AGL",
+            "source_image_id": null,
+            "image_timestamp": null,
+            "vehicle_pose_timestamp": null,
+            "gps_fix_quality": 3,
+            "gps_hdop": 1.0,
+            "ekf_healthy": true,
+            "horizontal_uncertainty_m": 1.0,
+            "vertical_uncertainty_m": 1.0,
+            "camera_calibrated": false,
+            "georef_method": "3D_ATTITUDE_PINHOLE",
+            "confidence_score": 0.85,
+            "consecutive_frames_verified": 3,
+            "quality_state": "APPROXIMATE",
+            "validation_status": "APPROVED",
+            "validation_reasons": [
+              "Altitude 10.0m compliant with envelope [5.0m - 25.0m]",
+              "Autopilot estimator healthy: Fix 3, HDOP 1.00, EKF Nominal",
+              "Multi-frame visual lock confirmed (3 consecutive frames)"
+            ],
+            "rejection_errors": [],
+            "target_label": "TARGET_A",
+            "created_at_utc": "2026-11-21T10:06:56Z"
+          }
+        ],
+        "checksum_sha256": "a56fb06e0c5e120bd07a9b887a6e38d12e7ecb55ea3a9d11f6c900642b737e2b",
+        "is_validated_by_companion": true,
+        "validation_passed": true,
+        "validation_notes": [],
+        "rejection_reasons": []
+      }
+    },
+    {
+      "timestamp": "2026-11-21T10:06:57.199650+00:00",
+      "event_type": "MOTOR_ARMED",
+      "source": "OPERATOR",
+      "details": {
+        "bench_mode": true
+      }
+    },
+    {
+      "timestamp": "2026-11-21T10:06:57.274974+00:00",
+      "event_type": "TAKEOFF_COMMANDED",
+      "source": "OPERATOR",
+      "details": {
+        "target_altitude_m": 10.0,
+        "result": {
+          "status": "STATE_CONFIRMED",
+          "target_altitude_m": 10.0,
+          "confirmed": true,
+          "message": "Autonomous TAKEOFF initiated to 10.0m (Simulation)"
+        }
+      }
+    },
+    {
+      "timestamp": "2026-11-21T10:06:57.358377+00:00",
+      "event_type": "FLIGHT_MODE_SWITCH",
+      "source": "OPERATOR",
+      "details": {
+        "mode": "GUIDED",
+        "success": true,
+        "detail": {
+          "status": "STATE_CONFIRMED",
+          "flight_mode": "GUIDED",
+          "custom_mode": 4,
+          "confirmed": true,
+          "message": "Flight mode set to GUIDED"
+        }
+      }
+    },
+    {
+      "timestamp": "2026-11-21T10:06:57.429799+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Emergency RTL triggered: TEST_FAILSAFE",
+        "elapsed": 0
+      },
+      "details": "IDLE -> FAILSAFE"
+    },
+    {
+      "timestamp": "2026-11-21T10:06:57.494439+00:00",
+      "event_type": "EMERGENCY_RTL_TRIGGERED",
+      "source": "SAFETY",
+      "details": {
+        "reason": "TEST_FAILSAFE",
+        "detail": {
+          "status": "STATE_CONFIRMED",
+          "flight_mode": "RTL",
+          "custom_mode": 6,
+          "confirmed": true,
+          "message": "Flight mode set to RTL"
+        }
+      }
+    },
+    {
+      "timestamp": "2026-11-21T10:18:30.155032+00:00",
+      "event_type": "COORDINATE_PACKAGE_SAVED",
+      "source": "COORDINATE_PACKAGE_MANAGER",
+      "details": {
+        "package_id": "PKG_TEST_01",
+        "version": 1,
+        "created_at_utc": "2026-11-21T10:18:30Z",
+        "source": "LOCAL_VISION",
+        "execution_strategy": "INSPECT_CANDIDATE",
+        "coordinates": [
+          {
+            "lat": 13.0827,
+            "lon": 80.2707,
+            "altitude_m": 10.0,
+            "alt_reference": "AGL",
+            "source_image_id": null,
+            "image_timestamp": null,
+            "vehicle_pose_timestamp": null,
+            "gps_fix_quality": 3,
+            "gps_hdop": 1.0,
+            "ekf_healthy": true,
+            "horizontal_uncertainty_m": 1.0,
+            "vertical_uncertainty_m": 1.0,
+            "camera_calibrated": false,
+            "georef_method": "3D_ATTITUDE_PINHOLE",
+            "confidence_score": 0.85,
+            "consecutive_frames_verified": 3,
+            "quality_state": "APPROXIMATE",
+            "validation_status": "APPROVED",
+            "validation_reasons": [
+              "Altitude 10.0m compliant with envelope [5.0m - 25.0m]",
+              "Autopilot estimator healthy: Fix 3, HDOP 1.00, EKF Nominal",
+              "Multi-frame visual lock confirmed (3 consecutive frames)"
+            ],
+            "rejection_errors": [],
+            "target_label": "TARGET_CANDIDATE",
+            "created_at_utc": "2026-11-21T10:18:30Z"
+          },
+          {
+            "lat": 13.0828,
+            "lon": 80.2708,
+            "altitude_m": 12.0,
+            "alt_reference": "AGL",
+            "source_image_id": null,
+            "image_timestamp": null,
+            "vehicle_pose_timestamp": null,
+            "gps_fix_quality": 3,
+            "gps_hdop": 1.0,
+            "ekf_healthy": true,
+            "horizontal_uncertainty_m": 1.0,
+            "vertical_uncertainty_m": 1.0,
+            "camera_calibrated": false,
+            "georef_method": "3D_ATTITUDE_PINHOLE",
+            "confidence_score": 0.85,
+            "consecutive_frames_verified": 3,
+            "quality_state": "APPROXIMATE",
+            "validation_status": "APPROVED",
+            "validation_reasons": [
+              "Altitude 12.0m compliant with envelope [5.0m - 25.0m]",
+              "Autopilot estimator healthy: Fix 3, HDOP 1.00, EKF Nominal",
+              "Multi-frame visual lock confirmed (3 consecutive frames)"
+            ],
+            "rejection_errors": [],
+            "target_label": "TARGET_CANDIDATE",
+            "created_at_utc": "2026-11-21T10:18:30Z"
+          }
+        ],
+        "checksum_sha256": "adf9ad218d52cfb083933b4bd7491933cfcee5e0a52887a234334f03f0e9e11a",
+        "is_validated_by_companion": true,
+        "validation_passed": true,
+        "validation_notes": [],
+        "rejection_reasons": []
+      }
+    },
+    {
+      "timestamp": "2026-11-21T10:18:30.279478+00:00",
+      "event_type": "COORDINATE_PACKAGE_SAVED",
+      "source": "COORDINATE_PACKAGE_MANAGER",
+      "details": {
+        "package_id": "PKG_MAV_01",
+        "version": 2,
+        "created_at_utc": "2026-11-21T10:18:30Z",
+        "source": "LOCAL_VISION",
+        "execution_strategy": "INSPECT_CANDIDATE",
+        "coordinates": [
+          {
+            "lat": 13.0827,
+            "lon": 80.2707,
+            "altitude_m": 10.0,
+            "alt_reference": "AGL",
+            "source_image_id": null,
+            "image_timestamp": null,
+            "vehicle_pose_timestamp": null,
+            "gps_fix_quality": 3,
+            "gps_hdop": 1.0,
+            "ekf_healthy": true,
+            "horizontal_uncertainty_m": 1.0,
+            "vertical_uncertainty_m": 1.0,
+            "camera_calibrated": false,
+            "georef_method": "3D_ATTITUDE_PINHOLE",
+            "confidence_score": 0.85,
+            "consecutive_frames_verified": 3,
+            "quality_state": "APPROXIMATE",
+            "validation_status": "APPROVED",
+            "validation_reasons": [
+              "Altitude 10.0m compliant with envelope [5.0m - 25.0m]",
+              "Autopilot estimator healthy: Fix 3, HDOP 1.00, EKF Nominal",
+              "Multi-frame visual lock confirmed (3 consecutive frames)"
+            ],
+            "rejection_errors": [],
+            "target_label": "TARGET_A",
+            "created_at_utc": "2026-11-21T10:18:30Z"
+          }
+        ],
+        "checksum_sha256": "d38f1ab3373c3f9e998a45951c78800a414b2fb54403d155f84a431f5ff450db",
+        "is_validated_by_companion": true,
+        "validation_passed": true,
+        "validation_notes": [],
+        "rejection_reasons": []
+      }
+    },
+    {
+      "timestamp": "2026-11-21T10:18:30.846970+00:00",
+      "event_type": "AUTH_FAILED",
+      "source": "AUTH",
+      "details": {
+        "username": "admin"
+      }
+    },
+    {
+      "timestamp": "2026-11-21T10:18:31.038019+00:00",
+      "event_type": "AUTH_SUCCESS",
+      "source": "AUTH",
+      "details": {
+        "username": "admin",
+        "role": "OPERATOR"
+      }
+    },
+    {
+      "timestamp": "2026-11-21T10:18:32.200408+00:00",
+      "event_type": "MOTOR_ARMED",
+      "source": "OPERATOR",
+      "details": {
+        "bench_mode": true
+      }
+    },
+    {
+      "timestamp": "2026-11-21T10:18:32.292781+00:00",
+      "event_type": "MOTOR_ARMED",
+      "source": "OPERATOR",
+      "details": {
+        "bench_mode": true
+      }
+    },
+    {
+      "timestamp": "2026-11-21T10:18:32.361915+00:00",
+      "event_type": "TAKEOFF_COMMANDED",
+      "source": "OPERATOR",
+      "details": {
+        "target_altitude_m": 10.0,
+        "result": {
+          "status": "STATE_CONFIRMED",
+          "target_altitude_m": 10.0,
+          "confirmed": true,
+          "message": "Autonomous TAKEOFF initiated to 10.0m (Simulation)"
+        }
+      }
+    },
+    {
+      "timestamp": "2026-11-21T10:18:32.421334+00:00",
+      "event_type": "FLIGHT_MODE_SWITCH",
+      "source": "OPERATOR",
+      "details": {
+        "mode": "GUIDED",
+        "success": true,
+        "detail": {
+          "status": "STATE_CONFIRMED",
+          "flight_mode": "GUIDED",
+          "custom_mode": 4,
+          "confirmed": true,
+          "message": "Flight mode set to GUIDED"
+        }
+      }
+    },
+    {
+      "timestamp": "2026-11-21T10:18:32.488040+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Emergency RTL triggered: TEST_FAILSAFE",
+        "elapsed": 0
+      },
+      "details": "IDLE -> FAILSAFE"
+    },
+    {
+      "timestamp": "2026-11-21T10:18:32.558791+00:00",
+      "event_type": "EMERGENCY_RTL_TRIGGERED",
+      "source": "SAFETY",
+      "details": {
+        "reason": "TEST_FAILSAFE",
+        "detail": {
+          "status": "STATE_CONFIRMED",
+          "flight_mode": "RTL",
+          "custom_mode": 6,
+          "confirmed": true,
+          "message": "Flight mode set to RTL"
+        }
+      }
+    },
+    {
+      "timestamp": "2026-11-21T10:31:53.772497+00:00",
+      "event_type": "COORDINATE_PACKAGE_SAVED",
+      "source": "COORDINATE_PACKAGE_MANAGER",
+      "details": {
+        "package_id": "PKG_TEST_01",
+        "version": 1,
+        "created_at_utc": "2026-11-21T10:31:53Z",
+        "source": "LOCAL_VISION",
+        "execution_strategy": "INSPECT_CANDIDATE",
+        "coordinates": [
+          {
+            "lat": 13.0827,
+            "lon": 80.2707,
+            "altitude_m": 10.0,
+            "alt_reference": "AGL",
+            "source_image_id": null,
+            "image_timestamp": null,
+            "vehicle_pose_timestamp": null,
+            "gps_fix_quality": 3,
+            "gps_hdop": 1.0,
+            "ekf_healthy": true,
+            "horizontal_uncertainty_m": 1.0,
+            "vertical_uncertainty_m": 1.0,
+            "camera_calibrated": false,
+            "georef_method": "3D_ATTITUDE_PINHOLE",
+            "confidence_score": 0.85,
+            "consecutive_frames_verified": 3,
+            "quality_state": "APPROXIMATE",
+            "validation_status": "APPROVED",
+            "validation_reasons": [
+              "Altitude 10.0m compliant with envelope [5.0m - 25.0m]",
+              "Autopilot estimator healthy: Fix 3, HDOP 1.00, EKF Nominal",
+              "Multi-frame visual lock confirmed (3 consecutive frames)"
+            ],
+            "rejection_errors": [],
+            "target_label": "TARGET_CANDIDATE",
+            "created_at_utc": "2026-11-21T10:31:53Z"
+          },
+          {
+            "lat": 13.0828,
+            "lon": 80.2708,
+            "altitude_m": 12.0,
+            "alt_reference": "AGL",
+            "source_image_id": null,
+            "image_timestamp": null,
+            "vehicle_pose_timestamp": null,
+            "gps_fix_quality": 3,
+            "gps_hdop": 1.0,
+            "ekf_healthy": true,
+            "horizontal_uncertainty_m": 1.0,
+            "vertical_uncertainty_m": 1.0,
+            "camera_calibrated": false,
+            "georef_method": "3D_ATTITUDE_PINHOLE",
+            "confidence_score": 0.85,
+            "consecutive_frames_verified": 3,
+            "quality_state": "APPROXIMATE",
+            "validation_status": "APPROVED",
+            "validation_reasons": [
+              "Altitude 12.0m compliant with envelope [5.0m - 25.0m]",
+              "Autopilot estimator healthy: Fix 3, HDOP 1.00, EKF Nominal",
+              "Multi-frame visual lock confirmed (3 consecutive frames)"
+            ],
+            "rejection_errors": [],
+            "target_label": "TARGET_CANDIDATE",
+            "created_at_utc": "2026-11-21T10:31:53Z"
+          }
+        ],
+        "checksum_sha256": "caff11588f4aeca679a87ca06e36805e79f527e56e1c1c9280d564168a6aa4c5",
+        "is_validated_by_companion": true,
+        "validation_passed": true,
+        "validation_notes": [],
+        "rejection_reasons": []
+      }
+    },
+    {
+      "timestamp": "2026-11-21T10:31:53.850741+00:00",
+      "event_type": "COORDINATE_PACKAGE_SAVED",
+      "source": "COORDINATE_PACKAGE_MANAGER",
+      "details": {
+        "package_id": "PKG_MAV_01",
+        "version": 2,
+        "created_at_utc": "2026-11-21T10:31:53Z",
+        "source": "LOCAL_VISION",
+        "execution_strategy": "INSPECT_CANDIDATE",
+        "coordinates": [
+          {
+            "lat": 13.0827,
+            "lon": 80.2707,
+            "altitude_m": 10.0,
+            "alt_reference": "AGL",
+            "source_image_id": null,
+            "image_timestamp": null,
+            "vehicle_pose_timestamp": null,
+            "gps_fix_quality": 3,
+            "gps_hdop": 1.0,
+            "ekf_healthy": true,
+            "horizontal_uncertainty_m": 1.0,
+            "vertical_uncertainty_m": 1.0,
+            "camera_calibrated": false,
+            "georef_method": "3D_ATTITUDE_PINHOLE",
+            "confidence_score": 0.85,
+            "consecutive_frames_verified": 3,
+            "quality_state": "APPROXIMATE",
+            "validation_status": "APPROVED",
+            "validation_reasons": [
+              "Altitude 10.0m compliant with envelope [5.0m - 25.0m]",
+              "Autopilot estimator healthy: Fix 3, HDOP 1.00, EKF Nominal",
+              "Multi-frame visual lock confirmed (3 consecutive frames)"
+            ],
+            "rejection_errors": [],
+            "target_label": "TARGET_A",
+            "created_at_utc": "2026-11-21T10:31:53Z"
+          }
+        ],
+        "checksum_sha256": "29599ff70eebd9590f2a8c3ccc4953ac287fcd519fbd95ae1011fef73ac6d418",
+        "is_validated_by_companion": true,
+        "validation_passed": true,
+        "validation_notes": [],
+        "rejection_reasons": []
+      }
+    },
+    {
+      "timestamp": "2026-11-21T10:31:54.323197+00:00",
+      "event_type": "AUTH_FAILED",
+      "source": "AUTH",
+      "details": {
+        "username": "admin"
+      }
+    },
+    {
+      "timestamp": "2026-11-21T10:31:54.447624+00:00",
+      "event_type": "AUTH_SUCCESS",
+      "source": "AUTH",
+      "details": {
+        "username": "admin",
+        "role": "OPERATOR"
+      }
+    },
+    {
+      "timestamp": "2026-11-21T10:31:55.460373+00:00",
+      "event_type": "MOTOR_ARMED",
+      "source": "OPERATOR",
+      "details": {
+        "bench_mode": true
+      }
+    },
+    {
+      "timestamp": "2026-11-21T10:31:55.532687+00:00",
+      "event_type": "MOTOR_ARMED",
+      "source": "OPERATOR",
+      "details": {
+        "bench_mode": true
+      }
+    },
+    {
+      "timestamp": "2026-11-21T10:31:55.594076+00:00",
+      "event_type": "TAKEOFF_COMMANDED",
+      "source": "OPERATOR",
+      "details": {
+        "target_altitude_m": 10.0,
+        "result": {
+          "status": "STATE_CONFIRMED",
+          "target_altitude_m": 10.0,
+          "confirmed": true,
+          "message": "Autonomous TAKEOFF initiated to 10.0m (Simulation)"
+        }
+      }
+    },
+    {
+      "timestamp": "2026-11-21T10:31:55.662599+00:00",
+      "event_type": "FLIGHT_MODE_SWITCH",
+      "source": "OPERATOR",
+      "details": {
+        "mode": "GUIDED",
+        "success": true,
+        "detail": {
+          "status": "STATE_CONFIRMED",
+          "flight_mode": "GUIDED",
+          "custom_mode": 4,
+          "confirmed": true,
+          "message": "Flight mode set to GUIDED"
+        }
+      }
+    },
+    {
+      "timestamp": "2026-11-21T10:31:55.721200+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Emergency RTL triggered: TEST_FAILSAFE",
+        "elapsed": 0
+      },
+      "details": "IDLE -> FAILSAFE"
+    },
+    {
+      "timestamp": "2026-11-21T10:31:55.774295+00:00",
+      "event_type": "EMERGENCY_RTL_TRIGGERED",
+      "source": "SAFETY",
+      "details": {
+        "reason": "TEST_FAILSAFE",
+        "detail": {
+          "status": "STATE_CONFIRMED",
+          "flight_mode": "RTL",
+          "custom_mode": 6,
+          "confirmed": true,
+          "message": "Flight mode set to RTL"
+        }
+      }
+    },
+    {
+      "timestamp": "2026-11-21T14:32:43.715702+00:00",
+      "event_type": "COORDINATE_PACKAGE_SAVED",
+      "source": "COORDINATE_PACKAGE_MANAGER",
+      "details": {
+        "package_id": "PKG_TEST_01",
+        "version": 1,
+        "created_at_utc": "2026-11-21T14:32:43Z",
+        "source": "LOCAL_VISION",
+        "execution_strategy": "INSPECT_CANDIDATE",
+        "coordinates": [
+          {
+            "lat": 13.0827,
+            "lon": 80.2707,
+            "altitude_m": 10.0,
+            "alt_reference": "AGL",
+            "source_image_id": null,
+            "image_timestamp": null,
+            "vehicle_pose_timestamp": null,
+            "gps_fix_quality": 3,
+            "gps_hdop": 1.0,
+            "ekf_healthy": true,
+            "horizontal_uncertainty_m": 1.0,
+            "vertical_uncertainty_m": 1.0,
+            "camera_calibrated": false,
+            "georef_method": "3D_ATTITUDE_PINHOLE",
+            "confidence_score": 0.85,
+            "consecutive_frames_verified": 3,
+            "quality_state": "APPROXIMATE",
+            "validation_status": "APPROVED",
+            "validation_reasons": [
+              "Altitude 10.0m compliant with envelope [5.0m - 25.0m]",
+              "Autopilot estimator healthy: Fix 3, HDOP 1.00, EKF Nominal",
+              "Multi-frame visual lock confirmed (3 consecutive frames)"
+            ],
+            "rejection_errors": [],
+            "target_label": "TARGET_CANDIDATE",
+            "created_at_utc": "2026-11-21T14:32:43Z"
+          },
+          {
+            "lat": 13.0828,
+            "lon": 80.2708,
+            "altitude_m": 12.0,
+            "alt_reference": "AGL",
+            "source_image_id": null,
+            "image_timestamp": null,
+            "vehicle_pose_timestamp": null,
+            "gps_fix_quality": 3,
+            "gps_hdop": 1.0,
+            "ekf_healthy": true,
+            "horizontal_uncertainty_m": 1.0,
+            "vertical_uncertainty_m": 1.0,
+            "camera_calibrated": false,
+            "georef_method": "3D_ATTITUDE_PINHOLE",
+            "confidence_score": 0.85,
+            "consecutive_frames_verified": 3,
+            "quality_state": "APPROXIMATE",
+            "validation_status": "APPROVED",
+            "validation_reasons": [
+              "Altitude 12.0m compliant with envelope [5.0m - 25.0m]",
+              "Autopilot estimator healthy: Fix 3, HDOP 1.00, EKF Nominal",
+              "Multi-frame visual lock confirmed (3 consecutive frames)"
+            ],
+            "rejection_errors": [],
+            "target_label": "TARGET_CANDIDATE",
+            "created_at_utc": "2026-11-21T14:32:43Z"
+          }
+        ],
+        "checksum_sha256": "14e990f3e161945d0e97a665b24b7cd31f8a6f618bce2e55e4e5f293d12ef6af",
+        "is_validated_by_companion": true,
+        "validation_passed": true,
+        "validation_notes": [],
+        "rejection_reasons": []
+      }
+    },
+    {
+      "timestamp": "2026-11-21T14:32:43.765670+00:00",
+      "event_type": "COORDINATE_PACKAGE_SAVED",
+      "source": "COORDINATE_PACKAGE_MANAGER",
+      "details": {
+        "package_id": "PKG_MAV_01",
+        "version": 2,
+        "created_at_utc": "2026-11-21T14:32:43Z",
+        "source": "LOCAL_VISION",
+        "execution_strategy": "INSPECT_CANDIDATE",
+        "coordinates": [
+          {
+            "lat": 13.0827,
+            "lon": 80.2707,
+            "altitude_m": 10.0,
+            "alt_reference": "AGL",
+            "source_image_id": null,
+            "image_timestamp": null,
+            "vehicle_pose_timestamp": null,
+            "gps_fix_quality": 3,
+            "gps_hdop": 1.0,
+            "ekf_healthy": true,
+            "horizontal_uncertainty_m": 1.0,
+            "vertical_uncertainty_m": 1.0,
+            "camera_calibrated": false,
+            "georef_method": "3D_ATTITUDE_PINHOLE",
+            "confidence_score": 0.85,
+            "consecutive_frames_verified": 3,
+            "quality_state": "APPROXIMATE",
+            "validation_status": "APPROVED",
+            "validation_reasons": [
+              "Altitude 10.0m compliant with envelope [5.0m - 25.0m]",
+              "Autopilot estimator healthy: Fix 3, HDOP 1.00, EKF Nominal",
+              "Multi-frame visual lock confirmed (3 consecutive frames)"
+            ],
+            "rejection_errors": [],
+            "target_label": "TARGET_A",
+            "created_at_utc": "2026-11-21T14:32:43Z"
+          }
+        ],
+        "checksum_sha256": "c6d6afcf9b026681ce825fcf999110534027faa30b3c70f8b12bd42bc2594d98",
+        "is_validated_by_companion": true,
+        "validation_passed": true,
+        "validation_notes": [],
+        "rejection_reasons": []
+      }
+    },
+    {
+      "timestamp": "2026-11-21T14:32:44.208340+00:00",
+      "event_type": "AUTH_FAILED",
+      "source": "AUTH",
+      "details": {
+        "username": "admin"
+      }
+    },
+    {
+      "timestamp": "2026-11-21T14:32:44.324074+00:00",
+      "event_type": "AUTH_SUCCESS",
+      "source": "AUTH",
+      "details": {
+        "username": "admin",
+        "role": "OPERATOR"
+      }
+    },
+    {
+      "timestamp": "2026-11-21T14:32:45.249462+00:00",
+      "event_type": "MOTOR_ARMED",
+      "source": "OPERATOR",
+      "details": {
+        "bench_mode": true
+      }
+    },
+    {
+      "timestamp": "2026-11-21T14:32:45.306067+00:00",
+      "event_type": "MOTOR_ARMED",
+      "source": "OPERATOR",
+      "details": {
+        "bench_mode": true
+      }
+    },
+    {
+      "timestamp": "2026-11-21T14:32:45.360073+00:00",
+      "event_type": "TAKEOFF_COMMANDED",
+      "source": "OPERATOR",
+      "details": {
+        "target_altitude_m": 10.0,
+        "result": {
+          "status": "STATE_CONFIRMED",
+          "target_altitude_m": 10.0,
+          "confirmed": true,
+          "message": "Autonomous TAKEOFF initiated to 10.0m (Simulation)"
+        }
+      }
+    },
+    {
+      "timestamp": "2026-11-21T14:32:45.413193+00:00",
+      "event_type": "FLIGHT_MODE_SWITCH",
+      "source": "OPERATOR",
+      "details": {
+        "mode": "GUIDED",
+        "success": true,
+        "detail": {
+          "status": "STATE_CONFIRMED",
+          "flight_mode": "GUIDED",
+          "custom_mode": 4,
+          "confirmed": true,
+          "message": "Flight mode set to GUIDED"
+        }
+      }
+    },
+    {
+      "timestamp": "2026-11-21T14:32:45.467328+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Emergency RTL triggered: TEST_FAILSAFE",
+        "elapsed": 0
+      },
+      "details": "IDLE -> FAILSAFE"
+    },
+    {
+      "timestamp": "2026-11-21T14:32:45.509394+00:00",
+      "event_type": "EMERGENCY_RTL_TRIGGERED",
+      "source": "SAFETY",
+      "details": {
+        "reason": "TEST_FAILSAFE",
+        "detail": {
+          "status": "STATE_CONFIRMED",
+          "flight_mode": "RTL",
+          "custom_mode": 6,
+          "confirmed": true,
+          "message": "Flight mode set to RTL"
+        }
+      }
+    },
+    {
+      "timestamp": "2026-11-21T14:32:46.571336+00:00",
+      "event_type": "QR_DETECTED",
+      "source": "VISION",
+      "details": {
+        "code": "42",
+        "lat": 13.0827,
+        "lon": 80.2707
+      }
+    },
+    {
+      "timestamp": "2026-11-21T14:32:46.885555+00:00",
+      "event_type": "MARSHAL_AUTH",
+      "source": {
+        "missionId": null,
+        "marshalId": "CHIEF_MARSHAL_01",
+        "signature": "SIGNATURE_OK"
+      },
+      "details": "Marshal 'CHIEF_MARSHAL_01' authorized"
+    },
+    {
+      "timestamp": "2026-11-21T14:32:47.025069+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Checks started",
+        "elapsed": 0
+      },
+      "details": "IDLE -> PREFLIGHT"
+    },
+    {
+      "timestamp": "2026-11-21T14:32:47.162072+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "All pre-arm checks pass",
+        "elapsed": 0
+      },
+      "details": "PREFLIGHT -> READY"
+    },
+    {
+      "timestamp": "2026-11-21T14:32:47.271071+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Armed",
+        "elapsed": 0
+      },
+      "details": "READY -> ARMED"
+    },
+    {
+      "timestamp": "2026-11-21T14:32:47.417097+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Climbing",
+        "elapsed": 0
+      },
+      "details": "ARMED -> TAKING_OFF"
+    },
+    {
+      "timestamp": "2026-11-21T14:32:47.598658+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Target reached",
+        "elapsed": 0
+      },
+      "details": "TAKING_OFF -> CLIMBING"
+    },
+    {
+      "timestamp": "2026-11-21T14:32:47.749503+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Executing boustrophedon sweep",
+        "elapsed": 0
+      },
+      "details": "CLIMBING -> SCANNING"
+    },
+    {
+      "timestamp": "2026-11-21T14:32:47.815476+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Cuboid box identified",
+        "elapsed": 0
+      },
+      "details": "SCANNING -> TARGET_INSPECTION"
+    },
+    {
+      "timestamp": "2026-11-21T14:32:47.876304+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Target verified with 2-digit aerial code: '42'",
+        "elapsed": 0
+      },
+      "details": "TARGET_INSPECTION -> QR_DETECTED"
+    },
+    {
+      "timestamp": "2026-11-21T14:32:47.997219+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Aerial QR '42' confirmed. Awaiting ground operative 2-digit puzzle completion.",
+        "elapsed": 0
+      },
+      "details": "QR_DETECTED -> TASK_PENDING"
+    },
+    {
+      "timestamp": "2026-11-21T14:32:48.109782+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Package retrieved. Executing autonomous RTL to finish zone.",
+        "elapsed": 0
+      },
+      "details": "TASK_PENDING -> RETURNING"
+    },
+    {
+      "timestamp": "2026-11-21T14:32:48.527785+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Target verified with 2-digit aerial code: '07'",
+        "elapsed": 0
+      },
+      "details": "IDLE -> QR_DETECTED"
+    },
+    {
+      "timestamp": "2026-11-21T14:32:48.665553+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Aerial QR '07' confirmed. Awaiting ground operative 2-digit puzzle completion.",
+        "elapsed": 0
+      },
+      "details": "QR_DETECTED -> TASK_PENDING"
+    },
+    {
+      "timestamp": "2026-11-21T14:32:48.755553+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Package retrieved. Executing autonomous RTL to finish zone.",
+        "elapsed": 0
+      },
+      "details": "TASK_PENDING -> RETURNING"
+    },
+    {
+      "timestamp": "2026-11-21T14:32:48.805790+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Mission timeout reached. Safe recovery RTL.",
+        "elapsed": 0
+      },
+      "details": "SCANNING -> RETURNING"
+    },
+    {
+      "timestamp": "2026-11-21T14:32:48.859143+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Emergency RTL triggered: Geofence breach: Geofence breached! Distance outside: 761.7m",
+        "elapsed": 0
+      },
+      "details": "SCANNING -> FAILSAFE"
+    },
+    {
+      "timestamp": "2026-11-21T14:32:48.928257+00:00",
+      "event_type": "MARSHAL_AUTH",
+      "source": {
+        "missionId": null,
+        "marshalId": "MARSHAL_42",
+        "signature": "OFFICIAL_AUTH"
+      },
+      "details": "Marshal 'MARSHAL_42' authorized"
+    },
+    {
+      "timestamp": "2026-11-21T14:32:48.978437+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Emergency RTL triggered: TEST_ABORT",
+        "elapsed": 0
+      },
+      "details": "FAILSAFE -> FAILSAFE"
+    },
+    {
+      "timestamp": "2026-11-21T14:32:49.048349+00:00",
+      "event_type": "MARSHAL_AUTH",
+      "source": {
+        "missionId": null,
+        "marshalId": "OFFICIAL_MARSHAL_01",
+        "signature": "SIG_VALID_2026"
+      },
+      "details": "Marshal 'OFFICIAL_MARSHAL_01' authorized"
+    },
+    {
+      "timestamp": "2026-11-21T14:32:49.085413+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Preflight checks initiated",
+        "elapsed": 0
+      },
+      "details": "IDLE -> PREFLIGHT"
+    },
+    {
+      "timestamp": "2026-11-21T14:32:49.124825+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Preflight checks passed",
+        "elapsed": 0
+      },
+      "details": "PREFLIGHT -> READY"
+    },
+    {
+      "timestamp": "2026-11-21T14:32:49.179595+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Pilot commands arm",
+        "elapsed": 0
+      },
+      "details": "READY -> ARMED"
+    },
+    {
+      "timestamp": "2026-11-21T14:32:49.255157+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Autonomous takeoff commanded",
+        "elapsed": 0
+      },
+      "details": "ARMED -> TAKING_OFF"
+    },
+    {
+      "timestamp": "2026-11-21T14:32:49.336599+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Ascending to cruise altitude",
+        "elapsed": 0
+      },
+      "details": "TAKING_OFF -> CLIMBING"
+    },
+    {
+      "timestamp": "2026-11-21T14:32:49.458134+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Commencing boustrophedon sweep",
+        "elapsed": 0
+      },
+      "details": "CLIMBING -> SCANNING"
+    },
+    {
+      "timestamp": "2026-11-21T14:32:49.565912+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Target cuboid detected in FOV",
+        "elapsed": 0
+      },
+      "details": "SCANNING -> TARGET_INSPECTION"
+    },
+    {
+      "timestamp": "2026-11-21T14:32:49.688098+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Target verified with 2-digit aerial code: '42'",
+        "elapsed": 0
+      },
+      "details": "TARGET_INSPECTION -> QR_DETECTED"
+    },
+    {
+      "timestamp": "2026-11-21T14:32:49.866836+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Aerial QR '42' confirmed. Awaiting ground operative 2-digit puzzle completion.",
+        "elapsed": 0
+      },
+      "details": "QR_DETECTED -> TASK_PENDING"
+    },
+    {
+      "timestamp": "2026-11-21T14:32:50.010262+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Package retrieved. Executing autonomous RTL to finish zone.",
+        "elapsed": 0
+      },
+      "details": "TASK_PENDING -> RETURNING"
+    },
+    {
+      "timestamp": "2026-11-21T14:32:50.115392+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Touchdown descent",
+        "elapsed": 0
+      },
+      "details": "RETURNING -> LANDING"
+    },
+    {
+      "timestamp": "2026-11-21T14:32:50.208921+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Sortie complete, disarmed",
+        "elapsed": 0
+      },
+      "details": "LANDING -> COMPLETED"
+    },
+    {
+      "timestamp": "2026-11-21T14:32:50.469613+00:00",
+      "event_type": "MISSION_STAGE_ADVANCE",
+      "source": "CLOUD_INGEST",
+      "details": {
+        "stage": "SEARCHING"
+      }
+    },
+    {
+      "timestamp": "2026-11-21T14:32:50.642893+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Emergency RTL triggered: API_EMERGENCY_RTL",
+        "elapsed": 0
+      },
+      "details": "COMPLETED -> FAILSAFE"
+    },
+    {
+      "timestamp": "2026-11-21T14:32:51.050317+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Operator started checks",
+        "elapsed": 0
+      },
+      "details": "IDLE -> PREFLIGHT"
+    },
+    {
+      "timestamp": "2026-11-21T14:32:51.152220+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "All checks passed",
+        "elapsed": 0
+      },
+      "details": "PREFLIGHT -> READY"
+    },
+    {
+      "timestamp": "2026-11-21T14:32:51.250213+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Safety abort",
+        "elapsed": 0
+      },
+      "details": "READY -> FAILSAFE"
+    },
+    {
+      "timestamp": "2026-11-21T14:32:53.041757+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Offline start",
+        "elapsed": 0
+      },
+      "details": "IDLE -> PREFLIGHT"
+    },
+    {
+      "timestamp": "2026-11-21T14:32:53.098355+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "",
+        "elapsed": 0
+      },
+      "details": "IDLE -> PREFLIGHT"
+    },
+    {
+      "timestamp": "2026-11-21T14:32:53.151614+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Service restart recovery",
+        "elapsed": 0
+      },
+      "details": "PREFLIGHT -> FAILSAFE"
+    },
+    {
+      "timestamp": "2026-11-21T14:32:53.355264+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Target verified with 2-digit aerial code: '56'",
+        "elapsed": 0
+      },
+      "details": "IDLE -> QR_DETECTED"
+    },
+    {
+      "timestamp": "2026-11-21T14:32:53.439945+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Aerial QR '56' confirmed. Awaiting ground operative 2-digit puzzle completion.",
+        "elapsed": 0
+      },
+      "details": "QR_DETECTED -> TASK_PENDING"
+    },
+    {
+      "timestamp": "2026-11-21T14:32:53.536321+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Package retrieved. Executing autonomous RTL to finish zone.",
+        "elapsed": 0
+      },
+      "details": "TASK_PENDING -> RETURNING"
+    },
+    {
+      "timestamp": "2026-11-21T14:32:53.608693+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": "ADDC_E2E_21STEP",
+        "reason": "Mission configured and validated",
+        "elapsed": 0
+      },
+      "details": "IDLE -> PREFLIGHT"
+    },
+    {
+      "timestamp": "2026-11-21T14:32:53.682081+00:00",
+      "event_type": "MARSHAL_AUTH",
+      "source": {
+        "missionId": "ADDC_E2E_21STEP",
+        "marshalId": "CHIEF_MARSHAL_2026",
+        "signature": "AUTH_SIG_OK"
+      },
+      "details": "Marshal 'CHIEF_MARSHAL_2026' authorized"
+    },
+    {
+      "timestamp": "2026-11-21T14:32:53.740967+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": "ADDC_E2E_21STEP",
+        "reason": "Pre-arm pass",
+        "elapsed": 0
+      },
+      "details": "PREFLIGHT -> READY"
+    },
+    {
+      "timestamp": "2026-11-21T14:32:53.830708+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": "ADDC_E2E_21STEP",
+        "reason": "Armed by pilot",
+        "elapsed": 0
+      },
+      "details": "READY -> ARMED"
+    },
+    {
+      "timestamp": "2026-11-21T14:32:53.928442+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": "ADDC_E2E_21STEP",
+        "reason": "Climbing to 10m",
+        "elapsed": 0
+      },
+      "details": "ARMED -> TAKING_OFF"
+    },
+    {
+      "timestamp": "2026-11-21T14:32:54.033049+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": "ADDC_E2E_21STEP",
+        "reason": "Altitude reached",
+        "elapsed": 0
+      },
+      "details": "TAKING_OFF -> CLIMBING"
+    },
+    {
+      "timestamp": "2026-11-21T14:32:54.120691+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": "ADDC_E2E_21STEP",
+        "reason": "Boustrophedon sweep active",
+        "elapsed": 0
+      },
+      "details": "CLIMBING -> SCANNING"
+    },
+    {
+      "timestamp": "2026-11-21T14:32:54.201402+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": "ADDC_E2E_21STEP",
+        "reason": "Target cuboid in FOV",
+        "elapsed": 0
+      },
+      "details": "SCANNING -> TARGET_INSPECTION"
+    },
+    {
+      "timestamp": "2026-11-21T14:32:54.287186+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": "ADDC_E2E_21STEP",
+        "reason": "Target verified with 2-digit aerial code: '73'",
+        "elapsed": 0
+      },
+      "details": "TARGET_INSPECTION -> QR_DETECTED"
+    },
+    {
+      "timestamp": "2026-11-21T14:32:54.401198+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": "ADDC_E2E_21STEP",
+        "reason": "Aerial QR '73' confirmed. Awaiting ground operative 2-digit puzzle completion.",
+        "elapsed": 0
+      },
+      "details": "QR_DETECTED -> TASK_PENDING"
+    },
+    {
+      "timestamp": "2026-11-21T14:32:54.519610+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": "ADDC_E2E_21STEP",
+        "reason": "Package retrieved. Executing autonomous RTL to finish zone.",
+        "elapsed": 0
+      },
+      "details": "TASK_PENDING -> RETURNING"
+    },
+    {
+      "timestamp": "2026-11-21T14:32:54.618932+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": "ADDC_E2E_21STEP",
+        "reason": "Touchdown descent",
+        "elapsed": 0
+      },
+      "details": "RETURNING -> LANDING"
+    },
+    {
+      "timestamp": "2026-11-21T14:32:54.707855+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": "ADDC_E2E_21STEP",
+        "reason": "Disarmed on ground",
+        "elapsed": 0
+      },
+      "details": "LANDING -> COMPLETED"
+    },
+    {
+      "timestamp": "2026-11-21T14:43:30.081178+00:00",
+      "event_type": "MOTOR_ARMED",
+      "source": "OPERATOR",
+      "details": {
+        "bench_mode": true
+      }
+    },
+    {
+      "timestamp": "2026-11-21T14:43:30.111184+00:00",
+      "event_type": "TAKEOFF_COMMANDED",
+      "source": "OPERATOR",
+      "details": {
+        "target_altitude_m": 10.0,
+        "result": {
+          "status": "STATE_CONFIRMED",
+          "target_altitude_m": 10.0,
+          "confirmed": true,
+          "message": "Autonomous TAKEOFF initiated to 10.0m (Simulation)"
+        }
+      }
+    },
+    {
+      "timestamp": "2026-11-21T14:43:30.140811+00:00",
+      "event_type": "FLIGHT_MODE_SWITCH",
+      "source": "OPERATOR",
+      "details": {
+        "mode": "GUIDED",
+        "success": true,
+        "detail": {
+          "status": "STATE_CONFIRMED",
+          "flight_mode": "GUIDED",
+          "custom_mode": 4,
+          "confirmed": true,
+          "message": "Flight mode set to GUIDED"
+        }
+      }
+    },
+    {
+      "timestamp": "2026-11-21T14:43:30.170068+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Emergency RTL triggered: TEST_FAILSAFE",
+        "elapsed": 0
+      },
+      "details": "IDLE -> FAILSAFE"
+    },
+    {
+      "timestamp": "2026-11-21T14:43:30.205839+00:00",
+      "event_type": "EMERGENCY_RTL_TRIGGERED",
+      "source": "SAFETY",
+      "details": {
+        "reason": "TEST_FAILSAFE",
+        "detail": {
+          "status": "STATE_CONFIRMED",
+          "flight_mode": "RTL",
+          "custom_mode": 6,
+          "confirmed": true,
+          "message": "Flight mode set to RTL"
+        }
+      }
+    },
+    {
+      "timestamp": "2026-11-21T14:43:30.427581+00:00",
+      "event_type": "AUTH_FAILED",
+      "source": "AUTH",
+      "details": {
+        "username": "admin"
+      }
+    },
+    {
+      "timestamp": "2026-11-21T14:43:30.498435+00:00",
+      "event_type": "AUTH_SUCCESS",
+      "source": "AUTH",
+      "details": {
+        "username": "admin",
+        "role": "OPERATOR"
+      }
+    },
+    {
+      "timestamp": "2026-11-21T14:43:31.166322+00:00",
+      "event_type": "MOTOR_ARMED",
+      "source": "OPERATOR",
+      "details": {
+        "bench_mode": true
+      }
+    },
+    {
+      "timestamp": "2026-11-21T14:43:31.311836+00:00",
+      "event_type": "COORDINATE_PACKAGE_SAVED",
+      "source": "COORDINATE_PACKAGE_MANAGER",
+      "details": {
+        "package_id": "PKG_TEST_01",
+        "version": 1,
+        "created_at_utc": "2026-11-21T14:43:31Z",
+        "source": "LOCAL_VISION",
+        "execution_strategy": "INSPECT_CANDIDATE",
+        "coordinates": [
+          {
+            "lat": 13.0827,
+            "lon": 80.2707,
+            "altitude_m": 10.0,
+            "alt_reference": "AGL",
+            "source_image_id": null,
+            "image_timestamp": null,
+            "vehicle_pose_timestamp": null,
+            "gps_fix_quality": 3,
+            "gps_hdop": 1.0,
+            "ekf_healthy": true,
+            "horizontal_uncertainty_m": 1.0,
+            "vertical_uncertainty_m": 1.0,
+            "camera_calibrated": false,
+            "georef_method": "3D_ATTITUDE_PINHOLE",
+            "confidence_score": 0.85,
+            "consecutive_frames_verified": 3,
+            "quality_state": "APPROXIMATE",
+            "validation_status": "APPROVED",
+            "validation_reasons": [
+              "Altitude 10.0m compliant with envelope [5.0m - 25.0m]",
+              "Autopilot estimator healthy: Fix 3, HDOP 1.00, EKF Nominal",
+              "Multi-frame visual lock confirmed (3 consecutive frames)"
+            ],
+            "rejection_errors": [],
+            "target_label": "TARGET_CANDIDATE",
+            "created_at_utc": "2026-11-21T14:43:31Z"
+          },
+          {
+            "lat": 13.0828,
+            "lon": 80.2708,
+            "altitude_m": 12.0,
+            "alt_reference": "AGL",
+            "source_image_id": null,
+            "image_timestamp": null,
+            "vehicle_pose_timestamp": null,
+            "gps_fix_quality": 3,
+            "gps_hdop": 1.0,
+            "ekf_healthy": true,
+            "horizontal_uncertainty_m": 1.0,
+            "vertical_uncertainty_m": 1.0,
+            "camera_calibrated": false,
+            "georef_method": "3D_ATTITUDE_PINHOLE",
+            "confidence_score": 0.85,
+            "consecutive_frames_verified": 3,
+            "quality_state": "APPROXIMATE",
+            "validation_status": "APPROVED",
+            "validation_reasons": [
+              "Altitude 12.0m compliant with envelope [5.0m - 25.0m]",
+              "Autopilot estimator healthy: Fix 3, HDOP 1.00, EKF Nominal",
+              "Multi-frame visual lock confirmed (3 consecutive frames)"
+            ],
+            "rejection_errors": [],
+            "target_label": "TARGET_CANDIDATE",
+            "created_at_utc": "2026-11-21T14:43:31Z"
+          }
+        ],
+        "checksum_sha256": "3b9a47f3d5511675c354cc4c632681a615d41b9603e9b487db7ff5d01d4cd26a",
+        "is_validated_by_companion": true,
+        "validation_passed": true,
+        "validation_notes": [],
+        "rejection_reasons": []
+      }
+    },
+    {
+      "timestamp": "2026-11-21T14:43:31.351821+00:00",
+      "event_type": "COORDINATE_PACKAGE_SAVED",
+      "source": "COORDINATE_PACKAGE_MANAGER",
+      "details": {
+        "package_id": "PKG_MAV_01",
+        "version": 2,
+        "created_at_utc": "2026-11-21T14:43:31Z",
+        "source": "LOCAL_VISION",
+        "execution_strategy": "INSPECT_CANDIDATE",
+        "coordinates": [
+          {
+            "lat": 13.0827,
+            "lon": 80.2707,
+            "altitude_m": 10.0,
+            "alt_reference": "AGL",
+            "source_image_id": null,
+            "image_timestamp": null,
+            "vehicle_pose_timestamp": null,
+            "gps_fix_quality": 3,
+            "gps_hdop": 1.0,
+            "ekf_healthy": true,
+            "horizontal_uncertainty_m": 1.0,
+            "vertical_uncertainty_m": 1.0,
+            "camera_calibrated": false,
+            "georef_method": "3D_ATTITUDE_PINHOLE",
+            "confidence_score": 0.85,
+            "consecutive_frames_verified": 3,
+            "quality_state": "APPROXIMATE",
+            "validation_status": "APPROVED",
+            "validation_reasons": [
+              "Altitude 10.0m compliant with envelope [5.0m - 25.0m]",
+              "Autopilot estimator healthy: Fix 3, HDOP 1.00, EKF Nominal",
+              "Multi-frame visual lock confirmed (3 consecutive frames)"
+            ],
+            "rejection_errors": [],
+            "target_label": "TARGET_A",
+            "created_at_utc": "2026-11-21T14:43:31Z"
+          }
+        ],
+        "checksum_sha256": "9dcd14981645d502105cf54fbeb48d634c5ed79a2c0418af7820f30be16e3a76",
+        "is_validated_by_companion": true,
+        "validation_passed": true,
+        "validation_notes": [],
+        "rejection_reasons": []
+      }
     }
   ]
 }

@@ -14,7 +14,10 @@ import {
   ShieldAlert,
   Radio,
   WifiOff,
-  Power
+  Power,
+  Play,
+  Square,
+  Loader2
 } from 'lucide-react';
 import { decodeQRFromImageData } from '../../services/qrDecoderService';
 import { Card } from '../../ui/Card';
@@ -24,6 +27,10 @@ import {
   droneCameraStreamService,
   DroneCameraStreamStatus
 } from '../../services/droneCameraStreamService';
+import {
+  dronePortStreamingService,
+  DronePortStreamState
+} from '../../services/dronePortStreamingService';
 import {
   QRDetectionRecord,
   GCSVisualStatus,
@@ -91,9 +98,15 @@ export const CameraFeed: React.FC<CameraFeedProps> = ({ className = '', telemetr
     setTimeout(() => setActionNotice(null), 3500);
   };
 
+  // Drone Port Streaming State (Strictly OFF by default per Master Prompt)
+  const [dronePortState, setDronePortState] = useState<DronePortStreamState>(() => dronePortStreamingService.getStreamState());
+
   // Subscribe to Drone Camera Stream Service (WebRTC + Direct Frames)
   useEffect(() => {
-    droneCameraStreamService.startSubscribing();
+    // Listen to user streaming state (OFF by default)
+    const unsubPortState = dronePortStreamingService.subscribe((st) => {
+      setDronePortState(st);
+    });
 
     const unsubStream = droneCameraStreamService.subscribeStream((stream) => {
       setCameraStream(stream);
@@ -109,6 +122,7 @@ export const CameraFeed: React.FC<CameraFeedProps> = ({ className = '', telemetr
     });
 
     return () => {
+      unsubPortState();
       unsubStream();
       unsubFrame();
       unsubStatus();
@@ -270,64 +284,55 @@ export const CameraFeed: React.FC<CameraFeedProps> = ({ className = '', telemetr
     }
   };
 
-  // Drone Core Camera Status Mapping
-  const getStreamStatusConfig = (st: DroneCameraStreamStatus) => {
-    switch (st) {
-      case 'LIVE_FEED_CONNECTED':
+  // Drone Port Streaming Status Mapping (Req 2 & 3)
+  const getStreamStatusConfig = (state: DronePortStreamState) => {
+    switch (state) {
+      case 'STREAMING_ACTIVE':
         return {
-          label: 'Live Feed Connected',
-          badgeClass: 'bg-emerald-600 text-white shadow-emerald-950/60',
-          pulse: true,
-          dotClass: 'bg-emerald-300 animate-pulse',
+          label: 'STREAMING ACTIVE',
+          badgeClass: 'bg-emerald-950/80 border border-emerald-500/50 text-emerald-400',
+          pulse: false,
+          dotClass: 'bg-[#22C55E]',
           icon: Video,
-          description: 'Live video feed received directly from Drone Core camera.'
+          description: 'Live optical and video feed active from Drone Port.'
         };
-      case 'CONNECTING':
+      case 'STARTING':
         return {
-          label: 'Connecting to Drone Core',
-          badgeClass: 'bg-amber-600 text-white shadow-amber-950/60',
+          label: 'STARTING',
+          badgeClass: 'bg-amber-950/80 border border-amber-500/50 text-amber-300',
           pulse: true,
-          dotClass: 'bg-amber-300 animate-spin',
+          dotClass: 'bg-amber-400 animate-pulse',
           icon: RefreshCw,
-          description: 'Drone Core camera detected. Establishing direct high-speed live feed...'
+          description: 'Initiating streaming handshake with Drone Port...'
         };
-      case 'CAMERA_OFFLINE':
+      case 'STREAMING_OFF':
         return {
-          label: 'Camera Offline',
-          badgeClass: 'bg-slate-800 text-slate-300 border border-slate-700',
+          label: 'STREAMING OFF',
+          badgeClass: 'bg-[#161B22] border border-slate-700 text-slate-400',
+          pulse: false,
+          dotClass: 'bg-rose-500',
+          icon: WifiOff,
+          description: 'Drone Port streaming is OFF. Click Start Streaming to activate feed.'
+        };
+      case 'CONNECTION_UNAVAILABLE':
+      default:
+        return {
+          label: 'CONNECTION UNAVAILABLE',
+          badgeClass: 'bg-slate-900 border border-slate-800 text-slate-400',
           pulse: false,
           dotClass: 'bg-slate-500',
           icon: WifiOff,
-          description: 'Drone Core camera is currently turned OFF. Turn on the camera on Drone Core to resume feed.'
-        };
-      case 'CONNECTION_LOST':
-        return {
-          label: 'Connection Lost',
-          badgeClass: 'bg-rose-700 text-white shadow-rose-950/60',
-          pulse: true,
-          dotClass: 'bg-rose-400 animate-pulse',
-          icon: WifiOff,
-          description: 'Live camera heartbeat lost. Reconnecting to Drone Core...'
-        };
-      case 'WAITING_FOR_CAMERA':
-      default:
-        return {
-          label: 'Waiting for Drone Core Camera',
-          badgeClass: 'bg-[#161B22] text-sky-400 border border-sky-500/30',
-          pulse: false,
-          dotClass: 'bg-sky-400 animate-pulse',
-          icon: Camera,
-          description: 'Awaiting Drone Core camera activation. Ensure onboard camera is running.'
+          description: 'Drone Port connection is unavailable. Verify companion power and network bridge.'
         };
     }
   };
 
   const statusBadge = getStatusBadge(visualStatus);
   const StatusIcon = statusBadge.icon;
-  const streamStatusConfig = getStreamStatusConfig(streamStatus);
+  const streamStatusConfig = getStreamStatusConfig(dronePortState);
   const StreamStatusIcon = streamStatusConfig.icon;
 
-  const isFeedActive = useTestPattern || (hasWebRtcVideo || Boolean(liveFrame)) || streamStatus === 'LIVE_FEED_CONNECTED';
+  const isFeedActive = (dronePortState === 'STREAMING_ACTIVE' && (hasWebRtcVideo || Boolean(liveFrame))) || useTestPattern;
 
   const handleFullscreen = () => {
     if (!containerRef.current) return;
@@ -343,6 +348,53 @@ export const CameraFeed: React.FC<CameraFeedProps> = ({ className = '', telemetr
       title="DRONE & OPTICAL INTELLIGENCE"
       action={
         <div className="flex items-center gap-1.5 relative flex-wrap justify-end">
+          {/* Explicit Start / Stop Streaming Control Button (Req 2) */}
+          {dronePortState === 'STREAMING_ACTIVE' ? (
+            <button
+              type="button"
+              onClick={() => {
+                dronePortStreamingService.stopStreaming();
+                showNotification('Drone Port streaming stopped');
+              }}
+              className="px-2.5 py-0.5 rounded-[4px] text-[10px] font-mono font-bold bg-rose-950/80 hover:bg-rose-900 border border-rose-500/50 text-rose-300 hover:text-white transition flex items-center gap-1 cursor-pointer shadow-sm"
+              title="Stop Drone Port video streaming"
+            >
+              <Square className="w-3 h-3 text-rose-400 fill-current" />
+              <span>STOP STREAMING</span>
+            </button>
+          ) : dronePortState === 'STARTING' ? (
+            <button
+              type="button"
+              disabled
+              className="px-2.5 py-0.5 rounded-[4px] text-[10px] font-mono font-bold bg-amber-950/80 border border-amber-500/50 text-amber-300 flex items-center gap-1 cursor-wait shadow-sm"
+            >
+              <Loader2 className="w-3 h-3 animate-spin text-amber-400" />
+              <span>STARTING...</span>
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => {
+                dronePortStreamingService.startStreaming();
+                showNotification('Initiating Drone Port streaming...');
+              }}
+              className="px-2.5 py-0.5 rounded-[4px] text-[10px] font-mono font-bold bg-emerald-600 hover:bg-emerald-500 text-white transition flex items-center gap-1 cursor-pointer shadow-sm shadow-emerald-950/50"
+              title="Start Drone Port optical and telemetry streaming"
+            >
+              <Play className="w-3 h-3 fill-current" />
+              <span>START STREAMING</span>
+            </button>
+          )}
+
+          {/* Drone Port Streaming Status Pill (Req 2 & 3) */}
+          <div
+            className={`flex items-center gap-1.5 px-2.5 py-0.5 rounded-[4px] text-[10px] font-mono font-bold transition shadow-sm ${streamStatusConfig.badgeClass}`}
+            title={`Drone Port Streaming Status: ${streamStatusConfig.label}`}
+          >
+            <span className={`w-1.5 h-1.5 rounded-full ${streamStatusConfig.dotClass}`} />
+            <span>{streamStatusConfig.label}</span>
+          </div>
+
           {/* Manual Fallback Test Pattern Toggle */}
           <button
             type="button"
@@ -365,15 +417,6 @@ export const CameraFeed: React.FC<CameraFeedProps> = ({ className = '', telemetr
             <span>{useTestPattern ? 'PATTERN ON' : 'TEST PATTERN'}</span>
             {useTestPattern && <span className="w-1.5 h-1.5 rounded-full bg-slate-950 animate-ping" />}
           </button>
-
-          {/* Drone Core Camera Status Pill */}
-          <div
-            className={`flex items-center gap-1.5 px-2.5 py-0.5 rounded-[4px] text-[10px] font-mono font-bold transition shadow-sm ${streamStatusConfig.badgeClass}`}
-            title={`Drone Core Camera: ${streamStatusConfig.label}`}
-          >
-            <span className={`w-1.5 h-1.5 rounded-full ${streamStatusConfig.dotClass}`} />
-            <span className="hidden sm:inline">{streamStatusConfig.label}</span>
-          </div>
 
           {/* Tab Navigation: STREAM | ARCHIVE ({n}) | TARGET */}
           <div className="flex items-center bg-[#161B22] p-0.5 rounded-[6px] border border-[var(--uav-card-border)] text-[10px] font-mono">
@@ -549,7 +592,7 @@ export const CameraFeed: React.FC<CameraFeedProps> = ({ className = '', telemetr
               </div>
             </div>
           ) : (
-            /* Waiting Screen with Direct Prompt to Reconnect Drone Cam */
+            /* Drone Port Streaming Off / Waiting Overlay (Req 2) */
             <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-[#070D18] text-center p-6 select-none font-mono">
               <div className="w-12 h-12 rounded-xl bg-[#0D1524] border border-slate-800 flex items-center justify-center mb-2.5 shadow-xl">
                 <StreamStatusIcon className={`w-6 h-6 ${streamStatusConfig.pulse ? 'text-amber-400 animate-pulse' : 'text-slate-400'}`} />
@@ -567,14 +610,40 @@ export const CameraFeed: React.FC<CameraFeedProps> = ({ className = '', telemetr
               </p>
 
               <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => droneCameraStreamService.reconnect()}
-                  className="px-3.5 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-500 text-white text-[11px] font-black uppercase tracking-wider flex items-center gap-1.5 cursor-pointer shadow-md shadow-sky-950 transition active:scale-95"
-                >
-                  <RefreshCw className="w-3.5 h-3.5" />
-                  <span>Reconnect Camera</span>
-                </button>
+                {dronePortState === 'STREAMING_ACTIVE' ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      dronePortStreamingService.stopStreaming();
+                      showNotification('Drone Port streaming stopped');
+                    }}
+                    className="px-3.5 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-[11px] font-black uppercase tracking-wider flex items-center gap-1.5 cursor-pointer shadow-md transition active:scale-95"
+                  >
+                    <Square className="w-3.5 h-3.5 fill-current" />
+                    <span>Stop Streaming</span>
+                  </button>
+                ) : dronePortState === 'STARTING' ? (
+                  <button
+                    type="button"
+                    disabled
+                    className="px-3.5 py-1.5 rounded-lg bg-amber-600 text-white text-[11px] font-black uppercase tracking-wider flex items-center gap-1.5 cursor-wait shadow-md"
+                  >
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <span>Starting Stream...</span>
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      dronePortStreamingService.startStreaming();
+                      showNotification('Starting Drone Port video stream...');
+                    }}
+                    className="px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white text-[11px] font-black uppercase tracking-wider flex items-center gap-1.5 cursor-pointer shadow-md shadow-emerald-950 transition active:scale-95"
+                  >
+                    <Play className="w-3.5 h-3.5 fill-current" />
+                    <span>Start Streaming</span>
+                  </button>
+                )}
               </div>
             </div>
           )}

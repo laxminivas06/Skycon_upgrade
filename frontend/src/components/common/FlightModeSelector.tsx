@@ -134,13 +134,23 @@ export const FlightModeSelector: React.FC<FlightModeSelectorProps> = ({
     };
   }, []);
 
-  const currentModeStr = (telemetry.flightMode || 'STABILIZE').toUpperCase();
   const isLinkActive = Boolean(
     connState.isConnected ||
     connState.isUsbConnected ||
     connState.isRealHardware ||
     connState.connectionType === 'SIMULATED'
   );
+
+  const hasFlightMode = Boolean(
+    isLinkActive &&
+    telemetry.flightMode &&
+    telemetry.flightMode !== 'DISCONNECTED' &&
+    telemetry.flightMode !== 'WAITING FOR TELEMETRY'
+  );
+
+  const currentModeStr = hasFlightMode
+    ? telemetry.flightMode.toUpperCase()
+    : 'WAITING FOR TELEMETRY';
 
   const handleModeSelect = async (mode: FlightModeName) => {
     if (!isLinkActive) {

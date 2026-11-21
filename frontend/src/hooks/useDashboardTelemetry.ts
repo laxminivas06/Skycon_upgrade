@@ -37,6 +37,7 @@ export interface DashboardTelemetryData {
   isCompassCalibrated: boolean;
   isStale: boolean;
   isLinkLost: boolean;
+  isTelemetryAvailable: boolean;
   rawTelemetry: DroneTelemetry;
   rawConnectionState: PixhawkConnectionState;
 }
@@ -103,7 +104,12 @@ export const useDashboardTelemetry = (): DashboardTelemetryData => {
         setIsLinkLost(age > 8000 || !state.isConnected);
       } else {
         setIsStale(false);
-        setIsLinkLost(!state.isConnected && state.phase !== 'CONNECTING');
+        // CRITICAL FIX: Initial disconnected state is NOT link lost!
+        // Link lost only occurs when an established communication link is lost.
+        const isExplicitLoss = Boolean(
+          (state.phase === 'CONNECTION_LOST' || state.phase === 'HEARTBEAT_TIMEOUT') && state.lastHeartbeat > 0
+        );
+        setIsLinkLost(isExplicitLoss);
       }
     }, 250);
 
@@ -158,6 +164,7 @@ export const useDashboardTelemetry = (): DashboardTelemetryData => {
       isCompassCalibrated: true,
       isStale: false,
       isLinkLost: false,
+      isTelemetryAvailable: true,
       rawTelemetry: telemetry,
       rawConnectionState: connState,
     };
@@ -177,6 +184,8 @@ export const useDashboardTelemetry = (): DashboardTelemetryData => {
     connState.phase === 'WAITING_FOR_MAVLINK' ||
     connState.phase === 'SERIAL_OPENING' ||
     connState.phase === 'WAITING_FOR_HEARTBEAT' ||
+    connState.phase === 'CONNECTING' ||
+    connState.phase === 'RECONNECTING' ||
     connState.phase === 'SERIAL_OPEN')
   );
 
@@ -204,23 +213,31 @@ export const useDashboardTelemetry = (): DashboardTelemetryData => {
   const gpsFixType = telemetry.gps?.fixType || (isGpsValid ? '3D_FIX' : 'NO_GPS');
   const gpsAltitudeMeters = telemetry.gps?.altitude || 0.0;
 
-  let gpsStatusMessage = 'Pixhawk GPS Signal Unavailable';
+  let gpsStatusMessage = 'GPS UNAVAILABLE';
   if (isGpsValid) {
     gpsStatusMessage = `${gpsFixType} (${sats} Sats)`;
   } else if (!isConnected) {
-    gpsStatusMessage = 'Pixhawk Disconnected';
-  } else if (isLinkLost || isStale) {
-    gpsStatusMessage = 'MAVLink Telemetry Stale / Paused';
+    gpsStatusMessage = 'NOT CONNECTED';
+  } else if (isLinkLost) {
+    gpsStatusMessage = 'LINK LOST';
+  } else if (isStale) {
+    gpsStatusMessage = 'MAVLink Telemetry Stale';
   } else if (sats > 0) {
     gpsStatusMessage = `Acquiring Fix (${sats} Sats Visible)`;
   }
+
+  const isTelemetryAvailable = Boolean(isConnected && (connState.isReceivingTelemetry || connState.bytesReceived > 0));
 
   return {
     isFixture: false,
     isConnected,
     isConnecting,
     isArmed: isConnected ? Boolean(telemetry.isArmed) : false,
-    flightMode: isConnected ? (telemetry.flightMode || 'DISARMED') : 'DISCONNECTED',
+    flightMode: isConnected && telemetry.flightMode && telemetry.flightMode !== 'DISCONNECTED'
+      ? telemetry.flightMode
+      : isConnected
+      ? (telemetry.flightMode || 'DISARMED')
+      : 'WAITING FOR TELEMETRY',
     satellites: sats,
     hdop: telemetry.gps?.hdop ?? (isGpsValid ? 1.0 : 99.0),
     batteryPercent: telemetry.batteryPercent ?? 0,
@@ -248,6 +265,7 @@ export const useDashboardTelemetry = (): DashboardTelemetryData => {
     isCompassCalibrated: telemetry.isCompassCalibrated ?? true,
     isStale,
     isLinkLost,
+    isTelemetryAvailable,
     rawTelemetry: telemetry,
     rawConnectionState: connState,
   };

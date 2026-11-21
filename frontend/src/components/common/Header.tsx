@@ -202,7 +202,7 @@ export const Header: React.FC<HeaderProps> = ({
             {telemetry.batteryVoltage > 0 ? `${telemetry.batteryPercent}%` : '--%'}
           </span>
           <span className="text-slate-400 text-[10px] hidden sm:inline">
-            {telemetry.batteryVoltage > 0 ? `${telemetry.batteryVoltage.toFixed(1)}V` : 'NO SENSOR'}
+            {telemetry.batteryVoltage > 0 ? `${telemetry.batteryVoltage.toFixed(1)}V` : 'UNAVAILABLE'}
           </span>
         </div>
 

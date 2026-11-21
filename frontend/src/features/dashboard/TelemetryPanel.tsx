@@ -135,12 +135,13 @@ export const TelemetryPanel: React.FC<TelemetryPanelProps> = ({
     }
   };
 
-  const alt = Math.max(0, telemetry.altitudeMeters || 0);
+  const isTelemActive = Boolean(telemetry.isConnected && telemetry.isTelemetryAvailable);
+  const alt = isTelemActive ? Math.max(0, telemetry.altitudeMeters || 0) : 0;
   const mslAlt = telemetry.gpsAltitudeMeters || (telemetry.rawTelemetry?.gps?.altitude || 0);
   const displayedAlt = altDisplayMode === 'AGL' ? alt : (mslAlt > 0 ? mslAlt : alt);
   const heading = Math.round(telemetry.headingDeg || 0);
-  const spd = Math.max(0, telemetry.speedMs || 0);
-  const vSpd = telemetry.verticalSpeedMs || 0;
+  const spd = isTelemActive ? Math.max(0, telemetry.speedMs || 0) : 0;
+  const vSpd = isTelemActive ? (telemetry.verticalSpeedMs || 0) : 0;
   const batteryPct = Math.max(0, Math.min(100, telemetry.batteryPercent ?? 0));
   const batteryVolt = telemetry.batteryVoltage || 0;
   const batteryCurrent = telemetry.rawTelemetry?.batteryCurrent || 0;
@@ -156,9 +157,9 @@ export const TelemetryPanel: React.FC<TelemetryPanelProps> = ({
   const spdOffset = arcCircumference * (1 - spdPercent * 0.75);
 
   // Battery health thresholds
-  const isBatteryLow = batteryPct > 0 && (batteryPct < 25 || (batteryVolt > 0 && batteryVolt < 10.8));
-  const isBatteryCritical = batteryPct > 0 && (batteryPct < 15 || (batteryVolt > 0 && batteryVolt < 10.2));
-  const isBatteryUnavailable = batteryVolt <= 0 && batteryPct <= 0;
+  const isBatteryLow = isTelemActive && batteryPct > 0 && (batteryPct < 25 || (batteryVolt > 0 && batteryVolt < 10.8));
+  const isBatteryCritical = isTelemActive && batteryPct > 0 && (batteryPct < 15 || (batteryVolt > 0 && batteryVolt < 10.2));
+  const isBatteryUnavailable = !isTelemActive || (batteryVolt <= 0 && batteryPct <= 0);
 
   return (
     <div className={`flex flex-col gap-3 w-full select-none ${className}`}>
@@ -225,7 +226,7 @@ export const TelemetryPanel: React.FC<TelemetryPanelProps> = ({
             </svg>
             <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
               <span className="text-[18px] font-black font-orbitron text-white leading-none">
-                {displayedAlt.toFixed(1)}
+                {isTelemActive ? displayedAlt.toFixed(1) : '--.-'}
               </span>
               <span className={`text-[8.5px] font-mono font-bold mt-0.5 ${altDisplayMode === 'AGL' ? 'text-amber-400' : 'text-cyan-400'}`}>
                 {altDisplayMode === 'AGL' ? 'M (AGL)' : 'M (MSL)'}
@@ -247,13 +248,21 @@ export const TelemetryPanel: React.FC<TelemetryPanelProps> = ({
                 )}
               </div>
               <div className="flex items-baseline gap-1">
-                <span className="text-2xl font-black font-orbitron text-white">
-                  {displayedAlt.toFixed(1)}
-                </span>
-                <span className={`text-[11px] font-bold font-mono ${altDisplayMode === 'AGL' ? 'text-amber-400' : 'text-cyan-400'}`}>m</span>
-                <span className="text-[10px] text-slate-500 font-mono ml-1">
-                  ({(displayedAlt * 3.28084).toFixed(1)} ft)
-                </span>
+                {isTelemActive ? (
+                  <>
+                    <span className="text-2xl font-black font-orbitron text-white">
+                      {displayedAlt.toFixed(1)}
+                    </span>
+                    <span className={`text-[11px] font-bold font-mono ${altDisplayMode === 'AGL' ? 'text-amber-400' : 'text-cyan-400'}`}>m</span>
+                    <span className="text-[10px] text-slate-500 font-mono ml-1">
+                      ({(displayedAlt * 3.28084).toFixed(1)} ft)
+                    </span>
+                  </>
+                ) : (
+                  <span className="text-sm font-bold font-mono text-amber-400">
+                    WAITING FOR TELEMETRY
+                  </span>
+                )}
               </div>
             </div>
 
@@ -262,19 +271,27 @@ export const TelemetryPanel: React.FC<TelemetryPanelProps> = ({
               <span className="text-slate-400 text-[10px]">V-SPEED:</span>
               <span
                 className={`font-bold flex items-center gap-0.5 ${
-                  vSpd > 0.2
+                  !isTelemActive
+                    ? 'text-slate-500'
+                    : vSpd > 0.2
                     ? 'text-emerald-400'
                     : vSpd < -0.2
                     ? 'text-amber-400'
                     : 'text-slate-300'
                 }`}
               >
-                {vSpd > 0.2 ? (
-                  <ArrowUp className="w-3 h-3 text-emerald-400" />
-                ) : vSpd < -0.2 ? (
-                  <ArrowDown className="w-3 h-3 text-amber-400" />
-                ) : null}
-                {vSpd > 0 ? `+${vSpd.toFixed(1)}` : vSpd.toFixed(1)} m/s
+                {!isTelemActive ? (
+                  'UNAVAILABLE'
+                ) : (
+                  <>
+                    {vSpd > 0.2 ? (
+                      <ArrowUp className="w-3 h-3 text-emerald-400" />
+                    ) : vSpd < -0.2 ? (
+                      <ArrowDown className="w-3 h-3 text-amber-400" />
+                    ) : null}
+                    {vSpd > 0 ? `+${vSpd.toFixed(1)}` : vSpd.toFixed(1)} m/s
+                  </>
+                )}
               </span>
             </div>
           </div>
@@ -334,22 +351,32 @@ export const TelemetryPanel: React.FC<TelemetryPanelProps> = ({
           <span className="text-[10px] text-slate-400 font-mono block">DRONE HEADING</span>
           <div className="flex items-baseline gap-1">
             <span className="text-3xl font-black font-orbitron text-transparent bg-clip-text bg-gradient-to-r from-sky-400 via-teal-200 to-amber-300 leading-none">
-              {heading}°
+              {isTelemActive ? `${heading}°` : '--°'}
             </span>
           </div>
           <span className="text-[11px] font-bold text-amber-300 font-mono uppercase mt-1">
-            {getHeadingCardinal(heading)}
+            {isTelemActive ? getHeadingCardinal(heading) : 'WAITING FOR TELEMETRY'}
           </span>
 
           {/* Magnetometer status */}
           <div className="flex items-center gap-1.5 mt-2 text-[9.5px] font-mono text-slate-400">
             <span
               className={`w-1.5 h-1.5 rounded-full ${
-                telemetry.isCompassHealthy ? 'bg-emerald-400 shadow-[0_0_4px_#34d399]' : 'bg-amber-400 animate-pulse'
+                !isTelemActive
+                  ? 'bg-slate-500'
+                  : telemetry.isCompassHealthy
+                  ? 'bg-emerald-400 shadow-[0_0_4px_#34d399]'
+                  : 'bg-amber-400 animate-pulse'
               }`}
             />
-            <span>{telemetry.isCompassHealthy ? 'CALIBRATED' : 'UNCALIBRATED'}</span>
-            <span className="text-slate-500">({telemetry.magFieldStrength || 480}mG)</span>
+            <span>
+              {!isTelemActive
+                ? 'UNAVAILABLE'
+                : telemetry.isCompassHealthy
+                ? 'CALIBRATED'
+                : 'UNCALIBRATED'}
+            </span>
+            {isTelemActive && <span className="text-slate-500">({telemetry.magFieldStrength || 480}mG)</span>}
           </div>
         </div>
       </Card>
@@ -394,7 +421,7 @@ export const TelemetryPanel: React.FC<TelemetryPanelProps> = ({
             </svg>
             <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
               <span className="text-[18px] font-black font-orbitron text-white leading-none">
-                {spd.toFixed(1)}
+                {isTelemActive ? spd.toFixed(1) : '--.-'}
               </span>
               <span className="text-[8.5px] text-emerald-400 font-mono font-bold mt-0.5">M / S</span>
             </div>
@@ -405,20 +432,28 @@ export const TelemetryPanel: React.FC<TelemetryPanelProps> = ({
             <div>
               <span className="text-[10px] text-slate-400 font-mono block">VELOCITY</span>
               <div className="flex items-baseline gap-1">
-                <span className="text-2xl font-black font-orbitron text-white">
-                  {spd.toFixed(1)}
-                </span>
-                <span className="text-[11px] font-bold text-emerald-400 font-mono">m/s</span>
-                <span className="text-[10px] text-slate-500 font-mono ml-1">
-                  ({(spd * 3.6).toFixed(1)} km/h)
-                </span>
+                {isTelemActive ? (
+                  <>
+                    <span className="text-2xl font-black font-orbitron text-white">
+                      {spd.toFixed(1)}
+                    </span>
+                    <span className="text-[11px] font-bold text-emerald-400 font-mono">m/s</span>
+                    <span className="text-[10px] text-slate-500 font-mono ml-1">
+                      ({(spd * 3.6).toFixed(1)} km/h)
+                    </span>
+                  </>
+                ) : (
+                  <span className="text-sm font-bold font-mono text-amber-400">
+                    WAITING FOR TELEMETRY
+                  </span>
+                )}
               </div>
             </div>
 
             <div className="flex items-center justify-between text-[10px] font-mono text-slate-400">
               <span>AIRSPEED (EST):</span>
               <span className="font-bold text-slate-200">
-                {(spd * 1.05).toFixed(1)} m/s
+                {isTelemActive ? `${(spd * 1.05).toFixed(1)} m/s` : 'UNAVAILABLE'}
               </span>
             </div>
           </div>
@@ -456,7 +491,7 @@ export const TelemetryPanel: React.FC<TelemetryPanelProps> = ({
                   : 'bg-emerald-950/40 text-emerald-300 border border-emerald-500/30'
               }`}
             >
-              {isBatteryUnavailable ? 'NO SENSOR' : `${batteryPct}%`}
+              {isBatteryUnavailable ? 'UNAVAILABLE' : `${batteryPct}%`}
             </span>
           </div>
         }
@@ -573,7 +608,7 @@ export const TelemetryPanel: React.FC<TelemetryPanelProps> = ({
             </span>
           </div>
           <span className="text-[10px] text-slate-400">
-            {telemetry.flightMode || 'DISARMED'}
+            {isTelemActive ? (telemetry.flightMode || 'DISARMED') : 'WAITING FOR TELEMETRY'}
           </span>
         </div>
 

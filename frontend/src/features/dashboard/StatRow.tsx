@@ -58,7 +58,13 @@ export const StatRow: React.FC<StatRowProps> = ({ telemetry, className = '' }) =
           )
         }
         label="FLIGHT MODE"
-        value={isArmed ? telemetry.flightMode : 'DISARMED'}
+        value={
+          !telemetry.isConnected
+            ? 'WAITING FOR TELEMETRY'
+            : isArmed
+            ? telemetry.flightMode
+            : (telemetry.flightMode || 'DISARMED')
+        }
         valueClassName={modeColor}
       />
 
@@ -66,7 +72,13 @@ export const StatRow: React.FC<StatRowProps> = ({ telemetry, className = '' }) =
       <StatTile
         icon={<Satellite className={`w-5 h-5 ${telemetry.isGpsValid ? 'text-[var(--uav-icon-blue)]' : 'text-rose-400'}`} />}
         label="GPS"
-        value={telemetry.isGpsValid ? `${telemetry.satellites} Sats (${telemetry.gpsFixType.replace('_', ' ')})` : 'NO LOCK'}
+        value={
+          !telemetry.isConnected
+            ? 'WAITING FOR TELEMETRY'
+            : telemetry.isGpsValid
+            ? `${telemetry.satellites} Sats (${telemetry.gpsFixType.replace('_', ' ')})`
+            : 'NO LOCK'
+        }
         valueClassName={telemetry.isGpsValid ? 'text-[var(--uav-text)]' : 'text-rose-400 font-bold'}
       />
 
@@ -74,7 +86,11 @@ export const StatRow: React.FC<StatRowProps> = ({ telemetry, className = '' }) =
       <StatTile
         icon={<Battery className={`w-5 h-5 ${batteryColor}`} />}
         label="BATTERY"
-        value={`${telemetry.batteryPercent}% (${telemetry.batteryVoltage.toFixed(1)}V)`}
+        value={
+          telemetry.batteryVoltage > 0
+            ? `${telemetry.batteryPercent}% (${telemetry.batteryVoltage.toFixed(1)}V)`
+            : 'UNAVAILABLE'
+        }
         valueClassName={batteryColor}
       />
 
@@ -83,21 +99,25 @@ export const StatRow: React.FC<StatRowProps> = ({ telemetry, className = '' }) =
         icon={<Mountain className="w-5 h-5 text-[var(--uav-icon-blue)]" />}
         label="ALTITUDE / V-SPD"
         value={
-          <span className="flex items-baseline gap-1.5">
-            <span>{telemetry.altitudeMeters.toFixed(1)}m</span>
-            <span
-              className={`text-[11px] font-mono font-bold ${
-                telemetry.verticalSpeedMs > 0.2
-                  ? 'text-emerald-400'
-                  : telemetry.verticalSpeedMs < -0.2
-                  ? 'text-amber-400'
-                  : 'text-slate-400'
-              }`}
-            >
-              {telemetry.verticalSpeedMs > 0 ? '▲+' : telemetry.verticalSpeedMs < 0 ? '▼' : ''}
-              {telemetry.verticalSpeedMs.toFixed(1)}m/s
+          !telemetry.isConnected && !telemetry.isTelemetryAvailable ? (
+            <span>UNAVAILABLE</span>
+          ) : (
+            <span className="flex items-baseline gap-1.5">
+              <span>{telemetry.altitudeMeters.toFixed(1)}m</span>
+              <span
+                className={`text-[11px] font-mono font-bold ${
+                  telemetry.verticalSpeedMs > 0.2
+                    ? 'text-emerald-400'
+                    : telemetry.verticalSpeedMs < -0.2
+                    ? 'text-amber-400'
+                    : 'text-slate-400'
+                }`}
+              >
+                {telemetry.verticalSpeedMs > 0 ? '▲+' : telemetry.verticalSpeedMs < 0 ? '▼' : ''}
+                {telemetry.verticalSpeedMs.toFixed(1)}m/s
+              </span>
             </span>
-          </span>
+          )
         }
         valueClassName="text-[var(--uav-text)]"
       />
@@ -106,7 +126,11 @@ export const StatRow: React.FC<StatRowProps> = ({ telemetry, className = '' }) =
       <StatTile
         icon={<Gauge className="w-5 h-5 text-[var(--uav-icon-blue)]" />}
         label="GROUND SPEED"
-        value={`${telemetry.speedMs.toFixed(1)} m/s`}
+        value={
+          !telemetry.isConnected && !telemetry.isTelemetryAvailable
+            ? 'UNAVAILABLE'
+            : `${telemetry.speedMs.toFixed(1)} m/s`
+        }
         valueClassName="text-[var(--uav-text)]"
       />
 
@@ -114,7 +138,11 @@ export const StatRow: React.FC<StatRowProps> = ({ telemetry, className = '' }) =
       <StatTile
         icon={<Compass className="w-5 h-5 text-[var(--uav-icon-blue)]" />}
         label="HEADING"
-        value={`${telemetry.headingDeg}° (${getCardinal(telemetry.headingDeg)})`}
+        value={
+          !telemetry.isConnected && !telemetry.isTelemetryAvailable
+            ? 'UNAVAILABLE'
+            : `${telemetry.headingDeg}° (${getCardinal(telemetry.headingDeg)})`
+        }
         valueClassName="text-[var(--uav-text)]"
       />
 

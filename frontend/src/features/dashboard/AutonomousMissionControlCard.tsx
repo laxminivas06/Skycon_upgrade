@@ -54,6 +54,7 @@ interface AutonomousMissionControlCardProps {
     deadline?: number;
     isExecuting: boolean;
   };
+  onOpenPhoneMission?: () => void;
 }
 
 export const AutonomousMissionControlCard: React.FC<AutonomousMissionControlCardProps> = ({
@@ -64,6 +65,7 @@ export const AutonomousMissionControlCard: React.FC<AutonomousMissionControlCard
   rtlConfirmPending = false,
   className = '',
   activeMissionTime,
+  onOpenPhoneMission,
 }) => {
   // 1. Boundary Type Selection
   const [boundaryType, setBoundaryType] = useState<'SQUARE' | 'RECTANGLE' | 'CIRCLE' | 'POLYGON'>('RECTANGLE');
@@ -664,6 +666,33 @@ export const AutonomousMissionControlCard: React.FC<AutonomousMissionControlCard
             <span>START MISSION</span>
           </button>
         </div>
+
+        {/* Designated Phone Recon Mission Section */}
+        {onOpenPhoneMission && (
+          <div className="p-2.5 rounded-lg bg-[#0F172A] border border-cyan-500/30 flex items-center justify-between gap-2 shadow-sm mt-1">
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 rounded-lg bg-cyan-950/80 border border-cyan-500/40 flex items-center justify-center text-cyan-400 font-bold text-sm">
+                📱
+              </div>
+              <div>
+                <span className="text-[11px] font-orbitron font-bold text-white block leading-tight">
+                  PHONE RECON MISSION
+                </span>
+                <span className="text-[9.5px] font-mono text-slate-400">
+                  Onboard smartphone camera node &amp; payload tracking
+                </span>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={onOpenPhoneMission}
+              className="px-3 py-1.5 rounded-md bg-cyan-600 hover:bg-cyan-500 active:bg-cyan-700 text-white text-[10.5px] font-bold font-mono transition cursor-pointer shadow-sm shrink-0"
+              title="Open Autonomous Phone Recon Mission Dashboard"
+            >
+              OPEN MISSION
+            </button>
+          </div>
+        )}
 
         {/* Delete Mission Button */}
         {currentMission && (
