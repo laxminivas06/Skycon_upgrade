@@ -31,8 +31,14 @@ export interface Esp32WebSocketOptions {
 }
 
 // Environment defaults
-const isLocalhostOrigin = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
-const defaultLocalWs = isLocalhostOrigin ? `ws://${window.location.hostname}:8443/ws` : 'wss://dronebackend-ppgp.onrender.com/ws';
+const isBrowser = typeof window !== 'undefined';
+const isHttpsOrigin = isBrowser && window.location.protocol === 'https:';
+const currentHost = isBrowser && window.location.hostname ? window.location.hostname : 'localhost';
+const currentPort = isBrowser && window.location.port ? parseInt(window.location.port, 10) : (isHttpsOrigin ? 443 : 8443);
+
+const defaultLocalWs = isBrowser
+  ? `${isHttpsOrigin ? 'wss:' : 'ws:'}//${currentHost}:${currentPort}/ws`
+  : 'ws://localhost:8443/ws';
 
 const ENV_ESP32_WS_URL = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_ESP32_WS_URL) || defaultLocalWs;
 const ENV_SECURE_RELAY_URL = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SECURE_RELAY_URL) || defaultLocalWs;
@@ -44,12 +50,12 @@ function parseWsEndpoint(urlStr: string) {
     const clean = urlStr.trim().replace(/^ws(s)?:\/\//i, 'http$1://');
     const parsed = new URL(clean);
     return {
-      host: parsed.hostname || (isLocalhostOrigin ? 'localhost' : 'dronebackend-ppgp.onrender.com'),
-      port: parsed.port ? parseInt(parsed.port, 10) : (clean.startsWith('https://') ? 443 : (isLocalhostOrigin ? 8443 : 8080)),
+      host: parsed.hostname || currentHost,
+      port: parsed.port ? parseInt(parsed.port, 10) : (clean.startsWith('https://') ? 443 : currentPort),
       path: parsed.pathname || '/ws'
     };
   } catch (e) {
-    return { host: isLocalhostOrigin ? 'localhost' : 'dronebackend-ppgp.onrender.com', port: isLocalhostOrigin ? 8443 : 443, path: '/ws' };
+    return { host: currentHost, port: currentPort, path: '/ws' };
   }
 }
 
@@ -116,9 +122,9 @@ export class Esp32WebSocketTransport implements MavlinkTransport {
     this.relayToken = ENV_RELAY_TOKEN;
     this.wifiSsid = ENV_WIFI_SSID;
 
-    this.protocolMode = 'WSS';
-    this.connectionMode = 'SECURE';
-    this.currentProtocol = 'wss';
+    this.protocolMode = isHttpsOrigin ? 'WSS' : 'WS';
+    this.connectionMode = isHttpsOrigin ? 'SECURE' : 'LOCAL';
+    this.currentProtocol = isHttpsOrigin ? 'wss' : 'ws';
 
     if (typeof window !== 'undefined') {
       try {
@@ -136,13 +142,13 @@ export class Esp32WebSocketTransport implements MavlinkTransport {
         if (savedProtoMode === 'WS' || savedProtoMode === 'WSS') {
           this.protocolMode = savedProtoMode;
         } else {
-          this.protocolMode = 'WSS';
+          this.protocolMode = isHttpsOrigin ? 'WSS' : 'WS';
         }
 
         if (savedMode === 'LOCAL' || savedMode === 'SECURE') {
           this.connectionMode = savedMode;
         } else {
-          this.connectionMode = 'SECURE';
+          this.connectionMode = isHttpsOrigin ? 'SECURE' : 'LOCAL';
         }
 
         if (savedHost && savedHost.trim().length > 0) {
@@ -331,17 +337,7 @@ export class Esp32WebSocketTransport implements MavlinkTransport {
     if (this.protocolMode === 'WS') return 'ws';
     if (this.protocolMode === 'WSS') return 'wss';
 
-    const isLocalhost = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
-    if (isLocalhost) {
-      return 'ws';
-    }
-
-    // AUTO MODE: If secure endpoint is configured, prefer WSS to connect to active cloud relay
-    if (this.secureEndpoint || ENV_SECURE_RELAY_URL) {
-      return 'wss';
-    }
-
-    // Fallback on HTTP origin without configured secure endpoint:
+    // On plain HTTP origins, always default to unencrypted ws:// to prevent TLS handshake failures
     return 'ws';
   }
 
@@ -380,17 +376,17 @@ export class Esp32WebSocketTransport implements MavlinkTransport {
 
       return url;
     } else {
-      // Direct WS to ESP32 or Localhost Relay: Do NOT convert ws:// to wss://
-      if (this.secureEndpoint && this.secureEndpoint.startsWith('ws://')) {
-        let url = this.secureEndpoint;
-        const tokenToUse = (this.relayToken || ENV_RELAY_TOKEN).trim();
-        if (tokenToUse && !url.includes('token=')) {
-          const sep = url.includes('?') ? '&' : '?';
-          url = `${url}${sep}token=${encodeURIComponent(tokenToUse)}`;
-        }
-        return url;
+      // Direct WS to ESP32 / Raspberry Pi Localhost Relay: Do NOT convert ws:// to wss://
+      let url = this.secureEndpoint && this.secureEndpoint.startsWith('ws://')
+        ? this.secureEndpoint
+        : `ws://${this.localHost}:${this.localPort}${formattedPath}`;
+
+      const tokenToUse = (this.relayToken || ENV_RELAY_TOKEN).trim();
+      if (tokenToUse && !url.includes('token=')) {
+        const sep = url.includes('?') ? '&' : '?';
+        url = `${url}${sep}token=${encodeURIComponent(tokenToUse)}`;
       }
-      return `ws://${this.localHost}:${this.localPort}${formattedPath}`;
+      return url;
     }
   }
 
@@ -732,9 +728,14 @@ export class Esp32WebSocketTransport implements MavlinkTransport {
             };
             reader.readAsArrayBuffer(event.data);
           } else if (typeof event.data === 'string') {
-            // Check for JSON status message from Secure Cloud Relay
+            // Check for JSON status message or Companion Telemetry Packet
             try {
               const meta = JSON.parse(event.data);
+              if (meta && (meta.type === 'TELEMETRY_PACKET' || meta.telemetry)) {
+                if (typeof window !== 'undefined') {
+                  window.dispatchEvent(new CustomEvent('sae:telemetry_packet', { detail: meta.telemetry || meta }));
+                }
+              }
               if (meta && (meta.type === 'QR_ALERT' || meta.type === 'QR_TWO_DIGIT_DETECTED')) {
                 if (typeof window !== 'undefined') {
                   window.dispatchEvent(new CustomEvent('sae:qr_alert', { detail: meta }));

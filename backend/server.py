@@ -78,6 +78,44 @@ SERVER_START_TIME = time.time()
 # -----------------------------------------------------------------------------
 # Background Telemetry & WebSocket Broadcaster Loop
 # -----------------------------------------------------------------------------
+# Telemetry Broadcast & Raw MAVLink Streaming Loops
+# -----------------------------------------------------------------------------
+
+raw_packet_queue: Optional[asyncio.Queue] = None
+main_event_loop: Optional[asyncio.AbstractEventLoop] = None
+
+def _on_raw_mavlink_received(packet: bytes):
+    """Thread-safe callback from MAVLinkMultiplexer when a valid MAVLink frame arrives."""
+    global raw_packet_queue, main_event_loop
+    if raw_packet_queue and main_event_loop and not main_event_loop.is_closed():
+        try:
+            main_event_loop.call_soon_threadsafe(
+                lambda: raw_packet_queue.put_nowait(packet) if not raw_packet_queue.full() else None
+            )
+        except Exception:
+            pass
+
+async def raw_mavlink_broadcast_loop():
+    """Broadcasts raw binary MAVLink frames to connected WebSockets."""
+    global raw_packet_queue
+    while True:
+        try:
+            if raw_packet_queue:
+                packet = await raw_packet_queue.get()
+                if connected_clients:
+                    disconnected = []
+                    for client in list(connected_clients):
+                        try:
+                            await client.send_bytes(packet)
+                        except Exception:
+                            disconnected.append(client)
+                    for dc in disconnected:
+                        connected_clients.discard(dc)
+            else:
+                await asyncio.sleep(0.01)
+        except Exception as e:
+            logger.debug(f"Error in raw MAVLink broadcast: {e}")
+            await asyncio.sleep(0.01)
 
 async def telemetry_broadcast_loop():
     """Broadcasts telemetry frames to connected WebSockets at 10 Hz."""
@@ -121,15 +159,22 @@ async def telemetry_broadcast_loop():
 
 @app.on_event("startup")
 async def startup_event():
+    global main_event_loop, raw_packet_queue
     logger.info("Initializing SKYCON Master Backend...")
-    # Start MAVLink multiplexer
+    main_event_loop = asyncio.get_running_loop()
+    raw_packet_queue = asyncio.Queue(maxsize=500)
+
+    # Start MAVLink multiplexer & subscribe to raw MAVLink frames
+    mavlink_mux.subscribe_raw(_on_raw_mavlink_received)
     mavlink_mux.start()
+
     # Start Network Manager auto-reconnect watchdog
     network_manager.start()
     # Start Cloud Sync worker if configured
     cloud_sync_service.start()
-    # Start telemetry broadcast task
+    # Start telemetry broadcast tasks
     asyncio.create_task(telemetry_broadcast_loop())
+    asyncio.create_task(raw_mavlink_broadcast_loop())
     logger.info("SKYCON Companion Services Online (Raspberry Pi 4 / Pixhawk 2.4.8).")
 
 
@@ -153,49 +198,58 @@ async def websocket_endpoint(websocket: WebSocket):
 
     try:
         while True:
-            data = await websocket.receive_text()
-            try:
-                msg = json.loads(data)
-                msg_type = msg.get("type", "")
+            message = await websocket.receive()
 
-                # Handle client command or signaling
-                if msg_type == "COMMAND_ARM":
-                    mavlink_mux.arm()
-                elif msg_type == "COMMAND_DISARM":
-                    mavlink_mux.disarm()
-                elif msg_type == "COMMAND_MODE":
-                    mavlink_mux.set_mode(msg.get("mode", "LOITER"))
-                elif msg_type == "COMMAND_TAKEOFF":
-                    mavlink_mux.takeoff(float(msg.get("altitude", 10.0)))
-                elif msg_type == "COMMAND_RTL":
-                    mavlink_mux.rtl()
-                elif msg_type == "COMMAND_EMERGENCY_RTL":
-                    mission_engine.trigger_emergency_rtl("WEBSOCKET_EMERGENCY_RTL")
+            # 1. Raw binary MAVLink packets from frontend GCS (e.g. ARM, MODE, WAYPOINTS)
+            if "bytes" in message and message["bytes"]:
+                raw_bytes = message["bytes"]
+                mavlink_mux.send_packet(raw_bytes)
 
-                # Forward camera frames and signaling to other clients (e.g. Phone -> GCS)
-                elif msg_type in ("CAMERA_FRAME_DATA", "CAMERA_STREAM_SIGNAL", "CAMERA_STATUS_UPDATE"):
-                    global latest_camera_frame, latest_frame_time
-                    if msg_type == "CAMERA_FRAME_DATA" and "frame" in msg:
-                        import base64
-                        try:
-                            frame_str = msg["frame"]
-                            if "," in frame_str:
-                                frame_str = frame_str.split(",")[1]
-                            latest_camera_frame = base64.b64decode(frame_str)
-                            latest_frame_time = time.time()
-                        except Exception:
-                            pass
+            # 2. Text / JSON messages (commands, signaling, camera stream)
+            elif "text" in message and message["text"]:
+                data = message["text"]
+                try:
+                    msg = json.loads(data)
+                    msg_type = msg.get("type", "")
 
-                    # Broadcast to other peers
-                    for peer in list(connected_clients):
-                        if peer != websocket:
+                    # Handle client command or signaling
+                    if msg_type == "COMMAND_ARM":
+                        mavlink_mux.arm()
+                    elif msg_type == "COMMAND_DISARM":
+                        mavlink_mux.disarm()
+                    elif msg_type == "COMMAND_MODE":
+                        mavlink_mux.set_mode(msg.get("mode", "LOITER"))
+                    elif msg_type == "COMMAND_TAKEOFF":
+                        mavlink_mux.takeoff(float(msg.get("altitude", 10.0)))
+                    elif msg_type == "COMMAND_RTL":
+                        mavlink_mux.rtl()
+                    elif msg_type == "COMMAND_EMERGENCY_RTL":
+                        mission_engine.trigger_emergency_rtl("WEBSOCKET_EMERGENCY_RTL")
+
+                    # Forward camera frames and signaling to other clients (e.g. Phone -> GCS)
+                    elif msg_type in ("CAMERA_FRAME_DATA", "CAMERA_STREAM_SIGNAL", "CAMERA_STATUS_UPDATE"):
+                        global latest_camera_frame, latest_frame_time
+                        if msg_type == "CAMERA_FRAME_DATA" and "frame" in msg:
+                            import base64
                             try:
-                                await peer.send_text(data)
+                                frame_str = msg["frame"]
+                                if "," in frame_str:
+                                    frame_str = frame_str.split(",")[1]
+                                latest_camera_frame = base64.b64decode(frame_str)
+                                latest_frame_time = time.time()
                             except Exception:
                                 pass
 
-            except json.JSONDecodeError:
-                pass
+                        # Broadcast to other peers
+                        for peer in list(connected_clients):
+                            if peer != websocket:
+                                try:
+                                    await peer.send_text(data)
+                                except Exception:
+                                    pass
+
+                except json.JSONDecodeError:
+                    pass
     except WebSocketDisconnect:
         connected_clients.discard(websocket)
         logger.info(f"WebSocket client disconnected. Total clients: {len(connected_clients)}")
@@ -265,11 +319,21 @@ def get_system_health():
 # -----------------------------------------------------------------------------
 
 @app.get("/api/telemetry")
+@app.get("/api/telemetry/snapshot")
 def get_telemetry():
     """Returns latest telemetry snapshot."""
     return {
         "success": True,
         "telemetry": mavlink_mux.get_telemetry()
+    }
+
+
+@app.get("/api/drone/state")
+def get_drone_state():
+    """Returns complete autopilot state and telemetry."""
+    return {
+        "success": True,
+        "state": mavlink_mux.get_state()
     }
 
 
@@ -284,6 +348,7 @@ def get_telemetry_history():
 
 
 @app.post("/api/command/arm")
+@app.post("/api/drone/arm")
 async def command_arm(req: Request):
     body = await req.json() if await req.body() else {}
     force = bool(body.get("force", False))
@@ -291,7 +356,17 @@ async def command_arm(req: Request):
     return {"success": success, "armed": mavlink_mux.get_telemetry()["armed"]}
 
 
+@app.post("/api/command/disarm")
+@app.post("/api/drone/disarm")
+async def command_disarm(req: Request):
+    body = await req.json() if await req.body() else {}
+    force = bool(body.get("force", False))
+    success = mavlink_mux.disarm(force=force)
+    return {"success": success, "armed": mavlink_mux.get_telemetry()["armed"]}
+
+
 @app.post("/api/command/mode")
+@app.post("/api/drone/mode")
 async def command_mode(req: Request):
     body = await req.json() if await req.body() else {}
     mode = str(body.get("mode", "LOITER")).upper()
@@ -300,6 +375,7 @@ async def command_mode(req: Request):
 
 
 @app.post("/api/command/takeoff")
+@app.post("/api/drone/takeoff")
 async def command_takeoff(req: Request):
     body = await req.json() if await req.body() else {}
     alt = float(body.get("altitude", 10.0))
@@ -308,18 +384,21 @@ async def command_takeoff(req: Request):
 
 
 @app.post("/api/command/land")
+@app.post("/api/drone/land")
 def command_land():
     success = mavlink_mux.land()
     return {"success": success, "mode": "LAND"}
 
 
 @app.post("/api/command/rtl")
+@app.post("/api/drone/rtl")
 def command_rtl():
     success = mavlink_mux.rtl()
     return {"success": success, "mode": "RTL"}
 
 
 @app.post("/api/command/emergency_rtl")
+@app.post("/api/drone/emergency_rtl")
 def command_emergency_rtl():
     mission_engine.trigger_emergency_rtl("API_EMERGENCY_RTL")
     return {"success": True, "mode": "RTL", "message": "Emergency RTL activated on companion"}

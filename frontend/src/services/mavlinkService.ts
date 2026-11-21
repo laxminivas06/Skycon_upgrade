@@ -502,6 +502,32 @@ class MAVLinkService {
 
     // Auto-connect to ESP32 wireless bridge on startup if not explicitly disconnected by user
     if (typeof window !== 'undefined') {
+      // Ingest companion telemetry packets from WebSocket
+      window.addEventListener('sae:telemetry_packet', (e: any) => {
+        if (e.detail) {
+          this.ingestCompanionTelemetry(e.detail);
+        }
+      });
+
+      // Periodic cloud / companion REST polling fallback (e.g. for PythonAnywhere or WSS timeout)
+      setInterval(async () => {
+        const now = Date.now();
+        const isMavFresh = this.connectionState.isConnected && (now - this.connectionState.lastHeartbeat < 3000);
+        if (!isMavFresh && !this.simInterval) {
+          try {
+            const res = await fetch('/api/telemetry');
+            if (res.ok) {
+              const data = await res.json();
+              if (data && data.telemetry) {
+                this.ingestCompanionTelemetry(data.telemetry);
+              }
+            }
+          } catch (e) {
+            // Ignore during offline
+          }
+        }
+      }, 1000);
+
       try {
         const manualDis = localStorage.getItem('esp32_manual_disconnect');
         if (manualDis !== 'true') {
@@ -513,6 +539,58 @@ class MAVLinkService {
         }
       } catch (e) {}
     }
+  }
+
+  /**
+   * Ingest consolidated telemetry snapshot from companion server (RPi 4 / Cloud Sync).
+   */
+  public ingestCompanionTelemetry(telem: any): void {
+    if (!telem || typeof telem !== 'object') return;
+    const now = Date.now();
+    this.connectionState.isConnected = true;
+    this.connectionState.isReceivingTelemetry = true;
+    this.connectionState.lastHeartbeat = now;
+    this.connectionState.heartbeatHz = telem.heartbeat_rate_hz || 1.0;
+    this.connectionState.phase = 'PIXHAWK_CONNECTED';
+    this.connectionState.phaseMessage = `Pixhawk connected ✓ (${telem.flight_mode || 'GUIDED'})`;
+    this.connectionState.isRealHardware = true;
+    this.telemetry.pixhawkConnected = true;
+
+    if (telem.flight_mode) {
+      this.telemetry.flightMode = telem.flight_mode;
+    }
+    if (telem.armed !== undefined) {
+      this.telemetry.isArmed = Boolean(telem.armed);
+      this.telemetry.vehicleState = this.telemetry.isArmed ? 'ARMED' : 'DISARMED';
+      this.connectionState.vehicleState = this.telemetry.vehicleState;
+    }
+    if (telem.lat !== undefined && Math.abs(telem.lat) > 0.001) {
+      this.telemetry.latitude = telem.lat;
+      this.telemetry.longitude = telem.lon;
+    }
+    if (telem.alt !== undefined) {
+      this.telemetry.altitude = telem.alt;
+      this.telemetry.relativeAltitude = telem.relative_alt !== undefined ? telem.relative_alt : telem.alt;
+    }
+    if (telem.roll !== undefined) this.telemetry.roll = telem.roll;
+    if (telem.pitch !== undefined) this.telemetry.pitch = telem.pitch;
+    if (telem.yaw !== undefined) this.telemetry.heading = Math.round((telem.yaw + 360) % 360);
+    if (telem.heading !== undefined) this.telemetry.heading = telem.heading;
+    if (telem.battery_voltage !== undefined && telem.battery_voltage > 0) {
+      this.telemetry.batteryVoltage = telem.battery_voltage;
+      this.telemetry.batteryPercent = telem.battery_remaining !== undefined ? telem.battery_remaining : Math.min(100, Math.max(0, Math.round(((telem.battery_voltage - 13.5) / (16.8 - 13.5)) * 100)));
+    }
+    if (telem.satellites_visible !== undefined) {
+      this.telemetry.satellitesVisible = telem.satellites_visible;
+      this.telemetry.gps.satellites = telem.satellites_visible;
+      this.telemetry.gps.isLocked = telem.satellites_visible >= 6;
+      this.telemetry.gps.fixType = telem.fix_type >= 3 ? '3D_FIX' : (telem.satellites_visible >= 4 ? '2D_FIX' : 'NO_GPS');
+    }
+    if (telem.climb_rate !== undefined) this.telemetry.verticalSpeed = telem.climb_rate;
+    if (telem.groundspeed !== undefined) this.telemetry.groundSpeed = telem.groundspeed;
+
+    this.notifyTelemetry();
+    this.notifyConnection();
   }
 
   public logDiagnostic(tag: DiagnosticsLogEntry['tag'], message: string, level: DiagnosticsLogEntry['level'] = 'info') {
@@ -2735,6 +2813,27 @@ class MAVLinkService {
     console.log(`[ARM] WS STATE = ${isWsOpen ? 'OPEN' : 'CLOSED'}, SIM = ${isSimMode}, FORCE = ${force}`);
 
     if (!isWsOpen && !isSimMode && !force) {
+      if (this.connectionState.isConnected) {
+        try {
+          const res = await fetch('/api/command/arm', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ force })
+          });
+          if (res.ok) {
+            const data = await res.json();
+            if (data.success) {
+              this.telemetry.isArmed = true;
+              this.telemetry.vehicleState = 'ARMED';
+              this.connectionState.vehicleState = 'ARMED';
+              this.addStatusMessage('INFO', 6, 'Motors Armed ✓ Confirmed by Companion REST');
+              this.notifyConnection();
+              this.notifyTelemetry();
+              return true;
+            }
+          }
+        } catch (e) {}
+      }
       console.error('[ARM] FAILED BEFORE PACKET CREATION: WebSocket / Transport disconnected');
       this.logDiagnostic('ERROR', '[ARM] Cannot send ARM: WebSocket / Transport disconnected', 'error');
       this.addStatusMessage('WARNING', 4, 'WebSocket / Transport disconnected');
@@ -2875,6 +2974,27 @@ class MAVLinkService {
     console.log(`[DISARM] WS STATE = ${isWsOpen ? 'OPEN' : 'CLOSED'}, SIM = ${isSimMode}, FORCE = ${force}`);
 
     if (!isWsOpen && !isSimMode && !force) {
+      if (this.connectionState.isConnected) {
+        try {
+          const res = await fetch('/api/command/disarm', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ force })
+          });
+          if (res.ok) {
+            const data = await res.json();
+            if (data.success) {
+              this.telemetry.isArmed = false;
+              this.telemetry.vehicleState = 'DISARMED';
+              this.connectionState.vehicleState = 'DISARMED';
+              this.addStatusMessage('INFO', 6, 'Motors Disarmed ✓ Confirmed by Companion REST');
+              this.notifyConnection();
+              this.notifyTelemetry();
+              return true;
+            }
+          }
+        } catch (e) {}
+      }
       console.error('[DISARM] Cannot send DISARM: WebSocket / Transport disconnected');
       this.logDiagnostic('ERROR', 'Cannot send DISARM: WebSocket / Transport disconnected', 'error');
       this.addStatusMessage('WARNING', 4, 'WebSocket / Transport disconnected');
@@ -2993,10 +3113,31 @@ class MAVLinkService {
   }
 
   public async setFlightMode(modeName: FlightModeName): Promise<boolean> {
-    const isConnected = this.isTransportConnected();
+    const isConnected = this.isTransportConnected() || this.connectionState.isConnected;
     if (!isConnected && !this.simInterval) {
       this.logDiagnostic('ERROR', `Cannot set mode ${modeName}: MAVLink not connected`, 'error');
       return false;
+    }
+
+    // Direct HTTP REST fallback when WebSocket transport is not directly open
+    if (!this.isTransportConnected() && this.connectionState.isConnected) {
+      try {
+        const res = await fetch('/api/command/mode', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ mode: modeName })
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success) {
+            this.telemetry.flightMode = modeName;
+            this.connectionState.pendingFlightMode = undefined;
+            this.notifyTelemetry();
+            this.notifyConnection();
+            return true;
+          }
+        }
+      } catch (e) {}
     }
 
     // Command deduplication: If vehicle is already confirmed in the requested mode,

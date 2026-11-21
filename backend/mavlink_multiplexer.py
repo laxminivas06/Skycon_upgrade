@@ -174,7 +174,7 @@ class MavlinkMultiplexer:
     def __init__(self, port: Optional[str] = None, baud: int = 57600):
         self.port = port
         self.baud = baud
-        self.candidate_bauds = [57600, 115200, 921600]
+        self.candidate_bauds = [921600, 115200, 57600]
         self.seq = 0
         self.system_id = 255     # GCS system ID
         self.component_id = 190  # Mission Planner / GCS component
@@ -428,8 +428,11 @@ class MavlinkMultiplexer:
         connected = False
         self.connection_state = ConnectionState.CONNECTING
 
+        # Prioritize 57600 (default ArduPilot TELEM2) first for rapid lock
+        ordered_bauds = [57600, 115200, 921600] if 57600 in self.candidate_bauds else self.candidate_bauds
+
         for port in candidate_ports:
-            for baud in self.candidate_bauds:
+            for baud in ordered_bauds:
                 if not self._running:
                     return
                 try:
