@@ -423,7 +423,7 @@ class MavlinkMultiplexer:
         candidate_ports = []
         if self.port:
             candidate_ports.append(self.port)
-        candidate_ports.extend(["/dev/ttyAMA0", "/dev/serial0", "/dev/ttyS0", "/dev/ttyACM0", "/dev/ttyUSB0"])
+        candidate_ports.extend(["/dev/serial0", "/dev/ttyAMA0", "/dev/ttyUSB0", "/dev/ttyACM0", "/dev/ttyS0"])
 
         connected = False
         self.connection_state = ConnectionState.CONNECTING
@@ -441,8 +441,10 @@ class MavlinkMultiplexer:
                     while time.time() - t_probe < 1.5:
                         b = s.read(1)
                         if b in (b'\xfd', b'\xfe'):
-                            magic_detected = True
-                            break
+                            hdr = s.read(5)
+                            if len(hdr) >= 5:
+                                magic_detected = True
+                                break
 
                     if magic_detected:
                         self._serial_conn = s
