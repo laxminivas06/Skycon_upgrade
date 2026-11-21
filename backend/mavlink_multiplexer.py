@@ -498,18 +498,29 @@ class MavlinkMultiplexer:
             self._run_mock_simulator()
 
     # -------------------------------------------------------------------------
-    # Binary MAVLink Parser
+    # Binary MAVLink Parser (Dual v1 0xFE and v2 0xFD support)
     # -------------------------------------------------------------------------
 
     def _process_buffer(self, buf: bytearray):
-        """Extracts and parses complete MAVLink v2 frames."""
-        while len(buf) >= 12:
-            if buf[0] != 0xFD:
+        """Extracts and parses complete MAVLink v1 (0xFE) and v2 (0xFD) frames."""
+        if len(buf) > 4096:
+            del buf[:-1024]
+        while len(buf) >= 8:
+            magic = buf[0]
+            if magic not in (0xFD, 0xFE):
                 buf.pop(0)
                 continue
 
             payload_len = buf[1]
-            total_len = 10 + payload_len + 2
+            if magic == 0xFD:
+                # MAVLink v2: header 10 bytes + payload + checksum 2 bytes + optional signature 13 bytes
+                if len(buf) < 12:
+                    return
+                is_signed = bool(buf[2] & 0x01)
+                total_len = 10 + payload_len + 2 + (13 if is_signed else 0)
+            else:
+                # MAVLink v1: header 6 bytes + payload + checksum 2 bytes
+                total_len = 6 + payload_len + 2
 
             if len(buf) < total_len:
                 return
@@ -521,16 +532,33 @@ class MavlinkMultiplexer:
                 try: sub(packet)
                 except Exception: pass
 
-            self._decode_packet(packet)
+            try:
+                self._decode_packet(packet)
+            except Exception as e:
+                logger.debug(f"MAVLink frame decode error: {e}")
 
     def _decode_packet(self, packet: bytes):
-        """Decodes telemetry and command ACKs."""
-        if len(packet) < 12:
+        """Decodes telemetry and command ACKs from MAVLink v1 or v2 frames."""
+        if len(packet) < 8:
             return
 
+        magic = packet[0]
         payload_len = packet[1]
-        msg_id = packet[7] | (packet[8] << 8) | (packet[9] << 16)
-        payload = packet[10:10 + payload_len]
+
+        if magic == 0xFD:
+            # MAVLink v2
+            if len(packet) < 10 + payload_len:
+                return
+            msg_id = packet[7] | (packet[8] << 8) | (packet[9] << 16)
+            payload = packet[10:10 + payload_len]
+        elif magic == 0xFE:
+            # MAVLink v1
+            if len(packet) < 6 + payload_len:
+                return
+            msg_id = packet[5]
+            payload = packet[6:6 + payload_len]
+        else:
+            return
 
         now = time.time()
         self.last_packet_time = now
@@ -544,7 +572,7 @@ class MavlinkMultiplexer:
             # -----------------------------------------------------------------
             if msg_id == 0:
                 if len(payload) >= 9:
-                    custom_mode, type_, autopilot, base_mode, system_status = struct.unpack('<IBBB B', payload[:8] + payload[8:9])
+                    custom_mode, type_, autopilot, base_mode, system_status, mav_version = struct.unpack('<IBBBBB', payload[:9])
                     self.last_heartbeat_time = now
                     self.telemetry["custom_mode"] = custom_mode
                     self.telemetry["flight_mode"] = COPTER_MODES.get(custom_mode, f"UNKNOWN_{custom_mode}")
