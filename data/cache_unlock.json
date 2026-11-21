@@ -1,0 +1,12 @@
+{
+  "_schema_version": "2.0",
+  "_collection": "cache_unlock",
+  "_updated_at": "2026-11-21T05:53:57.839533+00:00",
+  "_checksum_sha256": "67d4deead8e5aac180bc5de827fcb03bec50a1375bb935eaf1f4350e4b6807c8",
+  "_data": {
+    "missionId": "ADDC_E2E_21STEP",
+    "accessCode": "7328",
+    "operatorId": "FIELD_RUNNER_1",
+    "timestamp": 1795240437839
+  }
+}

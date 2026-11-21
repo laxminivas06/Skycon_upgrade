@@ -77,7 +77,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
   };
   const [activeTab, setActiveTab] = useState<'Plan' | 'Fly' | 'Logs'>('Fly');
   const [activeNav, setActiveNav] = useState<string>('Dashboard');
-  const [mobileView, setMobileView] = useState<'telemetry' | 'map' | 'operations'>('map');
+  const [mobileView, setMobileView] = useState<'telemetry' | 'map' | 'camera' | 'operations'>('map');
   const [showPreflightModal, setShowPreflightModal] = useState<boolean>(false);
   const [showRtlModal, setShowRtlModal] = useState<boolean>(false);
   const [showPhoneMissionModal, setShowPhoneMissionModal] = useState<boolean>(false);
@@ -560,15 +560,15 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
       )}
 
       {/* Responsive View Switcher for Small Screens (< lg) */}
-      <div className="lg:hidden w-full bg-[#11161F] border-b border-[var(--uav-card-border)] px-3 py-1.5 flex items-center justify-between shrink-0 z-20">
-        <span className="text-[11px] font-mono font-bold text-slate-400 uppercase">
-          GROUND STATION VIEW:
+      <div className="lg:hidden w-full bg-[#11161F] border-b border-[var(--uav-card-border)] px-3 py-1.5 flex items-center justify-between shrink-0 z-20 overflow-x-auto scrollbar-none gap-2">
+        <span className="text-[11px] font-mono font-bold text-slate-400 uppercase whitespace-nowrap">
+          GCS VIEW:
         </span>
-        <div className="flex items-center gap-1 bg-[#161B22] p-0.5 rounded-lg border border-[var(--uav-card-border)] text-xs font-semibold">
+        <div className="flex items-center gap-1 bg-[#161B22] p-0.5 rounded-lg border border-[var(--uav-card-border)] text-xs font-semibold shrink-0">
           <button
             type="button"
             onClick={() => setMobileView('telemetry')}
-            className={`px-2.5 py-1 rounded transition cursor-pointer ${
+            className={`px-2.5 py-1 rounded transition cursor-pointer whitespace-nowrap ${
               mobileView === 'telemetry' ? 'bg-[#10B981] text-emerald-950 font-bold' : 'text-slate-400 hover:text-white'
             }`}
           >
@@ -577,7 +577,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
           <button
             type="button"
             onClick={() => setMobileView('map')}
-            className={`px-2.5 py-1 rounded transition cursor-pointer ${
+            className={`px-2.5 py-1 rounded transition cursor-pointer whitespace-nowrap ${
               mobileView === 'map' ? 'bg-[#10B981] text-emerald-950 font-bold' : 'text-slate-400 hover:text-white'
             }`}
           >
@@ -585,8 +585,17 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
           </button>
           <button
             type="button"
+            onClick={() => setMobileView('camera')}
+            className={`px-2.5 py-1 rounded transition cursor-pointer whitespace-nowrap ${
+              mobileView === 'camera' ? 'bg-[#10B981] text-emerald-950 font-bold' : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            📹 Camera
+          </button>
+          <button
+            type="button"
             onClick={() => setMobileView('operations')}
-            className={`px-2.5 py-1 rounded transition cursor-pointer ${
+            className={`px-2.5 py-1 rounded transition cursor-pointer whitespace-nowrap ${
               mobileView === 'operations' ? 'bg-[#10B981] text-emerald-950 font-bold' : 'text-slate-400 hover:text-white'
             }`}
           >
@@ -660,52 +669,56 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
 
         {/* 3. RIGHT PANEL: Camera & Operations (Adapts between MODE A and MODE B) */}
         <aside
-          className={`h-full min-h-0 overflow-y-auto overflow-x-hidden p-3 bg-[var(--uav-header)] border-l border-[var(--uav-card-border)] flex flex-col gap-3 scrollbar-thin scrollbar-thumb-slate-800 ${
-            mobileView === 'operations' ? 'flex' : 'hidden lg:flex'
+          className={`h-full min-h-0 overflow-y-auto overflow-x-hidden p-3 bg-[var(--uav-header)] border-l border-[var(--uav-card-border)] flex-col gap-3 scrollbar-thin scrollbar-thumb-slate-800 ${
+            mobileView === 'camera' || mobileView === 'operations' ? 'flex' : 'hidden lg:flex'
           }`}
         >
           {/* A. Drone Camera Feed with Live QR Recognition */}
-          <CameraFeed telemetry={telemetry} className="w-full shrink-0" />
+          <div className={mobileView === 'operations' ? 'hidden lg:block w-full shrink-0' : 'w-full shrink-0'}>
+            <CameraFeed telemetry={telemetry} className="w-full shrink-0" />
+          </div>
 
-          {/* B. Mode-Specific Operations Card */}
-          {missionMode === 'MANUAL' ? (
-            <>
-              {/* MODE A: Manual Mission Planning & Controls */}
-              <ManualMissionControlCard
-                telemetry={telemetry}
-                onOpenPreflightModal={() => setShowPreflightModal(true)}
-                onUploadWaypoints={handleUploadWaypoints}
-                onEmergencyRTL={handleEmergencyRTL}
-                rtlConfirmPending={rtlConfirmPending}
-              />
+          {/* B. Operations Controls */}
+          <div className={mobileView === 'camera' ? 'hidden lg:flex lg:flex-col gap-3' : 'flex flex-col gap-3'}>
+            {missionMode === 'MANUAL' ? (
+              <>
+                {/* MODE A: Manual Mission Planning & Controls */}
+                <ManualMissionControlCard
+                  telemetry={telemetry}
+                  onOpenPreflightModal={() => setShowPreflightModal(true)}
+                  onUploadWaypoints={handleUploadWaypoints}
+                  onEmergencyRTL={handleEmergencyRTL}
+                  rtlConfirmPending={rtlConfirmPending}
+                />
 
-              {/* Waypoint Management Table */}
-              <WaypointManager
-                className="w-full shrink-0"
-                onClearAll={() => showNotification('Mission waypoints cleared')}
-                onSaveKml={() => showNotification('Mission KML downloaded')}
-                onLoadKml={() => showNotification('Mission KML loaded')}
-              />
-            </>
-          ) : (
-            <>
-              {/* MODE B: Autonomous Search Mission (4 Configurable Fields) */}
-              <AutonomousMissionControlCard
-                telemetry={telemetry}
-                onOpenPreflightModal={() => setShowPreflightModal(true)}
-                onUploadWaypoints={handleUploadWaypoints}
-                onEmergencyRTL={handleEmergencyRTL}
-                rtlConfirmPending={rtlConfirmPending}
-                activeMissionTime={activeMissionData || undefined}
-              />
-            </>
-          )}
+                {/* Waypoint Management Table */}
+                <WaypointManager
+                  className="w-full shrink-0"
+                  onClearAll={() => showNotification('Mission waypoints cleared')}
+                  onSaveKml={() => showNotification('Mission KML downloaded')}
+                  onLoadKml={() => showNotification('Mission KML loaded')}
+                />
+              </>
+            ) : (
+              <>
+                {/* MODE B: Autonomous Search Mission (4 Configurable Fields) */}
+                <AutonomousMissionControlCard
+                  telemetry={telemetry}
+                  onOpenPreflightModal={() => setShowPreflightModal(true)}
+                  onUploadWaypoints={handleUploadWaypoints}
+                  onEmergencyRTL={handleEmergencyRTL}
+                  rtlConfirmPending={rtlConfirmPending}
+                  activeMissionTime={activeMissionData || undefined}
+                />
+              </>
+            )}
 
-          {/* C. Geofence Enforcement Panel */}
-          <GeofencePanel className="w-full shrink-0" />
+            {/* C. Geofence Enforcement Panel */}
+            <GeofencePanel className="w-full shrink-0" />
 
-          {/* D. Flight Parameters */}
-          <FlightParams className="w-full shrink-0" />
+            {/* D. Flight Parameters */}
+            <FlightParams className="w-full shrink-0" />
+          </div>
         </aside>
 
       </div>
@@ -722,7 +735,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
       {/* 5. Safety Confirmation Modal: EMERGENCY RTL */}
       {showRtlModal && (
         <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-[#161B22] border-2 border-red-600 rounded-[12px] max-w-md w-full p-6 text-white shadow-2xl space-y-4">
+          <div className="bg-[#161B22] border-2 border-red-600 rounded-[12px] max-w-[95vw] sm:max-w-md w-full max-h-[90vh] overflow-y-auto p-6 text-white shadow-2xl space-y-4">
             <div className="flex items-center justify-between text-red-500">
               <div className="flex items-center gap-3">
                 <AlertTriangle className="w-8 h-8 text-red-500 animate-pulse" />
@@ -817,8 +830,8 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
 
       {/* 9. Tactical Flight Control Modal */}
       {isFlightControlModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-[#161B22] border border-[var(--uav-card-border)] rounded-[12px] max-w-2xl w-full p-5 text-white shadow-2xl space-y-4">
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4">
+          <div className="bg-[#161B22] border border-[var(--uav-card-border)] rounded-[12px] max-w-[95vw] sm:max-w-2xl w-full max-h-[90vh] overflow-y-auto p-4 sm:p-5 text-white shadow-2xl space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-[var(--uav-card-border)]">
               <div className="flex items-center gap-2.5">
                 <Crosshair className="w-5 h-5 text-[var(--uav-primary-blue)]" />

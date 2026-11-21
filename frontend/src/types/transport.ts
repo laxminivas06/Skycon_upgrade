@@ -5,6 +5,7 @@ export type TransportType =
   | 'WEBUSB' 
   | 'UDP' 
   | 'TCP' 
+  | 'PI_WEBSOCKET'
   | 'ESP32_WEBSOCKET'
   | 'SIMULATOR';
 

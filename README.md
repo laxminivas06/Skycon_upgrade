@@ -1,94 +1,115 @@
-# 🛸 SAE INDIA Autonomous Drone Rescue & Mission System
+# 🛸 SKYCON — Autonomous Drone Rescue & Mission System (ADDC 2026)
 
-Full-stack autonomous drone telemetry, computer vision target acquisition, and field rescue system built for the **SAE INDIA Autonomous Drone Competition**.
+Full-stack autonomous drone telemetry, computer vision target acquisition, and 5-minute competition mission system built for the **SAE INDIA Autonomous Drone Competition (ADDC 2026)**.
 
 ---
 
-## 📁 Monorepo Architecture
+## 🎯 Architecture & Tech Stack
 
-This repository is split into dedicated, decoupled directories for seamless deployment on **Netlify** (frontend) and **Render** (backend):
+- **Target Aircraft**: S500 Quadcopter Frame, 2216/2212 920KV motors, 30A ESCs, 1045 propellers.
+- **Flight Controller**: Pixhawk 2.4.8 running ArduCopter firmware (TELEM1 @ 921600 or 57600 baud).
+- **Sole Companion Computer**: Raspberry Pi 4 Model B (Python FastAPI / Flask + OpenCV + MAVLink 2.0).
+- **Onboard Optical Sensor**: Mounted Smartphone running **SKYCON Drone Core** mobile interface.
+- **Manual Safety Override**: MultiLink V1.0 2.4 GHz RC receiver connected to Pixhawk RC IN.
+- **Persistence Store**: `SimpleJsonStore` — Air-gapped, corruption-resistant atomic JSON database with SHA-256 cryptographic checksums.
+- **Cloud Hosting**: PythonAnywhere WSGI-compliant Flask REST application (`wsgi.py`).
+- **Ground Station HUD**: React 18, TypeScript, Tailwind CSS, Lucide icons, Leaflet.
+
+---
+
+## 📁 Repository Structure
 
 ```
-saeindia/
-├── frontend/               # 🌐 Frontend React 18 + Vite Web App (Deployed on Netlify)
-│   ├── src/                # Ground Station HUD, MAVLink services, CV pipeline
-│   ├── public/             # Static assets, audio alerts, Netlify _redirects
-│   ├── netlify.toml        # Netlify SPA redirects & security headers
-│   ├── vite.config.ts      # Vite configuration
-│   └── package.json        # Frontend dependencies
-│
-├── backend/                # ⚡ Backend WebSocket & HTTP Relay (Deployed on Render)
-│   ├── server.js           # WSS binary packet forwarder & telemetry bridge
-│   ├── render.yaml         # Render Blueprint configuration
-│   └── package.json        # Backend dependencies
-│
-├── android/                # 📱 Capacitor Android Studio native project
-├── esp32-firmware/         # 📡 ESP32-S3 Wi-Fi / UART bridge firmware
-├── tests/                  # 🧪 Comprehensive 49-point automated test suite
-├── netlify.toml            # Root Netlify configuration (points to frontend/)
-├── render.yaml             # Root Render blueprint (points to backend/)
-└── package.json            # Root workspace orchestrator
+Upgrade_skycon/
+├── backend/
+│   ├── app/                    # Modular Python backend (API, config, core, storage, mavlink)
+│   │   ├── drone/              # Unified onboard edge drone core (Autopilot, FSM, Vision, Georef)
+│   │   ├── camera/             # Camera stream pipelines & V4L2 capture
+│   │   ├── vision/             # Target tracking, pinhole projection & georeferencing
+│   │   ├── qr/                 # Subpixel QR detection & 2-digit regex validation
+│   │   ├── missions/           # 17-state FSM & 5-minute competition timeline
+│   │   ├── mavlink/            # MAVLink v2 binary multiplexer & ArduPilot mode engine
+│   │   ├── storage/            # Simple atomic JSON database
+│   │   └── main.py             # Flask application entry point (WSGI compliant)
+│   ├── data/                   # JSON collections (missions, detections, geofence, audit)
+│   ├── logs/                   # Rotating application logs (skycon_app.log)
+│   └── server.py               # Companion FastAPI + Uvicorn server (with high-speed WebSockets)
+├── config/                     # Hardware & flight configurations
+│   └── pixhawk/                # Pixhawk 2.4.8 ArduCopter parameter files
+├── frontend/                   # React 18 + Vite Web Application
+│   ├── ground-station/         # Dedicated Ground Control Station HTML interface
+│   ├── drone-core/             # Dedicated Drone Core mobile phone interface
+│   └── src/                    # Ground Station HUD, telemetry decks, map canvas
+├── docs/                       # Official System Documentation
+│   ├── architecture/           # Master system architecture & graph reports
+│   ├── hardware/               # Wiring pinouts, power regulation, pre-arm checks, parameters
+│   ├── reference/              # Optical standards, SPI 100 specifications, ADDC rulebook
+│   ├── addc-rules/             # ADDC 2026 rulebook & compliance matrix
+│   ├── api/                    # REST API endpoint reference
+│   ├── deployment/             # PythonAnywhere cloud & Raspberry Pi setup guides
+│   └── reports/                # Complete repository audit and cleanup reports
+├── scripts/                    # Live diagnostic tools, parameter uploaders & probes
+├── tests/                      # Automated unit & integration test suites
+├── wsgi.py                     # Root WSGI entry point for PythonAnywhere
+├── drone_core.py               # Compatibility shim redirecting to backend.app.drone
+└── requirements.txt            # Clean Python dependencies
 ```
 
 ---
 
-## 🚀 Deployment Instructions
+## 🚀 Quickstart & Local Development
 
-### 1. Deploy Frontend to Netlify
-
-1. In [Netlify](https://app.netlify.com/), click **Add new site** $\to$ **Import an existing project**.
-2. Select your GitHub repository: `https://github.com/RISHITBARLA/saeindia.git`.
-3. Netlify automatically reads [`netlify.toml`](./netlify.toml):
-   - **Base directory**: `frontend`
-   - **Build command**: `npm run build`
-   - **Publish directory**: `dist`
-4. Environment Variables (optional):
-   - `VITE_RELAY_URL`: `wss://YOUR_RENDER_URL/ws`
-   - `VITE_RELAY_TOKEN`: Your secure relay token
-5. Click **Deploy site**.
-
-### 2. Deploy Backend to Render
-
-1. In [Render](https://dashboard.render.com/), click **New +** $\to$ **Blueprint** (or **Web Service**).
-2. Connect your GitHub repository: `https://github.com/GudlaVishal-23/seasphndrone.git`.
-3. Render automatically reads [`render.yaml`](./render.yaml):
-   - **Root directory**: `backend`
-   - **Build command**: `npm install`
-   - **Start command**: `npm start`
-   - **Health check path**: `/health`
-4. Set Environment Variables:
-   - `RELAY_TOKEN`: `<your_secure_relay_token>` (must match frontend `VITE_RELAY_TOKEN`)
-   - `PORT`: `10000`
-5. Click **Apply / Create Web Service**.
-
----
-
-## 💻 Local Development
-
-### Root Orchestrator Scripts
+### 1. Python Backend (Cloud WSGI / Local REST API)
 ```bash
-# Run Frontend (Vite on http://localhost:5173)
-npm run dev
+# Install Python dependencies
+pip install -r requirements.txt
 
-# Build Frontend (outputs to frontend/dist)
-npm run build
+# Run Flask WSGI Server (port 8443)
+python wsgi.py
+```
+Health check: `http://localhost:8443/health`
 
-# Run Backend Relay Server (port 8443)
-npm run start
-
-# Run Comprehensive Function Test Suite (49/49 Tests)
-npm test
+### 2. Raspberry Pi 4 Companion Server (with WebSockets & MAVLink)
+```bash
+# Run high-speed companion hub on Raspberry Pi 4
+python -m backend.server
 ```
 
-### Developing in Subdirectories
+### 3. Frontend Development
 ```bash
-# Frontend only
 cd frontend
 npm install
 npm run dev
-
-# Backend only
-cd backend
-npm install
-npm start
 ```
+
+---
+
+## 🧪 Automated Test Verification
+
+Run all test suites across the Python companion and API layers:
+
+```bash
+# 1. Run Master Architecture Verification Suite (16/16 Tests)
+python -m unittest tests/test_skycon_master_suite.py
+
+# 2. Run Comprehensive Edge Autonomy & Vision Suite
+python -m unittest tests/adversarial_georef_test.py tests/test_drone_core_edge.py tests/test_smartphone_camera_pipeline.py tests/test_drone_core_m2.py
+
+# 3. Discover and run all unit test suites
+python -m unittest discover -s tests -p "test_*.py"
+```
+
+---
+
+## 📖 System Documentation Links
+
+- [Master System Architecture](docs/architecture/SYSTEM_ARCHITECTURE.md)
+- [Repository Structure Guide](docs/architecture/REPOSITORY_STRUCTURE.md)
+- [Hardware Integration & Pinout Guide](docs/hardware/HARDWARE_INTEGRATION_GUIDE.md)
+- [Raspberry Pi 4 Setup Manual](docs/hardware/RASPBERRY_PI_SETUP.md)
+- [Pixhawk Pre-Arm Safety Checks & Diagnostic Matrix](docs/hardware/PRE_ARM_SAFETY_CHECKS.md)
+- [SPI 100 & Camera Pixel Specifications](docs/reference/SPI_100_AND_PIXEL_SPECIFICATIONS.md)
+- [PythonAnywhere Cloud Deployment](docs/deployment/PYTHONANYWHERE_DEPLOYMENT.md)
+- [REST API Reference](docs/api/API_REFERENCE.md)
+- [ADDC 2026 Compliance Matrix](docs/addc-rules/ADDC_COMPLIANCE_MATRIX.md)
+- [Repository Audit & Cleanup Report](docs/reports/REPOSITORY_AUDIT_REPORT.md)

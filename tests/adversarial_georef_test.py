@@ -20,7 +20,7 @@ import numpy as np
 # Ensure skycon is in PYTHONPATH
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from drone_core.georeferencing import Georeferencer, CameraIntrinsics3D, GeoreferenceResult
+from backend.georeferencing import Georeferencer, CameraIntrinsics3D, GeoreferenceResult
 
 
 class AdversarialGeoreferencingTests(unittest.TestCase):

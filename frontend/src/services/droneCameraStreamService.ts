@@ -36,7 +36,16 @@ type StatusListener = (status: DroneCameraStreamStatus, message: string) => void
 
 const BROADCAST_CHANNEL_NAME = 'DRONE_CORE_CAMERA_STREAM_CHANNEL';
 const RELAY_TOKEN_DEFAULT = 'saeindia_secret_token_2026';
-const DEFAULT_SECURE_RELAY_URL = 'wss://dronebackend-ppgp.onrender.com/ws';
+const getCompanionWsUrl = (): string => {
+  if (typeof window !== 'undefined') {
+    const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const host = window.location.hostname || 'localhost';
+    const port = window.location.port ? window.location.port : '8443';
+    return `${proto}//${host}:${port}/ws`;
+  }
+  return 'ws://localhost:8443/ws';
+};
+const DEFAULT_SECURE_RELAY_URL = getCompanionWsUrl();
 
 class DroneCameraStreamService {
   private channel: BroadcastChannel | null = null;
@@ -179,7 +188,7 @@ class DroneCameraStreamService {
     }, 2500);
   }
 
-  private isAirGapped: boolean = true; // Default: Air-gapped onboard edge core with zero ground broadcasting
+  private isAirGapped: boolean = false; // Enabled local & relay camera streaming by default for laptop GCS & Pi companion
 
   public setAirGapped(enabled: boolean) {
     this.isAirGapped = enabled;

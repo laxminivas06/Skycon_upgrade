@@ -1,0 +1,13 @@
+{
+  "type": "CIRCLE",
+  "center": {
+    "lat": 13.0827,
+    "lon": 80.2707
+  },
+  "radius": 50.0,
+  "alt_max": 25.0,
+  "alt_min": 1.0,
+  "enabled": true,
+  "action": "RTL",
+  "polygon": []
+}

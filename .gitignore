@@ -58,7 +58,10 @@ graphify-out/.graphify_uncached.txt
 
 # Test artifacts
 tests/test_output_edge_drone/
+tests/test_scratch_*/
 *.db
+*.db-shm
+*.db-wal
 
 # Python
 __pycache__/
@@ -66,7 +69,13 @@ __pycache__/
 *.pyo
 *.pyd
 
-# Runtime data files
-backend/data/*.json
+# Runtime data & logs
+*.bak
+*.log
+logs/
+data/*.bak
+data/*.db*
+data/*.log
+
 
 

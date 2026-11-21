@@ -1,0 +1,33 @@
+[Unit]
+Description=SKYCON S500 UAV Companion System (Raspberry Pi 4)
+Documentation=https://github.com/RISHITBARLA/saeindia
+After=network.target local-fs.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=pi
+Group=pi
+WorkingDirectory=/home/pi/Upgrade_skycon
+EnvironmentFile=-/home/pi/Upgrade_skycon/.env
+Environment=PYTHONUNBUFFERED=1
+Environment=SKYCON_ENV=production
+Environment=SKYCON_IS_PI=True
+Environment=SKYCON_ALLOW_ARMING=False
+
+# Execution command using the dedicated virtual environment
+ExecStart=/home/pi/skycon-env/bin/python -m uvicorn backend.server:app --host 0.0.0.0 --port 8443 --workers 1
+
+# Restart policy: Restart on failure with a 5-second recovery delay
+Restart=on-failure
+RestartSec=5s
+TimeoutStopSec=10s
+
+# Resource limits & Process Management
+LimitNOFILE=65535
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=skycon-companion
+
+[Install]
+WantedBy=multi-user.target

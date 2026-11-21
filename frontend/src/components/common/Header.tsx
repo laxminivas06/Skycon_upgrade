@@ -62,15 +62,15 @@ export const Header: React.FC<HeaderProps> = ({
   const getRoleLabel = () => {
     switch (currentRole) {
       case 'GROUND_STATION':
-        return 'GROUND STATION ANDROID';
+        return 'SKYCON GROUND CONTROL STATION (GCS)';
       case 'DRONE':
-        return 'DRONE ANDROID MISSION CORE';
+        return 'SKYCON DRONE CORE (ONBOARD CAMERA)';
       case 'RUNNER':
-        return 'RUNNER ANDROID FIELD UNIT';
+        return 'SKYCON FIELD RUNNER UNIT';
       case 'TESTBENCH':
         return 'FIELD OPS SIMULATOR & TESTBENCH';
       default:
-        return 'SAE INDIA MISSION SYSTEM';
+        return 'SKYCON MISSION SYSTEM (ADDC 2026)';
     }
   };
 

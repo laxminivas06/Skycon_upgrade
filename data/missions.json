@@ -1,0 +1,64 @@
+{
+  "_schema_version": "2.0",
+  "_collection": "missions",
+  "_updated_at": "2026-11-21T05:53:57.985793+00:00",
+  "_checksum_sha256": "1d4a52461e462eee44b06ffc0827df3ba4648dfa4b12ac834be264936d7c3486",
+  "_data": [
+    {
+      "missionId": "MISS_1792487657929",
+      "mode": "AUTONOMOUS",
+      "algorithm": "TANGENTIAL_CIRCULAR",
+      "searchCenter": null,
+      "searchRadiusMeters": 10,
+      "plannedAltitudeMeters": 10,
+      "timeLimitMinutes": 10,
+      "startTime": 1792487657929,
+      "deadline": 1792488257929,
+      "waypoints": [],
+      "status": "DEADLINE_REACHED",
+      "abortReason": null,
+      "rtlStatus": "DEADLINE_RETURN_INITIATED",
+      "terminalStatus": "IN_FLIGHT",
+      "lastUpdated": 1792487657930,
+      "deadlineReachedTime": 1792488258482
+    },
+    {
+      "missionId": "MISS_1792487571495",
+      "mode": "AUTONOMOUS",
+      "algorithm": "TANGENTIAL_CIRCULAR",
+      "searchCenter": null,
+      "searchRadiusMeters": 10,
+      "plannedAltitudeMeters": 10,
+      "timeLimitMinutes": 10,
+      "startTime": 1792487571495,
+      "deadline": 1792488171495,
+      "waypoints": [],
+      "status": "ABORTED",
+      "abortReason": null,
+      "rtlStatus": "IDLE",
+      "terminalStatus": "IN_FLIGHT",
+      "lastUpdated": 1792487571496
+    },
+    {
+      "missionId": "ADDC_E2E_21STEP",
+      "status": "COMPLETED",
+      "startTime": null,
+      "deadline": null,
+      "waypoints": [
+        {
+          "lat": 13.0827,
+          "lon": 80.2707,
+          "alt": 10.0,
+          "speed": 3.0
+        },
+        {
+          "lat": 13.0829,
+          "lon": 80.2709,
+          "alt": 10.0,
+          "speed": 3.0
+        }
+      ],
+      "lastUpdated": 1795240437976
+    }
+  ]
+}

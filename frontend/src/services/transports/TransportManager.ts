@@ -6,12 +6,14 @@ import { WebSerialTransport } from './WebSerialTransport';
 import { WebUsbTransport } from './WebUsbTransport';
 import { UdpTransport } from './UdpTransport';
 import { SimulatorTransport } from './SimulatorTransport';
+import { PiWebSocketTransport } from './PiWebSocketTransport';
 import { Esp32WebSocketTransport } from './Esp32WebSocketTransport';
 
 export class TransportManager {
   private transports: Map<string, MavlinkTransport> = new Map();
   private activeTransport: MavlinkTransport;
-  private esp32Transport: Esp32WebSocketTransport;
+  private piTransport: PiWebSocketTransport;
+  private esp32Transport: any;
   
   private dataListeners: Set<(chunk: Uint8Array) => void> = new Set();
   private stateListeners: Set<(event: TransportStateEvent) => void> = new Set();
@@ -26,23 +28,25 @@ export class TransportManager {
     const webUsb = new WebUsbTransport();
     const udp = new UdpTransport();
     const sim = new SimulatorTransport();
-    const esp32 = new Esp32WebSocketTransport();
+    const pi = new PiWebSocketTransport();
 
-    this.esp32Transport = esp32;
+    this.piTransport = pi;
+    this.esp32Transport = pi;
 
     this.transports.set(androidUsb.id, androidUsb);
     this.transports.set(iosUsb.id, iosUsb);
     this.transports.set(webSerial.id, webSerial);
     this.transports.set(webUsb.id, webUsb);
     this.transports.set(udp.id, udp);
-    this.transports.set(esp32.id, esp32);
+    this.transports.set(pi.id, pi);
+    this.transports.set('esp32_websocket', pi);
     this.transports.set(sim.id, sim);
 
-    // Auto-select primary transport based on environment
+    // Auto-select primary transport based on environment (Raspberry Pi 4 WebSocket primary)
     const savedMethod = typeof window !== 'undefined' ? localStorage.getItem('preferred_connection_method') : null;
     if (Capacitor.isNativePlatform()) {
-      if (savedMethod === 'ESP32') {
-        this.activeTransport = esp32;
+      if (savedMethod === 'PI' || savedMethod === 'ESP32') {
+        this.activeTransport = pi;
       } else if (Capacitor.getPlatform() === 'android') {
         this.activeTransport = androidUsb;
       } else if (Capacitor.getPlatform() === 'ios') {
@@ -56,11 +60,19 @@ export class TransportManager {
       } else if (savedMethod === 'USB' && webUsb.isAvailable()) {
         this.activeTransport = webUsb;
       } else {
-        this.activeTransport = esp32;
+        this.activeTransport = pi;
       }
     }
 
     this.bindActiveTransport();
+  }
+
+  public getPiTransport(): PiWebSocketTransport {
+    return this.piTransport;
+  }
+
+  public getEsp32Transport(): any {
+    return this.piTransport;
   }
 
   private bindActiveTransport() {

@@ -4,27 +4,15 @@
   "version": "1.0.0",
   "type": "module",
   "workspaces": [
-    "frontend",
-    "backend"
+    "frontend"
   ],
   "scripts": {
     "dev": "npm run dev --workspace=frontend",
     "build": "npm run build --workspace=frontend && node scripts/sync-dist.js",
     "preview": "npm run preview --workspace=frontend",
-    "start": "npm run start --workspace=backend",
-    "backend:start": "npm run start --workspace=backend",
-    "relay:start": "npm run start --workspace=backend",
-    "cap:sync": "cap sync",
-    "cap:android": "cap open android",
-    "build:apk": "npm run build && npx cap sync android && cd android && export ANDROID_HOME=$HOME/Library/Android/sdk && ./gradlew assembleDebug && cp app/build/outputs/apk/debug/app-debug.apk ../saeindia-debug.apk",
-    "connector:start": "node local-connector/connector.js",
-    "test": "npx tsx tests/test-all-systems.ts",
-    "test:connectivity": "npx tsx tests/test-transport-connectivity-watchdog.ts",
-    "test:sitl": "npx tsx tests/test-sitl-scenarios.ts",
-    "test:smoke": "npx tsx tests/test-backend-smoke.ts",
-    "test:backend": "npx tsx tests/test-backend-full-workflows.ts",
-    "test:all": "npx tsx tests/test-all-systems.ts && npx tsx tests/test-transport-connectivity-watchdog.ts && npx tsx tests/test-sitl-scenarios.ts && npx tsx tests/test-backend-smoke.ts && npx tsx tests/test-backend-full-workflows.ts",
-    "test:e2e": "node test-e2e.cjs"
+    "test": "python -m unittest discover -s tests -p \"test_*.py\"",
+    "test:python": "python -m unittest discover -s tests -p \"test_*.py\"",
+    "test:master": "python -m unittest tests/test_skycon_master_suite.py"
   },
   "dependencies": {
     "@capacitor/android": "^6.1.2",

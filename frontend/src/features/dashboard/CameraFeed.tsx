@@ -73,7 +73,7 @@ export const CameraFeed: React.FC<CameraFeedProps> = ({ className = '', telemetr
   const [isApproaching, setIsApproaching] = useState<boolean>(false);
   const [actionNotice, setActionNotice] = useState<string | null>(null);
 
-  // Samsung S24 Phone Stream & Test Pattern State
+  // iPhone Onboard Camera Stream & Test Pattern State
   const [useTestPattern, setUseTestPattern] = useState<boolean>(false);
   const [phoneStreamUrl, setPhoneStreamUrl] = useState<string>('http://192.168.43.15:8080/video');
   const [streamRetryCount, setStreamRetryCount] = useState<number>(0);

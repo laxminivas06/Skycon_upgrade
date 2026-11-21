@@ -44,14 +44,15 @@ def main():
 
     param_path = args.file
     if not os.path.exists(param_path):
-        # Look in parent dir
-        parent_path = os.path.join(os.path.dirname(__file__), "..", args.file)
-        if os.path.exists(parent_path):
-            param_path = parent_path
-        else:
-            root_path = os.path.join("c:\\Antigravityyyyy\\last drone", args.file)
-            if os.path.exists(root_path):
-                param_path = root_path
+        candidates = [
+            os.path.join(os.path.dirname(__file__), "..", "config", "pixhawk", args.file),
+            os.path.join(os.path.dirname(__file__), "..", "docs", "hardware", "parameters", args.file),
+            os.path.join(os.path.dirname(__file__), "..", args.file),
+        ]
+        for c in candidates:
+            if os.path.exists(c):
+                param_path = c
+                break
 
     if not os.path.exists(param_path):
         print(f"Error: Parameter file '{args.file}' not found.")

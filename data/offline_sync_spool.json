@@ -1,0 +1,169 @@
+{
+  "_schema_version": "2.0",
+  "_collection": "offline_sync_spool",
+  "_updated_at": "2026-11-21T05:53:56.957762+00:00",
+  "_checksum_sha256": "4968a4ceb68fc4d5787497b371db1325b39b15634f33e00b2938e4775a049c46",
+  "_data": [
+    {
+      "source": "SKYCON_COMPANION_PI4",
+      "timestampUtc": "2026-11-21T05:19:34.046877+00:00",
+      "telemetry": {
+        "lat": 13.0,
+        "lon": 80.0,
+        "alt": 10.0
+      },
+      "hash": "test_hash_phase6_spool"
+    },
+    {
+      "source": "SKYCON_COMPANION_PI4",
+      "timestampUtc": "2026-11-21T05:26:26.917166+00:00",
+      "telemetry": {
+        "lat": 13.0,
+        "lon": 80.0,
+        "alt": 10.0
+      },
+      "hash": "test_hash_phase6_spool"
+    },
+    {
+      "source": "SKYCON_COMPANION_PI4",
+      "timestampUtc": "2026-11-21T05:27:11.117255+00:00",
+      "telemetry": {
+        "lat": 13.0,
+        "lon": 80.0,
+        "alt": 10.0
+      },
+      "hash": "test_hash_phase6_spool"
+    },
+    {
+      "source": "SKYCON_COMPANION_PI4",
+      "timestampUtc": "2026-11-21T05:27:58.958554+00:00",
+      "telemetry": {
+        "lat": 13.0,
+        "lon": 80.0,
+        "alt": 10.0
+      },
+      "hash": "test_hash_phase6_spool"
+    },
+    {
+      "source": "SKYCON_COMPANION_PI4",
+      "timestampUtc": "2026-11-21T05:28:32.966518+00:00",
+      "telemetry": {
+        "lat": 13.0,
+        "lon": 80.0,
+        "alt": 10.0
+      },
+      "hash": "test_hash_phase6_spool"
+    },
+    {
+      "source": "SKYCON_COMPANION_PI4",
+      "timestampUtc": "2026-11-21T05:28:57.709911+00:00",
+      "telemetry": {
+        "lat": 13.0,
+        "lon": 80.0,
+        "alt": 10.0
+      },
+      "hash": "test_hash_phase6_spool"
+    },
+    {
+      "source": "SKYCON_COMPANION_PI4",
+      "telemetry": {
+        "alt": 10.0,
+        "lat": 13.0827,
+        "lon": 80.2707
+      },
+      "hash": "validation_hash_spool_123"
+    },
+    {
+      "source": "SKYCON_COMPANION_PI4",
+      "telemetry": {
+        "alt": 10.0,
+        "lat": 13.0827,
+        "lon": 80.2707
+      },
+      "hash": "validation_hash_spool_123"
+    },
+    {
+      "source": "SKYCON_COMPANION_PI4",
+      "telemetry": {
+        "alt": 10.0,
+        "lat": 13.0827,
+        "lon": 80.2707
+      },
+      "hash": "validation_hash_spool_123"
+    },
+    {
+      "source": "SKYCON_COMPANION_PI4",
+      "telemetry": {
+        "alt": 10.0,
+        "lat": 13.0827,
+        "lon": 80.2707
+      },
+      "hash": "validation_hash_spool_123"
+    },
+    {
+      "source": "SKYCON_COMPANION_PI4",
+      "telemetry": {
+        "alt": 10.0,
+        "lat": 13.0827,
+        "lon": 80.2707
+      },
+      "hash": "validation_hash_spool_123"
+    },
+    {
+      "source": "SKYCON_COMPANION_PI4",
+      "telemetry": {
+        "alt": 10.0,
+        "lat": 13.0827,
+        "lon": 80.2707
+      },
+      "hash": "validation_hash_spool_123"
+    },
+    {
+      "source": "SKYCON_COMPANION_PI4",
+      "telemetry": {
+        "alt": 10.0,
+        "lat": 13.0827,
+        "lon": 80.2707
+      },
+      "hash": "validation_hash_spool_123"
+    },
+    {
+      "source": "SKYCON_COMPANION_PI4",
+      "timestampUtc": "2026-11-21T05:47:02.618757+00:00",
+      "telemetry": {
+        "lat": 13.0,
+        "lon": 80.0,
+        "alt": 10.0
+      },
+      "hash": "test_hash_phase6_spool"
+    },
+    {
+      "source": "SKYCON_COMPANION_PI4",
+      "telemetry": {
+        "alt": 10.0,
+        "lat": 13.0827,
+        "lon": 80.2707
+      },
+      "hash": "validation_hash_spool_123"
+    },
+    {
+      "source": "SKYCON_COMPANION_PI4",
+      "timestampUtc": "2026-11-21T05:53:55.503765+00:00",
+      "telemetry": {
+        "lat": 13.0,
+        "lon": 80.0,
+        "alt": 10.0
+      },
+      "hash": "test_hash_phase6_spool"
+    },
+    {
+      "source": "SKYCON_COMPANION_PI4",
+      "telemetry": {
+        "alt": 10.0,
+        "lat": 13.0827,
+        "lon": 80.2707
+      },
+      "hash": "validation_hash_spool_123"
+    }
+  ]
+}

@@ -11,6 +11,10 @@ import { audioService } from '../../services/audioService';
 import { CockpitInstrumentsPanel } from './CockpitInstrumentsPanel';
 import { TacticalCommandRail } from './TacticalCommandRail';
 import { MissionProfileElevationDock } from './MissionProfileElevationDock';
+import { CommunicationDiagnosticsPanel } from './CommunicationDiagnosticsPanel';
+import { HeatMapVisualizationPanel } from './HeatMapVisualizationPanel';
+import { ReconnaissanceStageControlPanel } from './ReconnaissanceStageControlPanel';
+import { ADDC2026MissionWorkflowPanel } from '../Mission/ADDC2026MissionWorkflowPanel';
 
 // Workspace & Visual Feed Components
 import { GoogleMapGroundStation } from './GoogleMapGroundStation';
@@ -51,7 +55,8 @@ import {
   AlertTriangle,
   Clock,
   Radio,
-  Cpu
+  Cpu,
+  Compass
 } from 'lucide-react';
 
 interface GroundStationDashboardProps {
@@ -87,8 +92,8 @@ export const GroundStationDashboard: React.FC<GroundStationDashboardProps> = ({
   onSwitchToManual,
   onOpenHistory
 }) => {
-  // View Modes: COCKPIT (Default Stitch UI), DETAILED (Multi-card view), SPLIT, VIDEO
-  const [viewMode, setViewMode] = useState<'COCKPIT' | 'DETAILED' | 'SPLIT' | 'VIDEO'>('COCKPIT');
+  // View Modes: COCKPIT (Default Stitch UI), DETAILED (Multi-card view), SPLIT, VIDEO, RECON
+  const [viewMode, setViewMode] = useState<'COCKPIT' | 'DETAILED' | 'SPLIT' | 'VIDEO' | 'RECON'>('COCKPIT');
 
   // Floating Overlay Toggles
   const [showInstruments, setShowInstruments] = useState<boolean>(true);
@@ -265,9 +270,9 @@ export const GroundStationDashboard: React.FC<GroundStationDashboardProps> = ({
       {/* ============================================================ */}
       {/* 1. TACTICAL TOP STATUS & VIEW CONTROL RIBBON                */}
       {/* ============================================================ */}
-      <div className="h-9 px-3 bg-[#1b1c1e]/90 border-b border-[#343537]/80 backdrop-blur-md flex items-center justify-between z-40 text-xs shrink-0">
+      <div className="h-9 px-3 bg-[#1b1c1e]/90 border-b border-[#343537]/80 backdrop-blur-md flex items-center justify-between z-40 text-xs shrink-0 overflow-x-auto scrollbar-none min-w-0">
         {/* Left: View Mode Switcher */}
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1 shrink-0">
           <button
             type="button"
             onClick={() => setViewMode('COCKPIT')}
@@ -308,6 +313,20 @@ export const GroundStationDashboard: React.FC<GroundStationDashboardProps> = ({
           >
             <VideoIcon className="w-3 h-3" />
             <span>SPLIT RECON</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setViewMode('RECON')}
+            className={`px-2.5 py-1 rounded text-[10px] font-sans font-bold uppercase tracking-wider flex items-center gap-1 transition-all cursor-pointer ${
+              viewMode === 'RECON'
+                ? 'bg-emerald-600 text-white shadow-sm'
+                : 'text-slate-400 hover:text-white hover:bg-[#292a2c]'
+            }`}
+            title="Autonomous Reconnaissance, Heatmap & Link Diagnostics"
+          >
+            <Compass className="w-3 h-3 text-emerald-300" />
+            <span>SPATIAL RECON</span>
           </button>
         </div>
 
@@ -709,6 +728,38 @@ export const GroundStationDashboard: React.FC<GroundStationDashboardProps> = ({
                 isArmingInProgress={isArming}
                 isDisarmingInProgress={isDisarming}
               />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ============================================================ */}
+      {/* 5B. SPATIAL RECONNAISSANCE & DIAGNOSTICS WORKSPACE          */}
+      {/* ============================================================ */}
+      {viewMode === 'RECON' && (
+        <div className="flex-1 p-4 overflow-y-auto bg-[#0d0e10]">
+          <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-4">
+            {/* Left Column: Stage Control & Telemetry Diagnostics */}
+            <div className="lg:col-span-6 space-y-4">
+              <ADDC2026MissionWorkflowPanel />
+              <ReconnaissanceStageControlPanel
+                onOpenConfigModal={() => setIsConfigModalOpen(true)}
+              />
+              <CommunicationDiagnosticsPanel />
+            </div>
+
+            {/* Right Column: Spatial Intelligence & Heat Map */}
+            <div className="lg:col-span-6 space-y-4">
+              <HeatMapVisualizationPanel />
+              <div className="h-64 rounded-xl overflow-hidden border border-slate-700/60 shadow-xl">
+                <GoogleMapGroundStation
+                  telemetry={telemetry}
+                  homePoint={homePoint}
+                  missionState={missionState}
+                  onSetHomePoint={onSetHomePoint}
+                  disabled={isMissionActive}
+                />
+              </div>
             </div>
           </div>
         </div>

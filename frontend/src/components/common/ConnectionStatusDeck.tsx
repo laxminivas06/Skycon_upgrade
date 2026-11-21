@@ -56,8 +56,8 @@ export const ConnectionStatusDeck: React.FC<ConnectionStatusDeckProps> = ({
   className = '',
 }) => {
   const isWifiOn = typeof navigator !== 'undefined' && navigator.onLine;
-  const isEsp32Reachable = pixhawkState.isUsbConnected || pixhawkState.isConnected;
-  const isWsOpen = pixhawkState.isUsbConnected && pixhawkState.connectionType === 'ESP32_WEBSOCKET';
+  const isPiReachable = pixhawkState.isUsbConnected || pixhawkState.isConnected;
+  const isWsOpen = pixhawkState.isUsbConnected;
   const isMavlinkUp = pixhawkState.isConnected;
   const isDroneAndroid = telemetry.pixhawkConnected || pixhawkState.isConnected;
   const isRunnerUp = runnerLink.isConnected;
@@ -76,9 +76,9 @@ export const ConnectionStatusDeck: React.FC<ConnectionStatusDeckProps> = ({
         />
         <StatusItem
           icon={<Cpu className="w-3.5 h-3.5" />}
-          label="ESP32"
-          value={isEsp32Reachable ? 'REACHED' : 'OFFLINE'}
-          status={isEsp32Reachable ? 'ok' : pixhawkState.phase === 'DISCONNECTED' ? 'error' : 'warn'}
+          label="PI 4"
+          value={isPiReachable ? 'REACHED' : 'OFFLINE'}
+          status={isPiReachable ? 'ok' : pixhawkState.phase === 'DISCONNECTED' ? 'error' : 'warn'}
         />
         <StatusItem
           icon={<Signal className="w-3.5 h-3.5" />}

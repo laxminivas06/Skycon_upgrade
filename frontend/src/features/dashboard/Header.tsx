@@ -12,7 +12,9 @@ import {
   Radio,
   CheckCircle2,
   AlertTriangle,
-  Activity
+  Activity,
+  Menu,
+  X
 } from 'lucide-react';
 import { DashboardTelemetryData } from '../../hooks/useDashboardTelemetry';
 import { AppRole } from '../../types/mission';
@@ -53,6 +55,7 @@ export const Header: React.FC<HeaderProps> = ({
 }) => {
   const isArmed = telemetry.isArmed;
   const [connState, setConnState] = useState<GCSConnectionState>(() => gcsConnectionService.getState());
+  const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false);
 
   useEffect(() => {
     const unsub = gcsConnectionService.subscribe((st) => {
@@ -244,7 +247,7 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
 
         {/* Section 3: TWO PRIMARY MISSION MODES (MANUAL vs AUTONOMOUS) */}
-        <div className="flex items-center bg-[#11161F] p-1 rounded-lg border border-[var(--uav-card-border)] ml-1 sm:ml-2">
+        <div className="hidden xl:flex items-center bg-[#11161F] p-1 rounded-lg border border-[var(--uav-card-border)] ml-1 sm:ml-2">
           <button
             type="button"
             onClick={() => onModeChange?.('MANUAL')}
@@ -286,7 +289,7 @@ export const Header: React.FC<HeaderProps> = ({
       </div>
 
       {/* 2. Center: START Button, Indicators & Short Diagnostic Status */}
-      <div className="flex flex-col items-center justify-center gap-1 shrink-0">
+      <div className="hidden xl:flex flex-col items-center justify-center gap-1 shrink-0">
         <div className="flex items-center gap-1.5 sm:gap-2">
           {/* START BUTTON: Operator initiates connection verification workflow */}
           <button
@@ -406,7 +409,9 @@ export const Header: React.FC<HeaderProps> = ({
       {/* 3. Right: Vehicle State Pills & Settings */}
       <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
         {/* Flight Mode Dropdown Selector */}
-        <FlightModeSelector variant="dropdown" />
+        <div className="hidden sm:block">
+          <FlightModeSelector variant="dropdown" />
+        </div>
 
         {/* Arm State Pill */}
         <button
@@ -424,7 +429,7 @@ export const Header: React.FC<HeaderProps> = ({
               isArmed ? 'bg-rose-500 animate-pulse' : 'bg-[#22C55E]'
             }`}
           />
-          <span>{isArmed ? 'ARMED (CLICK TO DISARM)' : 'DISARMED'}</span>
+          <span className="text-[10px] sm:text-[11px]">{isArmed ? 'ARMED (DISARM)' : 'DISARMED'}</span>
         </button>
 
         {/* RC Gamepad Link Toggle Button */}
@@ -436,7 +441,7 @@ export const Header: React.FC<HeaderProps> = ({
               ? 'RC Manual Control: ENABLED (Click to Disable RC Override)'
               : 'RC Manual Control: DISABLED (Click to Enable RC Override)'
           }
-          className={`hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-[8px] border text-[11px] font-mono transition-all active:scale-95 cursor-pointer ${
+          className={`hidden xl:flex items-center gap-1.5 px-2.5 py-1 rounded-[8px] border text-[11px] font-mono transition-all active:scale-95 cursor-pointer ${
             rcOverrideEnabled
               ? 'border-[#1b4d36] bg-[#0c2419] text-[#22C55E] hover:bg-[#123826]'
               : 'border-[var(--uav-card-border)] bg-[#161B22] text-slate-400 hover:text-white hover:bg-[#21262D]'
@@ -453,7 +458,7 @@ export const Header: React.FC<HeaderProps> = ({
         </button>
 
         {/* Battery Percent & Voltage Pill */}
-        <div className={`hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-[8px] border text-[11px] font-mono transition-colors ${
+        <div className={`hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-[8px] border text-[11px] font-mono transition-colors ${
           telemetry.batteryVoltage <= 0
             ? 'border-[var(--uav-card-border)] bg-[#161B22] text-slate-500'
             : telemetry.batteryVoltage < 10.5
@@ -481,7 +486,7 @@ export const Header: React.FC<HeaderProps> = ({
           onClick={onOpenSettings}
           title="Open Settings"
           aria-label="Open Settings"
-          className="w-8 h-8 rounded-[8px] border border-[var(--uav-card-border)] bg-[#161B22] hover:bg-[#21262D] hover:text-white flex items-center justify-center text-[var(--uav-muted)] transition cursor-pointer"
+          className="hidden sm:flex w-8 h-8 rounded-[8px] border border-[var(--uav-card-border)] bg-[#161B22] hover:bg-[#21262D] hover:text-white items-center justify-center text-[var(--uav-muted)] transition cursor-pointer"
         >
           <Settings className="w-4 h-4" />
         </button>
@@ -493,11 +498,160 @@ export const Header: React.FC<HeaderProps> = ({
             onClick={onLogout}
             title="Log Out / Switch Operator"
             aria-label="Log Out / Switch Operator"
-            className="w-8 h-8 rounded-[8px] border border-[var(--uav-card-border)] bg-[#161B22] hover:bg-red-950/60 hover:text-red-400 hover:border-red-500/40 flex items-center justify-center text-[var(--uav-muted)] transition cursor-pointer"
+            className="hidden sm:flex w-8 h-8 rounded-[8px] border border-[var(--uav-card-border)] bg-[#161B22] hover:bg-red-950/60 hover:text-red-400 hover:border-red-500/40 items-center justify-center text-[var(--uav-muted)] transition cursor-pointer"
           >
             <LogOut className="w-4 h-4" />
           </button>
         )}
+
+        {/* Mobile / Tablet Responsive Drawer Toggle Button */}
+        <button
+          type="button"
+          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+          className="xl:hidden w-8 h-8 rounded-[8px] border border-[var(--uav-card-border)] bg-[#161B22] text-slate-300 hover:text-white flex items-center justify-center transition cursor-pointer active:scale-95"
+          title={mobileMenuOpen ? 'Close Menu' : 'Open GCS Controls Menu'}
+          aria-label="Toggle Navigation Menu"
+        >
+          {mobileMenuOpen ? <X className="w-4 h-4 text-emerald-400" /> : <Menu className="w-4 h-4" />}
+        </button>
+      </div>
+
+      {/* Collapsible Mobile / Tablet Navigation Drawer */}
+      {mobileMenuOpen && (
+        <div className="xl:hidden fixed top-[68px] left-0 right-0 z-50 bg-[#0d121c]/95 border-b border-[var(--uav-card-border)] backdrop-blur-xl p-4 shadow-2xl max-h-[85vh] overflow-y-auto space-y-4 animate-in fade-in slide-in-from-top-2">
+          {/* A. Mode Switcher */}
+          <div className="space-y-1.5">
+            <div className="text-[10px] font-mono text-slate-400 uppercase tracking-wider font-bold">Mission Planning Mode:</div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              <button
+                type="button"
+                onClick={() => { onModeChange?.('MANUAL'); setMobileMenuOpen(false); }}
+                className={`flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs font-bold font-sans transition ${
+                  missionMode === 'MANUAL' ? 'bg-emerald-600 text-white shadow' : 'bg-[#161B22] text-slate-300 border border-[var(--uav-card-border)]'
+                }`}
+              >
+                <span>🧭</span>
+                <span>MANUAL</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => { onModeChange?.('AUTONOMOUS'); setMobileMenuOpen(false); }}
+                className={`flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs font-bold font-sans transition ${
+                  missionMode === 'AUTONOMOUS' ? 'bg-emerald-600 text-white shadow' : 'bg-[#161B22] text-slate-300 border border-[var(--uav-card-border)]'
+                }`}
+              >
+                <span>🤖</span>
+                <span>AUTONOMOUS</span>
+              </button>
+              {onOpenPhoneMission && (
+                <button
+                  type="button"
+                  onClick={() => { onOpenPhoneMission(); setMobileMenuOpen(false); }}
+                  className="col-span-2 sm:col-span-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs font-bold font-sans bg-cyan-950/80 border border-cyan-500/50 text-cyan-300"
+                >
+                  <span>📱</span>
+                  <span>PHONE CAM</span>
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* B. GCS Engine Actions */}
+          <div className="space-y-1.5">
+            <div className="text-[10px] font-mono text-slate-400 uppercase tracking-wider font-bold">GCS Quick Actions:</div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              <button
+                type="button"
+                onClick={() => { handleStartConnections(); setMobileMenuOpen(false); }}
+                disabled={connState.isInitializing}
+                className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-emerald-600 text-white text-xs font-bold transition active:scale-95"
+              >
+                <Play className="w-3.5 h-3.5 fill-current" />
+                <span>{connState.isStarted ? 'RE-VERIFY' : 'START GCS'}</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => { mavlinkService.switchToSimulationMode(); setMobileMenuOpen(false); }}
+                className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-cyan-950/60 border border-cyan-500/40 text-cyan-300 text-xs font-bold font-mono transition active:scale-95"
+              >
+                <span>⚡</span>
+                <span>BENCH SITL</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => { onOpenDiagnostics?.(); setMobileMenuOpen(false); }}
+                className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-amber-950/60 border border-amber-500/40 text-amber-300 text-xs font-bold font-mono transition active:scale-95"
+              >
+                <Activity className="w-3.5 h-3.5 text-amber-400" />
+                <span>DIAGNOSTICS</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => { onToggleRC?.(); setMobileMenuOpen(false); }}
+                className={`flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg border text-xs font-mono font-bold transition active:scale-95 ${
+                  rcOverrideEnabled ? 'bg-emerald-950/80 border-emerald-500/40 text-emerald-300' : 'bg-[#161B22] border-[var(--uav-card-border)] text-slate-400'
+                }`}
+              >
+                <Gamepad2 className="w-3.5 h-3.5" />
+                <span>RC: {rcOverrideEnabled ? 'ON' : 'OFF'}</span>
+              </button>
+            </div>
+          </div>
+
+          {/* C. Link Health Badges */}
+          <div className="space-y-1.5">
+            <div className="text-[10px] font-mono text-slate-400 uppercase tracking-wider font-bold">Link &amp; Avionics Status:</div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+              <div className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-xs font-mono ${wifiConfig.bg}`}>
+                <Wifi className="w-4 h-4 shrink-0" />
+                <span>{wifiConfig.label}</span>
+              </div>
+              <div className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-xs font-mono ${mavlinkConfig.bg}`}>
+                <Radio className="w-4 h-4 shrink-0" />
+                <span>{mavlinkConfig.label}</span>
+              </div>
+              <div className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-xs font-mono ${gpsConfig.bg}`}>
+                <Satellite className="w-4 h-4 shrink-0" />
+                <span>{gpsConfig.label}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* D. Flight Mode & Utilities */}
+          <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-[var(--uav-card-border)]">
+            <div className="flex items-center gap-2">
+              <FlightModeSelector variant="dropdown" />
+              {telemetry.batteryVoltage > 0 && (
+                <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-[var(--uav-card-border)] bg-[#161B22] text-xs font-mono text-emerald-400">
+                  <Battery className="w-4 h-4" />
+                  <span className="font-bold">{telemetry.batteryPercent}%</span>
+                  <span className="text-slate-400">({telemetry.batteryVoltage.toFixed(1)}V)</span>
+                </div>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => { onOpenSettings?.(); setMobileMenuOpen(false); }}
+                className="px-3 py-1.5 rounded-lg border border-[var(--uav-card-border)] bg-[#161B22] text-slate-300 hover:text-white flex items-center gap-1.5 text-xs font-mono"
+              >
+                <Settings className="w-3.5 h-3.5" />
+                <span>SETTINGS</span>
+              </button>
+              {onLogout && (
+                <button
+                  type="button"
+                  onClick={() => { onLogout(); setMobileMenuOpen(false); }}
+                  className="px-3 py-1.5 rounded-lg border border-red-500/40 bg-red-950/60 text-red-300 hover:text-white flex items-center gap-1.5 text-xs font-mono"
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                  <span>LOGOUT</span>
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
       </div>
     </header>
   );

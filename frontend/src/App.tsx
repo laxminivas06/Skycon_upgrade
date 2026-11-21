@@ -13,6 +13,7 @@ import { GroundStationDashboard } from './components/GroundStation/GroundStation
 import { DashboardPage } from './features/dashboard/DashboardPage';
 import { DroneDashboard } from './components/Drone/DroneDashboard';
 import { PhoneDroneDashboard } from './components/PhoneMission/PhoneDroneDashboard';
+import { PhoneCameraNode } from './components/PhoneMission/PhoneCameraNode';
 import { RunnerDashboard } from './components/Runner/RunnerDashboard';
 import { MultiRoleSimBench } from './components/Testbench/MultiRoleSimBench';
 import { MissionHistoryModal } from './components/History/MissionHistoryModal';
@@ -22,7 +23,7 @@ import { GlobalErrorHUD } from './components/common/GlobalErrorHUD';
 export const App: React.FC = () => {
   const [session, setSession] = useState<UserSession | null>(authService.getSession());
   const [historyOpen, setHistoryOpen] = useState<boolean>(false);
-  const [droneViewMode, setDroneViewMode] = useState<'PHONE_MISSION' | 'DRONE_HUD'>('PHONE_MISSION');
+  const [droneViewMode, setDroneViewMode] = useState<'PHONE_CAMERA' | 'PHONE_MISSION' | 'DRONE_HUD'>('PHONE_CAMERA');
 
   // Core Real-Time State
   const [telemetry, setTelemetry] = useState<DroneTelemetry>(mavlinkService.getTelemetry());
@@ -233,10 +234,21 @@ export const App: React.FC = () => {
             <div className="flex items-center bg-[#11161F] p-1 rounded-lg border border-slate-800">
               <button
                 type="button"
+                onClick={() => setDroneViewMode('PHONE_CAMERA')}
+                className={`px-2.5 py-1 rounded text-xs font-bold font-mono transition cursor-pointer ${
+                  droneViewMode === 'PHONE_CAMERA'
+                    ? 'bg-emerald-600 text-white shadow'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                📹 CAMERA STREAM
+              </button>
+              <button
+                type="button"
                 onClick={() => setDroneViewMode('PHONE_MISSION')}
                 className={`px-2.5 py-1 rounded text-xs font-bold font-mono transition cursor-pointer ${
                   droneViewMode === 'PHONE_MISSION'
-                    ? 'bg-emerald-600 text-white shadow'
+                    ? 'bg-sky-600 text-white shadow'
                     : 'text-slate-400 hover:text-white'
                 }`}
               >
@@ -267,7 +279,9 @@ export const App: React.FC = () => {
         </header>
 
         <main className="flex-1 min-h-0 flex flex-col overflow-hidden">
-          {droneViewMode === 'PHONE_MISSION' ? (
+          {droneViewMode === 'PHONE_CAMERA' ? (
+            <PhoneCameraNode onSwitchToFullDashboard={() => setDroneViewMode('PHONE_MISSION')} />
+          ) : droneViewMode === 'PHONE_MISSION' ? (
             <PhoneDroneDashboard />
           ) : (
             <div className="flex-1 p-2 sm:p-4 min-h-0 flex flex-col overflow-hidden">

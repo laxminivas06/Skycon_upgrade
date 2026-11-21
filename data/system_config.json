@@ -1,0 +1,9 @@
+{
+  "baud_rate": 921600,
+  "telem_port": "/dev/ttyAMA0",
+  "companion": "Raspberry Pi 4 Model B",
+  "autopilot": "Pixhawk 2.4.8 (ArduCopter)",
+  "rc_receiver": "MultiLink V1.0 (2.4 GHz)",
+  "camera_stream_port": 8443,
+  "qr_regex": "^\\d{2}$"
+}

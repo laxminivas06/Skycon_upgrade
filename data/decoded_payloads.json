@@ -1,0 +1,295 @@
+[
+  {
+    "detectionId": "DET_1795207694789",
+    "timestampUtc": "2026-11-20T20:48:14.789Z",
+    "epochMs": 1795207694789,
+    "payload": "99",
+    "twoDigitCode": "99",
+    "verified": true,
+    "targetLocation": {
+      "latitude": 13.0827,
+      "longitude": 80.2707153,
+      "altitudeAgl": 5.01,
+      "groundDistanceMeters": 0.88,
+      "offsetNorthMeters": 0.0,
+      "offsetEastMeters": 0.88
+    },
+    "droneStateAtCapture": {
+      "latitude": 13.0827,
+      "longitude": 80.2707072,
+      "altitudeAgl": 5.01,
+      "altitudeMsl": 542.5,
+      "rollDeg": 0.0,
+      "pitchDeg": -10.0,
+      "yawDeg": 90.0,
+      "groundSpeedMps": 4.0
+    },
+    "cameraIntrinsics": {
+      "sensorModel": "iPhone Camera (Onboard)",
+      "frameWidth": 1280,
+      "frameHeight": 720,
+      "hfovDeg": 68.0,
+      "vfovDeg": 54.0,
+      "focalLengthPixels": 948.84
+    },
+    "boundingBox": {
+      "x": 580,
+      "y": 300,
+      "width": 120,
+      "height": 120,
+      "centroidU": 640.0,
+      "centroidV": 360.0
+    },
+    "checksumSha256": "e374e509e49ed8c4a28d0aea74bceeffff0d6b1a27316a0ff1c61c9c4ad33fd1",
+    "thumbnailBase64": null
+  },
+  {
+    "detectionId": "DET_1795207694930",
+    "timestampUtc": "2026-11-20T20:48:14.930Z",
+    "epochMs": 1795207694930,
+    "payload": "77",
+    "twoDigitCode": "77",
+    "verified": true,
+    "targetLocation": {
+      "latitude": 13.0827,
+      "longitude": 80.2707153,
+      "altitudeAgl": 5.01,
+      "groundDistanceMeters": 0.88,
+      "offsetNorthMeters": 0.0,
+      "offsetEastMeters": 0.88
+    },
+    "droneStateAtCapture": {
+      "latitude": 13.0827,
+      "longitude": 80.2707072,
+      "altitudeAgl": 5.01,
+      "altitudeMsl": 542.5,
+      "rollDeg": 0.0,
+      "pitchDeg": -10.0,
+      "yawDeg": 90.0,
+      "groundSpeedMps": 4.0
+    },
+    "cameraIntrinsics": {
+      "sensorModel": "iPhone Camera (Onboard)",
+      "frameWidth": 1280,
+      "frameHeight": 720,
+      "hfovDeg": 68.0,
+      "vfovDeg": 54.0,
+      "focalLengthPixels": 948.84
+    },
+    "boundingBox": {
+      "x": 580,
+      "y": 300,
+      "width": 120,
+      "height": 120,
+      "centroidU": 640.0,
+      "centroidV": 360.0
+    },
+    "checksumSha256": "ebfc6198778c556e2906f17a3f7e4f0dfeba51770b9f7e574d0a79073958e9e2",
+    "thumbnailBase64": null
+  },
+  {
+    "detectionId": "DET_1795213085424",
+    "timestampUtc": "2026-11-20T22:18:05.424Z",
+    "epochMs": 1795213085424,
+    "payload": "99",
+    "twoDigitCode": "99",
+    "verified": true,
+    "targetLocation": {
+      "latitude": 13.0827,
+      "longitude": 80.2707153,
+      "altitudeAgl": 5.01,
+      "groundDistanceMeters": 0.88,
+      "offsetNorthMeters": 0.0,
+      "offsetEastMeters": 0.88
+    },
+    "droneStateAtCapture": {
+      "latitude": 13.0827,
+      "longitude": 80.2707072,
+      "altitudeAgl": 5.01,
+      "altitudeMsl": 542.5,
+      "rollDeg": 0.0,
+      "pitchDeg": -10.0,
+      "yawDeg": 90.0,
+      "groundSpeedMps": 4.0
+    },
+    "cameraIntrinsics": {
+      "sensorModel": "iPhone Camera (Onboard)",
+      "frameWidth": 1280,
+      "frameHeight": 720,
+      "hfovDeg": 68.0,
+      "vfovDeg": 54.0,
+      "focalLengthPixels": 948.84
+    },
+    "boundingBox": {
+      "x": 580,
+      "y": 300,
+      "width": 120,
+      "height": 120,
+      "centroidU": 640.0,
+      "centroidV": 360.0
+    },
+    "checksumSha256": "feef7069e58b8bd04cab943c0443c04d5022c713111331a4fff97a3a34739eac",
+    "thumbnailBase64": null
+  },
+  {
+    "detectionId": "DET_1795213085575",
+    "timestampUtc": "2026-11-20T22:18:05.575Z",
+    "epochMs": 1795213085575,
+    "payload": "77",
+    "twoDigitCode": "77",
+    "verified": true,
+    "targetLocation": {
+      "latitude": 13.0827,
+      "longitude": 80.2707117,
+      "altitudeAgl": 5.0,
+      "groundDistanceMeters": 0.88,
+      "offsetNorthMeters": 0.0,
+      "offsetEastMeters": 0.88
+    },
+    "droneStateAtCapture": {
+      "latitude": 13.0827,
+      "longitude": 80.2707036,
+      "altitudeAgl": 5.0,
+      "altitudeMsl": 542.5,
+      "rollDeg": 0.0,
+      "pitchDeg": -10.0,
+      "yawDeg": 90.0,
+      "groundSpeedMps": 4.0
+    },
+    "cameraIntrinsics": {
+      "sensorModel": "iPhone Camera (Onboard)",
+      "frameWidth": 1280,
+      "frameHeight": 720,
+      "hfovDeg": 68.0,
+      "vfovDeg": 54.0,
+      "focalLengthPixels": 948.84
+    },
+    "boundingBox": {
+      "x": 580,
+      "y": 300,
+      "width": 120,
+      "height": 120,
+      "centroidU": 640.0,
+      "centroidV": 360.0
+    },
+    "checksumSha256": "c8dd11e274cad429a0d2c46358d7e74c95a10bce9d72deada006be969d79c2af",
+    "thumbnailBase64": null
+  },
+  {
+    "payload": "42",
+    "checksum_sha256": "73475cb40a568e8da8a045ced110137e159f890ac4da883b6b17dc651b3a8049",
+    "timestamp_utc": "2026-11-21T00:02:33.639584+00:00",
+    "epoch_ms": 1795219353639,
+    "drone_latitude": 12.9715987,
+    "drone_longitude": 77.5945627,
+    "drone_altitude_m": 10.0,
+    "approach_distance_m": 0.0,
+    "verified": true,
+    "status": "DECODED_AND_VERIFIED",
+    "air_gapped": true
+  },
+  {
+    "payload": "42",
+    "checksum_sha256": "73475cb40a568e8da8a045ced110137e159f890ac4da883b6b17dc651b3a8049",
+    "timestamp_utc": "2026-11-21T00:04:43.534146+00:00",
+    "epoch_ms": 1795219483534,
+    "drone_latitude": 12.9715987,
+    "drone_longitude": 77.5945627,
+    "drone_altitude_m": 10.0,
+    "approach_distance_m": 0.0,
+    "verified": true,
+    "status": "DECODED_AND_VERIFIED",
+    "air_gapped": true
+  },
+  {
+    "payload": "42",
+    "checksum_sha256": "73475cb40a568e8da8a045ced110137e159f890ac4da883b6b17dc651b3a8049",
+    "timestamp_utc": "2026-11-21T00:05:26.900150+00:00",
+    "epoch_ms": 1795219526900,
+    "drone_latitude": 12.9715987,
+    "drone_longitude": 77.5945627,
+    "drone_altitude_m": 10.0,
+    "approach_distance_m": 0.0,
+    "verified": true,
+    "status": "DECODED_AND_VERIFIED",
+    "air_gapped": true
+  },
+  {
+    "payload": "42",
+    "checksum_sha256": "73475cb40a568e8da8a045ced110137e159f890ac4da883b6b17dc651b3a8049",
+    "timestamp_utc": "2026-11-21T00:05:41.723383+00:00",
+    "epoch_ms": 1795219541723,
+    "drone_latitude": 12.9715987,
+    "drone_longitude": 77.5945627,
+    "drone_altitude_m": 10.0,
+    "approach_distance_m": 0.0,
+    "verified": true,
+    "status": "DECODED_AND_VERIFIED",
+    "air_gapped": true
+  },
+  {
+    "payload": "42",
+    "checksum_sha256": "73475cb40a568e8da8a045ced110137e159f890ac4da883b6b17dc651b3a8049",
+    "timestamp_utc": "2026-11-21T04:44:40.228019+00:00",
+    "epoch_ms": 1795236280228,
+    "drone_latitude": 12.9715987,
+    "drone_longitude": 77.5945627,
+    "drone_altitude_m": 10.0,
+    "approach_distance_m": 0.0,
+    "verified": true,
+    "status": "DECODED_AND_VERIFIED",
+    "air_gapped": true
+  },
+  {
+    "payload": "42",
+    "checksum_sha256": "73475cb40a568e8da8a045ced110137e159f890ac4da883b6b17dc651b3a8049",
+    "timestamp_utc": "2026-11-21T05:05:54.086876+00:00",
+    "epoch_ms": 1795237554086,
+    "drone_latitude": 12.9715987,
+    "drone_longitude": 77.5945627,
+    "drone_altitude_m": 10.0,
+    "approach_distance_m": 0.0,
+    "verified": true,
+    "status": "DECODED_AND_VERIFIED",
+    "air_gapped": true
+  },
+  {
+    "payload": "42",
+    "checksum_sha256": "73475cb40a568e8da8a045ced110137e159f890ac4da883b6b17dc651b3a8049",
+    "timestamp_utc": "2026-11-21T05:28:56.426104+00:00",
+    "epoch_ms": 1795238936426,
+    "drone_latitude": 12.9715987,
+    "drone_longitude": 77.5945627,
+    "drone_altitude_m": 10.0,
+    "approach_distance_m": 0.0,
+    "verified": true,
+    "status": "DECODED_AND_VERIFIED",
+    "air_gapped": true
+  },
+  {
+    "payload": "42",
+    "checksum_sha256": "73475cb40a568e8da8a045ced110137e159f890ac4da883b6b17dc651b3a8049",
+    "timestamp_utc": "2026-11-21T05:47:01.946741+00:00",
+    "epoch_ms": 1795240021946,
+    "drone_latitude": 12.9715987,
+    "drone_longitude": 77.5945627,
+    "drone_altitude_m": 10.0,
+    "approach_distance_m": 0.0,
+    "verified": true,
+    "status": "DECODED_AND_VERIFIED",
+    "air_gapped": true
+  },
+  {
+    "payload": "42",
+    "checksum_sha256": "73475cb40a568e8da8a045ced110137e159f890ac4da883b6b17dc651b3a8049",
+    "timestamp_utc": "2026-11-21T05:53:54.705762+00:00",
+    "epoch_ms": 1795240434705,
+    "drone_latitude": 12.9715987,
+    "drone_longitude": 77.5945627,
+    "drone_altitude_m": 10.0,
+    "approach_distance_m": 0.0,
+    "verified": true,
+    "status": "DECODED_AND_VERIFIED",
+    "air_gapped": true
+  }
+]

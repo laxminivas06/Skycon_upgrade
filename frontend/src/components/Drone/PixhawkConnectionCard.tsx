@@ -1544,17 +1544,17 @@ export const PixhawkConnectionCard: React.FC<PixhawkConnectionCardProps> = ({
       {/* ========================================================================= */}
       {showEsp32Guide && (
         <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-5 font-mono">
-          <div className="bg-slate-900 border-2 border-purple-500/60 rounded-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto p-4 sm:p-6 shadow-2xl space-y-4">
+          <div className="bg-slate-900 border-2 border-emerald-500/60 rounded-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto p-4 sm:p-6 shadow-2xl space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-slate-800">
               <div className="flex items-center space-x-2.5">
-                <div className="p-2 bg-purple-950 rounded-xl border border-purple-500/50 text-purple-400">
-                  <Wifi className="w-5 h-5" />
+                <div className="p-2 bg-emerald-950 rounded-xl border border-emerald-500/50 text-emerald-400">
+                  <Cpu className="w-5 h-5" />
                 </div>
                 <div>
                   <h3 className="font-black text-sm sm:text-base text-white uppercase tracking-wider">
-                    ESP32-S3 Wireless Bridge &amp; Production Architecture
+                    Raspberry Pi 4 Companion Computer &amp; Architecture
                   </h3>
-                  <p className="text-xs text-purple-300">Local HTTP vs Deployed HTTPS (WSS) Connectivity</p>
+                  <p className="text-xs text-emerald-300">Sole Companion Computer • Pixhawk 2.4.8 Integration</p>
                 </div>
               </div>
               <button
@@ -1565,46 +1565,26 @@ export const PixhawkConnectionCard: React.FC<PixhawkConnectionCardProps> = ({
               </button>
             </div>
 
-            {/* 1. Architecture: Local vs Production HTTPS */}
+            {/* 1. Architecture: Direct Local & Cloud Telemetry */}
             <div className="space-y-2">
-              <div className="text-xs font-black uppercase text-purple-300 flex items-center space-x-1.5">
+              <div className="text-xs font-black uppercase text-emerald-300 flex items-center space-x-1.5">
                 <Network className="w-4 h-4" />
-                <span>1. Network Architecture (LOCAL vs PRODUCTION)</span>
+                <span>1. Network Architecture (Direct Pi 4 Companion)</span>
               </div>
               <div className="bg-slate-950 p-3.5 rounded-xl border border-slate-800 text-[11px] text-slate-300 space-y-3">
-                
-                {/* Local HTTP Architecture */}
-                <div className="p-2.5 bg-slate-900/90 rounded-lg border border-purple-500/30 space-y-1">
-                  <div className="font-bold text-purple-300 flex items-center space-x-1">
-                    <span>A. LOCAL DEVELOPMENT (Working Hardware Test)</span>
-                  </div>
-                  <div className="font-mono text-emerald-400 text-[10px] p-2 bg-black/60 rounded">
-                    http://ESP32-IP (or http://localhost:5173 / Android App)<br/>
-                    &nbsp;&nbsp;&nbsp;&nbsp;↓<br/>
-                    ws://ESP32-IP:8080<br/>
-                    &nbsp;&nbsp;&nbsp;&nbsp;↓<br/>
-                    ESP32-S3 Bridge ➔ Pixhawk TELEM2 (UART @ 57600)
-                  </div>
-                  <p className="text-[10px] text-slate-400">
-                    Direct local WebSocket connection. Works when Ground Station is running on <code>http://</code> or native Android app.
-                  </p>
-                </div>
-
-                {/* Production HTTPS Architecture */}
                 <div className="p-2.5 bg-slate-900/90 rounded-lg border border-emerald-500/30 space-y-1">
                   <div className="font-bold text-emerald-300 flex items-center space-x-1">
-                    <Lock className="w-3.5 h-3.5" />
-                    <span>B. PRODUCTION DEPLOYED HTTPS (Netlify / Cloud)</span>
+                    <span>A. DIRECT LOCAL LINK (Field Wi-Fi Hotspot / 4G Dongle)</span>
                   </div>
-                  <div className="font-mono text-sky-400 text-[10px] p-2 bg-black/60 rounded">
-                    HTTPS Web Ground Station (https://my-app.netlify.app)<br/>
-                    &nbsp;&nbsp;&nbsp;&nbsp;↓ (Secure WSS over TLS)<br/>
-                    wss://relay.yourdomain.com:8443 (Cloud / TLS Reverse Proxy)<br/>
-                    &nbsp;&nbsp;&nbsp;&nbsp;↓ (Forwarded to LAN or VPN)<br/>
-                    ESP32-S3 Bridge ➔ Pixhawk TELEM2 (UART @ 57600)
+                  <div className="font-mono text-emerald-400 text-[10px] p-2 bg-black/60 rounded">
+                    Ground Station / Phone Drone Core (Browser / PWA)<br/>
+                    &nbsp;&nbsp;&nbsp;&nbsp;↓ (ws://&lt;pi-ip&gt;:8443/ws or wss://&lt;cloud-url&gt;/ws)<br/>
+                    Raspberry Pi 4 Model B (FastAPI + OpenCV + MAVLink + SimpleJsonStore)<br/>
+                    &nbsp;&nbsp;&nbsp;&nbsp;↓ (UART0 @ 921600 or 57600 baud, 3.3V Logic)<br/>
+                    Pixhawk 2.4.8 Flight Controller (TELEM1 MAVLink 2.0)
                   </div>
                   <p className="text-[10px] text-slate-400">
-                    A deployed HTTPS web application cannot directly reach raw LAN IP addresses (like <code>192.168.10.109</code>) with <code>wss://</code> without a valid SSL/TLS certificate. Production uses a TLS reverse proxy or relay.
+                    The Raspberry Pi 4 is the sole companion computer. It executes mission autonomy, computer vision, geofence watchdogs, and JSON persistence locally.
                   </p>
                 </div>
               </div>
@@ -1612,34 +1592,34 @@ export const PixhawkConnectionCard: React.FC<PixhawkConnectionCardProps> = ({
 
             {/* 2. Hardware Architecture & Wiring */}
             <div className="space-y-2">
-              <div className="text-xs font-black uppercase text-purple-300 flex items-center space-x-1.5">
+              <div className="text-xs font-black uppercase text-emerald-300 flex items-center space-x-1.5">
                 <Cable className="w-4 h-4" />
-                <span>2. Pixhawk 2.4.8 TELEM2 Pinout &amp; Wiring</span>
+                <span>2. Pixhawk 2.4.8 TELEM1 Pinout &amp; Wiring to Raspberry Pi 4</span>
               </div>
               <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 text-[11px] text-slate-300 space-y-2">
                 <table className="w-full text-left border-collapse text-[11px]">
                   <thead>
                     <tr className="border-b border-slate-800 text-slate-400 font-bold">
-                      <th className="py-1">TELEM2 Pin</th>
+                      <th className="py-1">Pixhawk TELEM1 Pin</th>
                       <th className="py-1">Signal</th>
-                      <th className="py-1">ESP32-S3 Target Pin</th>
+                      <th className="py-1">Raspberry Pi 4 Target Pin</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-800/60 text-slate-200">
                     <tr>
-                      <td className="py-1 font-bold text-amber-400">Pin 1</td>
+                      <td className="py-1 font-bold text-rose-400">Pin 1</td>
                       <td>+5V Power</td>
-                      <td className="font-bold text-emerald-400">ESP32-S3 5V/VIN Input</td>
+                      <td className="font-bold text-rose-400">DO NOT CONNECT (Power Pi via dedicated UBEC)</td>
                     </tr>
                     <tr>
                       <td className="py-1 font-bold text-sky-400">Pin 2</td>
                       <td>TX (Transmit)</td>
-                      <td className="font-bold text-sky-300">ESP32-S3 RX (UART Pin)</td>
+                      <td className="font-bold text-sky-300">GPIO 15 (Pin 10 - RX / UART0)</td>
                     </tr>
                     <tr>
                       <td className="py-1 font-bold text-sky-400">Pin 3</td>
                       <td>RX (Receive)</td>
-                      <td className="font-bold text-sky-300">ESP32-S3 TX (UART Pin)</td>
+                      <td className="font-bold text-sky-300">GPIO 14 (Pin 8 - TX / UART0)</td>
                     </tr>
                     <tr>
                       <td className="py-1 text-slate-500">Pin 4</td>
@@ -1654,32 +1634,34 @@ export const PixhawkConnectionCard: React.FC<PixhawkConnectionCardProps> = ({
                     <tr>
                       <td className="py-1 font-bold text-slate-400">Pin 6</td>
                       <td>GND</td>
-                      <td className="font-bold text-slate-300">ESP32-S3 GND</td>
+                      <td className="font-bold text-slate-300">Pin 6, 9, 14, 20 (GND)</td>
                     </tr>
                   </tbody>
                 </table>
                 <div className="p-2 bg-rose-950/50 border border-rose-500/40 rounded-lg text-rose-300 text-[10px]">
-                  ⚠️ <strong>SAFETY CAUTION:</strong> Do NOT connect Pixhawk 5V output to the ESP32 3.3V pin. Connect to ESP32 5V / VIN pin only.
+                  ⚠️ <strong>POWER REGULATION REQUIREMENT:</strong> Never power Raspberry Pi 4 from the Pixhawk servo rail or TELEM port. Use a dedicated regulated 5V 3A UBEC connected directly to the flight LiPo battery.
                 </div>
               </div>
             </div>
 
-            {/* 3. Pixhawk ArduPilot Parameter Config */}
+            {/* 3. Pixhawk ArduPilot Parameter Config & RC Receiver */}
             <div className="space-y-2">
-              <div className="text-xs font-black uppercase text-purple-300 flex items-center space-x-1.5">
+              <div className="text-xs font-black uppercase text-emerald-300 flex items-center space-x-1.5">
                 <Sliders className="w-4 h-4" />
-                <span>3. Pixhawk Parameters for TELEM2</span>
+                <span>3. Pixhawk Parameters &amp; Radio Receiver Integration</span>
               </div>
               <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 text-[11px] text-slate-300 space-y-1">
-                <div>• <strong>SERIAL2_PROTOCOL = 2</strong> (MAVLink2)</div>
-                <div>• <strong>SERIAL2_BAUD = 57</strong> (57600 baud rate)</div>
+                <div>• <strong>SERIAL1_PROTOCOL = 2</strong> (MAVLink 2.0 on TELEM1 for Pi 4 companion)</div>
+                <div>• <strong>SERIAL1_BAUD = 921</strong> (921600 baud rate) or 57 (57600 baud)</div>
+                <div>• <strong>RC Receiver:</strong> MultiLink V1.0 2.4 GHz receiver connected to Pixhawk RC IN (SBUS/PPM)</div>
+                <div>• <strong>Failsafe:</strong> FS_THR_ENABLE = 1, RTL_ALT = 500 (5m return altitude)</div>
               </div>
             </div>
 
             <div className="pt-2 flex justify-end">
               <button
                 onClick={() => setShowEsp32Guide(false)}
-                className="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs rounded-xl transition cursor-pointer"
+                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl transition cursor-pointer"
               >
                 Got It, Close Guide
               </button>
