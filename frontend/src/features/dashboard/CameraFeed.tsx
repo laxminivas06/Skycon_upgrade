@@ -41,6 +41,7 @@ import { DashboardTelemetryData, useDashboardTelemetry } from '../../hooks/useDa
 interface CameraFeedProps {
   className?: string;
   telemetry?: DashboardTelemetryData;
+  onOpenExpandedIntelligence?: () => void;
 }
 
 const getCardinal = (heading: number): string => {
@@ -55,7 +56,11 @@ const getCardinal = (heading: number): string => {
   return 'NW';
 };
 
-export const CameraFeed: React.FC<CameraFeedProps> = ({ className = '', telemetry: propTelemetry }) => {
+export const CameraFeed: React.FC<CameraFeedProps> = ({
+  className = '',
+  telemetry: propTelemetry,
+  onOpenExpandedIntelligence
+}) => {
   const hookTelemetry = useDashboardTelemetry();
   const telemetry = propTelemetry || hookTelemetry;
 
@@ -345,7 +350,7 @@ export const CameraFeed: React.FC<CameraFeedProps> = ({ className = '', telemetr
 
   return (
     <Card
-      title="DRONE & OPTICAL INTELLIGENCE"
+      title="SKYCON OPTICAL INTELLIGENCE"
       action={
         <div className="flex items-center gap-1.5 relative flex-wrap justify-end">
           {/* Explicit Start / Stop Streaming Control Button (Req 2) */}
@@ -456,6 +461,18 @@ export const CameraFeed: React.FC<CameraFeedProps> = ({ className = '', telemetr
               </button>
             )}
           </div>
+
+          {/* Fullscreen / Expand Optical Recon Modal Button */}
+          {onOpenExpandedIntelligence && (
+            <button
+              type="button"
+              onClick={onOpenExpandedIntelligence}
+              className="p-1 rounded-[4px] bg-[#161B22] border border-[var(--uav-card-border)] hover:bg-cyan-950/60 hover:border-cyan-500/50 text-cyan-400 transition cursor-pointer"
+              title="Open Unified Optical Recon & Camera Intelligence Dialog"
+            >
+              <Maximize className="w-3.5 h-3.5" />
+            </button>
+          )}
         </div>
       }
       className={`h-[358px] shrink-0 select-none ${className}`}

@@ -262,7 +262,7 @@ export const AutonomousMissionControlCard: React.FC<AutonomousMissionControlCard
 
   return (
     <Card
-      title="AUTONOMOUS RECON & SPIRAL SCAN"
+      title="SKYCON AUTONOMOUS RECON & SPIRAL SCAN"
       action={
         <div className="flex items-center gap-1.5">
           {/* Tab buttons: CONFIG | OBJECTS ({n}) | HEATMAP */}
@@ -667,19 +667,19 @@ export const AutonomousMissionControlCard: React.FC<AutonomousMissionControlCard
           </button>
         </div>
 
-        {/* Designated Phone Recon Mission Section */}
+        {/* Consolidated Camera Intelligence & Optical Recon Section */}
         {onOpenPhoneMission && (
           <div className="p-2.5 rounded-lg bg-[#0F172A] border border-cyan-500/30 flex items-center justify-between gap-2 shadow-sm mt-1">
             <div className="flex items-center gap-2">
               <div className="w-7 h-7 rounded-lg bg-cyan-950/80 border border-cyan-500/40 flex items-center justify-center text-cyan-400 font-bold text-sm">
-                📱
+                📷
               </div>
               <div>
                 <span className="text-[11px] font-orbitron font-bold text-white block leading-tight">
-                  PHONE RECON MISSION
+                  SKYCON OPTICAL INTELLIGENCE
                 </span>
                 <span className="text-[9.5px] font-mono text-slate-400">
-                  Onboard smartphone camera node &amp; payload tracking
+                  Live camera stream, photo captures, heatmap &amp; targets
                 </span>
               </div>
             </div>
@@ -687,9 +687,9 @@ export const AutonomousMissionControlCard: React.FC<AutonomousMissionControlCard
               type="button"
               onClick={onOpenPhoneMission}
               className="px-3 py-1.5 rounded-md bg-cyan-600 hover:bg-cyan-500 active:bg-cyan-700 text-white text-[10.5px] font-bold font-mono transition cursor-pointer shadow-sm shrink-0"
-              title="Open Autonomous Phone Recon Mission Dashboard"
+              title="Open Unified Optical Recon & Camera Intelligence Dashboard"
             >
-              OPEN MISSION
+              OPEN INTELLIGENCE
             </button>
           </div>
         )}

@@ -102,7 +102,7 @@ export const ManualMissionControlCard: React.FC<ManualMissionControlCardProps> =
 
   return (
     <Card
-      title="MANUAL MISSION PLANNING"
+      title="SKYCON MANUAL MISSION PLANNING"
       action={
         <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-mono text-[10px] font-bold border border-emerald-500/40">
           MODE A • MANUAL

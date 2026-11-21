@@ -10,7 +10,12 @@ import {
   Crosshair,
   Send,
   Calendar,
-  Power
+  Power,
+  RotateCcw,
+  Octagon,
+  Home,
+  PlaneLanding,
+  Gamepad2
 } from 'lucide-react';
 import { useDashboardTelemetry } from '../../hooks/useDashboardTelemetry';
 import { mavlinkService } from '../../services/mavlinkService';
@@ -20,6 +25,8 @@ import { runnerCommService } from '../../services/runnerCommService';
 import { audioService } from '../../services/audioService';
 import { geofenceService } from '../../services/geofenceService';
 import { reconDetectionService } from '../../services/reconDetectionService';
+import { targetDetectionEngine } from '../../services/targetDetectionEngine';
+import { phoneDroneMissionService } from '../../services/phoneDroneMissionService';
 import { fetchWithFallback } from '../../services/apiClient';
 import { Header } from './Header';
 import { TelemetryPanel } from './TelemetryPanel';
@@ -38,8 +45,9 @@ import { AutonomousMissionConfigModal } from '../../components/Mission/Autonomou
 import { MissionHistoryModal } from '../../components/History/MissionHistoryModal';
 import { SerialDiagnosticsModal } from '../../components/Drone/SerialDiagnosticsModal';
 import { ComprehensiveDiagnosticDashboard } from '../../components/Drone/ComprehensiveDiagnosticDashboard';
-import { PhoneDroneDashboard } from '../../components/PhoneMission/PhoneDroneDashboard';
+import { UnifiedCameraIntelligenceModal } from '../../components/Mission/UnifiedCameraIntelligenceModal';
 import { FlightModeSelector } from '../../components/common/FlightModeSelector';
+import { SimpleConnectionIndicators } from '../../components/common/SimpleConnectionIndicators';
 import { GlobalErrorHUD } from '../../components/common/GlobalErrorHUD';
 import { systemAlertService } from '../../services/systemAlertService';
 import { AppRole } from '../../types/mission';
@@ -204,6 +212,33 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
         ? '🎮 RC MANUAL CONTROL OVERRIDE: ON (Handheld Transmitter in Command)'
         : '🤖 RC OVERRIDE: OFF (Autonomous GCS Navigation Active)'
     );
+  };
+
+  // Safe Mission Workflow Reset (Requirement 3)
+  const handleResetMissionWorkflow = async () => {
+    try {
+      await groundStationMissionService.deleteMission();
+    } catch {}
+
+    try {
+      reconDetectionService.clearAllDetections();
+      reconDetectionService.resetRtlState();
+    } catch {}
+
+    try {
+      targetDetectionEngine.clearCapturedImages();
+    } catch {}
+
+    try {
+      missionEngine.resetMission();
+    } catch {}
+
+    try {
+      phoneDroneMissionService.reset();
+    } catch {}
+
+    audioService.playBeep(440, 150);
+    showNotification('🔄 Mission workflow reset safely. All waypoints, QR codes, and states cleared.');
   };
 
   const handleToggleArm = async (force: boolean = false) => {
@@ -643,17 +678,65 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
           />
         </aside>
 
-        {/* 2. CENTER PANEL: Live Drone Map (Primary Visual Element, Fills Center Space) */}
+        {/* 2. CENTER PANEL: Mission Window & Tactical Map (Requirements 1 & 2) */}
         <section
           className={`h-full min-h-0 w-full relative overflow-hidden bg-[#0D1117] flex flex-col ${
             mobileView === 'map' ? 'flex' : 'hidden lg:flex'
           }`}
         >
-          {/* Tactical Flight Mode Strip: 10 Modes with Real-Time Feedback & Emergency Overrides */}
-          <div className="shrink-0 z-20 bg-[#0A0E14] border-b border-[var(--uav-card-border)] p-1.5">
-            <FlightModeSelector variant="strip" onModeChanged={(mode) => showNotification(`Flight Mode switched to ${mode} ✓`)} />
+          {/* Top Bar Beside/Above Mission Window: Manual/Autonomous Switch + Connection Symbols */}
+          <div className="shrink-0 z-20 bg-[#0c1322] border-b border-[var(--uav-card-border)] px-3 py-1.5 flex items-center justify-between gap-2 flex-wrap">
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="font-orbitron font-extrabold text-[12px] tracking-wider text-slate-200 hidden sm:inline truncate">
+                MISSION WINDOW
+              </span>
+              {/* Manual / Autonomous Switching */}
+              <div className="flex items-center bg-[#11161F] p-0.5 rounded-lg border border-[var(--uav-card-border)] shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setMissionMode('MANUAL')}
+                  className={`flex items-center gap-1 px-2.5 py-1 rounded text-[11px] font-bold font-sans transition cursor-pointer ${
+                    missionMode === 'MANUAL'
+                      ? 'bg-emerald-600 text-white shadow-sm'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                  title="Manual Mission Planning: Draw and customize search path on map"
+                >
+                  <span>🧭</span>
+                  <span>MANUAL</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMissionMode('AUTONOMOUS')}
+                  className={`flex items-center gap-1 px-2.5 py-1 rounded text-[11px] font-bold font-sans transition cursor-pointer ${
+                    missionMode === 'AUTONOMOUS'
+                      ? 'bg-emerald-600 text-white shadow-sm'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                  title="Autonomous Search Mission: Generate search mission from altitude, radius, and algorithm"
+                >
+                  <span>🤖</span>
+                  <span>AUTONOMOUS</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Connection Symbols Beside Mission Window */}
+            <div className="flex items-center gap-2 shrink-0">
+              <SimpleConnectionIndicators
+                isWifiConnected={typeof navigator !== 'undefined' ? navigator.onLine : true}
+                isMavlinkConnected={telemetry.isConnected}
+                isPixhawkConnected={telemetry.isConnected}
+              />
+              {/* GPS Status Indicator */}
+              <div className="px-2 py-0.5 rounded bg-[#11161F] border border-slate-800 text-[10px] font-mono font-bold flex items-center gap-1.5">
+                <span className={`w-1.5 h-1.5 rounded-full ${telemetry.gpsFixType && telemetry.gpsFixType !== 'NO_FIX' ? 'bg-emerald-400' : 'bg-rose-500'}`} />
+                <span className="text-slate-300">{telemetry.gpsFixType ? telemetry.gpsFixType.replace('_', ' ') : 'NO GPS'}</span>
+              </div>
+            </div>
           </div>
 
+          {/* Central Map Canvas (Fixed In Place, No Layout Jumping) */}
           <MapPanel
             telemetry={telemetry}
             className="h-full w-full min-h-0 flex-1 border-0 rounded-none"
@@ -665,6 +748,94 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
               showNotification('Waypoint added to mission plan');
             }}
           />
+
+          {/* Bottom Bar Below Mission Window: Mode Selector & RC ON (Left-Aligned, Space Utilized, No downward shift) */}
+          <div className="shrink-0 z-20 bg-[#0A0E14] border-t border-[var(--uav-card-border)] px-3 py-1.5 flex items-center justify-between gap-2 overflow-x-auto min-h-[44px]">
+            {/* Left-Aligned Controls: Mode Selector, RC ON, Reset, Emergency Overrides */}
+            <div className="flex items-center gap-2 justify-start shrink-0 flex-nowrap">
+              {/* Flight Mode Selector (direction="up" so opening never shifts controls downward) */}
+              <FlightModeSelector
+                variant="dropdown"
+                direction="up"
+                onModeChanged={(mode) => showNotification(`Flight Mode switched to ${mode} ✓`)}
+              />
+
+              {/* RC ON / OFF Status & Override Toggle */}
+              <button
+                type="button"
+                onClick={handleToggleRC}
+                title={
+                  telemetry.rcOverrideEnabled
+                    ? 'RC Manual Control: ENABLED (Click to Disable RC Override)'
+                    : 'RC Manual Control: DISABLED (Click to Enable RC Override)'
+                }
+                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-[8px] border text-[11px] font-mono transition-all active:scale-95 cursor-pointer shrink-0 ${
+                  telemetry.rcOverrideEnabled
+                    ? 'border-[#1b4d36] bg-[#0c2419] text-[#22C55E]'
+                    : 'border-[var(--uav-card-border)] bg-[#161B22] text-slate-400 hover:text-white hover:bg-[#21262D]'
+                }`}
+              >
+                <Gamepad2
+                  className={`w-3.5 h-3.5 ${
+                    telemetry.rcOverrideEnabled ? 'text-[#22C55E]' : 'text-slate-400'
+                  }`}
+                />
+                <span className="font-semibold">
+                  RC: {telemetry.rcOverrideEnabled ? 'ON' : 'OFF'}
+                </span>
+              </button>
+
+              {/* Safe Reset Mission Workflow Button (Requirement 3) */}
+              <button
+                type="button"
+                onClick={handleResetMissionWorkflow}
+                className="flex items-center gap-1.5 px-2.5 py-1 rounded-[8px] border border-amber-500/50 bg-amber-950/40 hover:bg-amber-900/60 text-amber-300 text-[11px] font-mono font-bold transition shadow-sm cursor-pointer shrink-0 active:scale-95"
+                title="Restart mission workflow from beginning: Clears previous waypoints, state, and QR code safely"
+              >
+                <RotateCcw className="w-3.5 h-3.5 text-amber-400" />
+                <span>RESET</span>
+              </button>
+
+              {/* Emergency Quick Actions */}
+              <button
+                type="button"
+                onClick={() => mavlinkService.setFlightMode('BRAKE')}
+                className="flex items-center gap-1 px-2 py-1 rounded-[6px] bg-red-950/80 border border-red-600/60 hover:bg-red-900 text-red-200 text-[10.5px] font-mono font-bold transition cursor-pointer shrink-0"
+                title="Instant Electronic Air Brake"
+              >
+                <Octagon className="w-3 h-3 text-red-400" />
+                <span>BRAKE</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => mavlinkService.setFlightMode('RTL')}
+                className="flex items-center gap-1 px-2 py-1 rounded-[6px] bg-amber-950/80 border border-amber-600/60 hover:bg-amber-900 text-amber-200 text-[10.5px] font-mono font-bold transition cursor-pointer shrink-0"
+                title="Return To Launch"
+              >
+                <Home className="w-3 h-3 text-amber-400" />
+                <span>RTL</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => mavlinkService.setFlightMode('LAND')}
+                className="flex items-center gap-1 px-2 py-1 rounded-[6px] bg-rose-950/80 border border-rose-600/60 hover:bg-rose-900 text-rose-200 text-[10.5px] font-mono font-bold transition cursor-pointer shrink-0"
+                title="Vertical Landing"
+              >
+                <PlaneLanding className="w-3 h-3 text-rose-400" />
+                <span>LAND</span>
+              </button>
+            </div>
+
+            {/* Right-Aligned Coordinates & Altitude (Space Utilized Efficiently) */}
+            <div className="hidden sm:flex items-center gap-2 text-[10px] font-mono text-slate-400 shrink-0">
+              <span className="px-2 py-0.5 rounded bg-[#161B22] border border-slate-800">
+                POS: {telemetry.latitude !== 0 ? `${telemetry.latitude.toFixed(4)}, ${telemetry.longitude.toFixed(4)}` : 'ACQUIRING GPS'}
+              </span>
+              <span className="px-2 py-0.5 rounded bg-[#161B22] border border-slate-800 text-emerald-400">
+                ALT: {(telemetry.altitudeMeters || 0).toFixed(1)}m
+              </span>
+            </div>
+          </div>
         </section>
 
         {/* 3. RIGHT PANEL: Camera & Operations (Adapts between MODE A and MODE B) */}
@@ -675,7 +846,11 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
         >
           {/* A. Drone Camera Feed with Live QR Recognition */}
           <div className={mobileView === 'operations' ? 'hidden lg:block w-full shrink-0' : 'w-full shrink-0'}>
-            <CameraFeed telemetry={telemetry} className="w-full shrink-0" />
+            <CameraFeed
+              telemetry={telemetry}
+              onOpenExpandedIntelligence={() => setShowPhoneMissionModal(true)}
+              className="w-full shrink-0"
+            />
           </div>
 
           {/* B. Operations Controls */}
@@ -1059,27 +1234,11 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
         </div>
       )}
 
-      {/* Phone Drone Mission Fullscreen Modal */}
-      {showPhoneMissionModal && (
-        <div className="fixed inset-0 z-50 bg-[#070b14] flex flex-col">
-          <div className="h-10 px-4 bg-[#0b1220] border-b border-slate-800 flex items-center justify-between z-10 shrink-0">
-            <span className="text-xs font-mono font-bold text-cyan-400 flex items-center gap-1.5">
-              <span>📱</span>
-              <span>AUTONOMOUS PHONE RECON MISSION DASHBOARD</span>
-            </span>
-            <button
-              type="button"
-              onClick={() => setShowPhoneMissionModal(false)}
-              className="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-mono font-bold transition"
-            >
-              ✕ CLOSE
-            </button>
-          </div>
-          <div className="flex-1 min-h-0 overflow-y-auto">
-            <PhoneDroneDashboard />
-          </div>
-        </div>
-      )}
+      {/* Unified Camera & Optical Intelligence Modal */}
+      <UnifiedCameraIntelligenceModal
+        isOpen={showPhoneMissionModal}
+        onClose={() => setShowPhoneMissionModal(false)}
+      />
     </div>
   );
 };

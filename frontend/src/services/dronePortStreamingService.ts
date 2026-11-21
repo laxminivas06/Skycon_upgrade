@@ -28,39 +28,55 @@ class DronePortStreamingService {
   private userStreamingRequested: boolean = false;
   private listeners: Set<StreamStateListener> = new Set();
   private unsubStreamStatus: (() => void) | null = null;
+  private unsubStreamFrame: (() => void) | null = null;
   private startingTimeout: any = null;
 
   constructor() {
     this.initStatusListener();
+    // Auto-subscribe to Drone Core stream signals
+    droneCameraStreamService.startSubscribing();
   }
 
   private initStatusListener() {
     this.unsubStreamStatus = droneCameraStreamService.subscribeStatus((st: DroneCameraStreamStatus) => {
-      if (!this.userStreamingRequested) {
-        // If user hasn't explicitly clicked Start Streaming, remain OFF
-        if (this.currentState !== 'STREAMING_OFF') {
-          this.setState('STREAMING_OFF');
-        }
-        return;
-      }
-
       switch (st) {
         case 'LIVE_FEED_CONNECTED':
           if (this.startingTimeout) clearTimeout(this.startingTimeout);
+          this.userStreamingRequested = true;
           this.setState('STREAMING_ACTIVE');
           break;
         case 'CONNECTING':
-          this.setState('STARTING');
+          if (this.userStreamingRequested) {
+            this.setState('STARTING');
+          }
           break;
         case 'CAMERA_OFFLINE':
+          if (this.startingTimeout) clearTimeout(this.startingTimeout);
+          this.userStreamingRequested = false;
+          this.setState('STREAMING_OFF');
+          break;
         case 'CONNECTION_LOST':
         case 'WAITING_FOR_CAMERA':
-          // If user requested streaming but camera is offline or lost
-          this.setState('CONNECTION_UNAVAILABLE');
+          if (this.userStreamingRequested) {
+            this.setState('CONNECTION_UNAVAILABLE');
+          } else {
+            this.setState('STREAMING_OFF');
+          }
           break;
         default:
-          this.setState('CONNECTION_UNAVAILABLE');
+          if (this.userStreamingRequested) {
+            this.setState('CONNECTION_UNAVAILABLE');
+          }
           break;
+      }
+    });
+
+    // Auto-detect incoming live frame from Drone Core
+    this.unsubStreamFrame = droneCameraStreamService.subscribeFrame((f) => {
+      if (f && this.currentState !== 'STREAMING_ACTIVE') {
+        if (this.startingTimeout) clearTimeout(this.startingTimeout);
+        this.userStreamingRequested = true;
+        this.setState('STREAMING_ACTIVE');
       }
     });
   }

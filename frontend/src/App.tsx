@@ -14,6 +14,7 @@ import { DashboardPage } from './features/dashboard/DashboardPage';
 import { DroneDashboard } from './components/Drone/DroneDashboard';
 import { PhoneDroneDashboard } from './components/PhoneMission/PhoneDroneDashboard';
 import { PhoneCameraNode } from './components/PhoneMission/PhoneCameraNode';
+import { UnifiedDroneCoreView } from './components/Drone/UnifiedDroneCoreView';
 import { RunnerDashboard } from './components/Runner/RunnerDashboard';
 import { MultiRoleSimBench } from './components/Testbench/MultiRoleSimBench';
 import { MissionHistoryModal } from './components/History/MissionHistoryModal';
@@ -208,100 +209,20 @@ export const App: React.FC = () => {
     );
   }
 
-  // Dedicated Drone Core Experience (Matches Field Unit & GCS Design System)
+  // Dedicated Drone Core Experience (Unified Optical Recon & Streaming Cockpit)
   if (currentRole === 'DRONE') {
     return (
       <div className="h-[100dvh] w-full bg-sae-dark text-slate-100 flex flex-col font-sans select-none overflow-hidden">
         <GlobalErrorHUD />
         <QrAlertHUD />
-        {/* Dedicated Minimal Drone Core Top Bar (Matching Field Unit & GCS) */}
-        <header className="h-[52px] px-3 sm:px-6 bg-[#0c1322] border-b border-slate-800 flex items-center justify-between select-none z-40 shadow-lg shrink-0">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-emerald-950/60 border border-emerald-500/50 flex items-center justify-center text-emerald-400 font-black">
-              📱
-            </div>
-            <div>
-              <span className="font-orbitron font-extrabold text-[13px] tracking-wide text-white block leading-none">
-                AUTONOMOUS PHONE RECON UNIT
-              </span>
-              <span className="text-[10px] text-slate-400 font-mono">
-                SAE INDIA ADDC 2026 • ONBOARD DRONE-MOUNTED PHONE
-              </span>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <div className="flex items-center bg-[#11161F] p-1 rounded-lg border border-slate-800">
-              <button
-                type="button"
-                onClick={() => setDroneViewMode('PHONE_CAMERA')}
-                className={`px-2.5 py-1 rounded text-xs font-bold font-mono transition cursor-pointer ${
-                  droneViewMode === 'PHONE_CAMERA'
-                    ? 'bg-emerald-600 text-white shadow'
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                📹 CAMERA STREAM
-              </button>
-              <button
-                type="button"
-                onClick={() => setDroneViewMode('PHONE_MISSION')}
-                className={`px-2.5 py-1 rounded text-xs font-bold font-mono transition cursor-pointer ${
-                  droneViewMode === 'PHONE_MISSION'
-                    ? 'bg-sky-600 text-white shadow'
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                📱 PHONE MISSION
-              </button>
-              <button
-                type="button"
-                onClick={() => setDroneViewMode('DRONE_HUD')}
-                className={`px-2.5 py-1 rounded text-xs font-bold font-mono transition cursor-pointer ${
-                  droneViewMode === 'DRONE_HUD'
-                    ? 'bg-amber-600 text-white shadow'
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                📷 DRONE HUD
-              </button>
-            </div>
-
-            <button
-              type="button"
-              onClick={handleLogout}
-              className="px-2.5 py-1.5 rounded-lg bg-slate-900 hover:bg-red-950/60 hover:text-red-300 border border-slate-800 text-slate-400 text-[11px] font-sans font-semibold transition cursor-pointer"
-              title="Log Out"
-            >
-              LOGOUT
-            </button>
-          </div>
-        </header>
-
-        <main className="flex-1 min-h-0 flex flex-col overflow-hidden">
-          {droneViewMode === 'PHONE_CAMERA' ? (
-            <PhoneCameraNode onSwitchToFullDashboard={() => setDroneViewMode('PHONE_MISSION')} />
-          ) : droneViewMode === 'PHONE_MISSION' ? (
-            <PhoneDroneDashboard />
-          ) : (
-            <div className="flex-1 p-2 sm:p-4 min-h-0 flex flex-col overflow-hidden">
-              <DroneDashboard
-                telemetry={telemetry}
-                missionState={missionState}
-                remainingSeconds={remainingSeconds}
-                elapsedSeconds={elapsedSeconds}
-                decodedQR={decodedQR}
-                pixhawkState={pixhawkState}
-                runnerLink={runnerLink}
-                runnerAckReceived={runnerAckReceived}
-                runnerAckLatencyMs={runnerAckLatencyMs}
-                onQRDetected={handleQRDetected}
-                onEmergencyRTL={handleEmergencyRTL}
-                className="flex-1 min-h-0"
-              />
-            </div>
-          )}
-        </main>
+        <UnifiedDroneCoreView
+          telemetry={telemetry}
+          pixhawkState={pixhawkState}
+          runnerLink={runnerLink}
+          onLogout={handleLogout}
+          onEmergencyRTL={handleEmergencyRTL}
+          className="flex-1 min-h-0"
+        />
       </div>
     );
   }

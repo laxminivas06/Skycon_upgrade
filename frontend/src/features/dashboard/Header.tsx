@@ -10,6 +10,7 @@ import {
   Loader2,
   Wifi,
   Radio,
+  Cpu,
   CheckCircle2,
   AlertTriangle,
   Activity,
@@ -22,6 +23,7 @@ import { gcsConnectionService, GCSConnectionState } from '../../services/gcsConn
 import { mavlinkService } from '../../services/mavlinkService';
 import { FlightModeSelector } from '../../components/common/FlightModeSelector';
 import { dronePortStreamingService, DronePortStreamState } from '../../services/dronePortStreamingService';
+import { SimpleConnectionIndicators } from '../../components/common/SimpleConnectionIndicators';
 
 interface HeaderProps {
   telemetry: DashboardTelemetryData;
@@ -313,7 +315,7 @@ export const Header: React.FC<HeaderProps> = ({
         <div className="flex flex-col justify-center">
           <div className="flex items-center gap-2">
             <span className="font-orbitron font-black text-[16px] sm:text-[17px] tracking-[0.14em] text-white leading-none text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-teal-200 to-amber-300">
-              AERORECON
+              SKYCON
             </span>
             <span className="px-1.5 py-0.5 rounded bg-emerald-500/15 border border-emerald-400/30 text-[9px] font-mono font-bold text-emerald-300 tracking-wider hidden md:inline-block">
               TACTICAL GCS
@@ -355,130 +357,86 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
       </div>
 
-      {/* 2. Center: START Button, Diagnostics & Unified 5-Component Connection Status Monitoring */}
-      <div className="hidden xl:flex flex-col items-center justify-center gap-1 shrink-0">
-        <div className="flex items-center gap-1.5 sm:gap-2">
-          {/* START BUTTON: Operator initiates connection verification workflow */}
-          <button
-            type="button"
-            onClick={handleStartConnections}
-            disabled={connState.isInitializing}
-            title={
-              connState.isStarted
-                ? 'Re-verify connections (Wi-Fi, MAVLink, Pixhawk, GPS, Drone Port)'
-                : 'Start GCS: Initialize and verify Wi-Fi, MAVLink, Pixhawk, GPS, and Drone Port'
-            }
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-[8px] text-[11px] font-bold font-sans tracking-wide transition shadow-sm cursor-pointer ${
-              connState.isInitializing
-                ? 'bg-amber-600/80 text-white cursor-wait'
-                : connState.isStarted
-                ? 'bg-[#161B22] border border-emerald-500/50 text-emerald-400 hover:bg-[#21262D]'
-                : 'bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white shadow-emerald-950/50'
-            }`}
-          >
-            {connState.isInitializing ? (
-              <>
-                <Loader2 className="w-3.5 h-3.5 animate-spin text-white" />
-                <span>INITIALIZING...</span>
-              </>
-            ) : (
-              <>
-                <Play className="w-3.5 h-3.5 fill-current" />
-                <span>{connState.isStarted ? 'RE-VERIFY' : 'START'}</span>
-              </>
-            )}
-          </button>
-
-          {/* SITL Bench Simulator Toggle Button */}
-          {telemetry.rawConnectionState.connectionType === 'SIMULATED' ? (
-            <div
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-[8px] border border-cyan-500/50 bg-cyan-950/60 text-cyan-300 text-[11px] font-mono font-bold shadow-sm"
-              title="Bench SITL Simulator active with simulated GPS, battery, and MAVLink"
-            >
-              <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
-              <span>SITL ACTIVE</span>
-            </div>
+      {/* 2. Center: START Button, Diagnostics & Simplified 3-Symbol Connection Indicators */}
+      <div className="hidden md:flex items-center gap-1.5 sm:gap-2 shrink-0">
+        {/* START BUTTON: Operator initiates connection verification workflow */}
+        <button
+          type="button"
+          onClick={handleStartConnections}
+          disabled={connState.isInitializing}
+          title={
+            connState.isStarted
+              ? 'Re-verify connections (Wi-Fi, MAVLink, Pixhawk)'
+              : 'Start GCS: Initialize and verify Wi-Fi, MAVLink, and Pixhawk'
+          }
+          className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-[8px] text-[11px] font-bold font-sans tracking-wide transition shadow-sm cursor-pointer ${
+            connState.isInitializing
+              ? 'bg-amber-600/80 text-white cursor-wait'
+              : connState.isStarted
+              ? 'bg-[#161B22] border border-emerald-500/50 text-emerald-400 hover:bg-[#21262D]'
+              : 'bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white shadow-emerald-950/50'
+          }`}
+        >
+          {connState.isInitializing ? (
+            <>
+              <Loader2 className="w-3.5 h-3.5 animate-spin text-white" />
+              <span>INITIALIZING...</span>
+            </>
           ) : (
-            <button
-              type="button"
-              onClick={() => mavlinkService.switchToSimulationMode()}
-              className="flex items-center gap-1 px-2.5 py-1.5 rounded-[8px] border border-cyan-500/40 bg-cyan-950/30 hover:bg-cyan-900/50 text-cyan-400 text-[11px] font-mono font-bold transition shadow-sm cursor-pointer"
-              title="Activate SITL Simulator for complete desktop testing without physical drone hardware"
-            >
-              <span>⚡</span>
-              <span>BENCH TEST</span>
-            </button>
+            <>
+              <Play className="w-3.5 h-3.5 fill-current" />
+              <span>{connState.isStarted ? 'RE-VERIFY' : 'START'}</span>
+            </>
           )}
+        </button>
 
-          {/* TL Diagnostics System Button */}
+        {/* SITL Bench Simulator Toggle Button */}
+        {telemetry.rawConnectionState.connectionType === 'SIMULATED' ? (
+          <div
+            className="hidden lg:flex items-center gap-1.5 px-2.5 py-1.5 rounded-[8px] border border-cyan-500/50 bg-cyan-950/60 text-cyan-300 text-[11px] font-mono font-bold shadow-sm"
+            title="Bench SITL Simulator active with simulated GPS, battery, and MAVLink"
+          >
+            <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
+            <span>SITL ACTIVE</span>
+          </div>
+        ) : (
           <button
             type="button"
-            onClick={onOpenDiagnostics}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-[8px] border border-amber-500/50 bg-amber-950/40 hover:bg-amber-900/60 text-amber-300 text-[11px] font-mono font-bold transition shadow-sm cursor-pointer"
-            title="Open Telemetry Link (TL) & Complete Pixhawk 2.4.8 Diagnostic System"
+            onClick={() => mavlinkService.switchToSimulationMode()}
+            className="hidden lg:flex items-center gap-1 px-2.5 py-1.5 rounded-[8px] border border-cyan-500/40 bg-cyan-950/30 hover:bg-cyan-900/50 text-cyan-400 text-[11px] font-mono font-bold transition shadow-sm cursor-pointer"
+            title="Activate SITL Simulator for complete desktop testing without physical drone hardware"
           >
-            <Activity className="w-3.5 h-3.5 text-amber-400" />
-            <span>TL DIAGNOSTICS</span>
+            <span>⚡</span>
+            <span>BENCH TEST</span>
           </button>
-
-          {/* UNIFIED MONITORING: Component 1 — Wi-Fi */}
-          <div
-            className={`flex items-center gap-1 px-2 py-1 rounded-[6px] border text-[10px] font-mono shrink-0 transition-colors ${wifiConfig.bg}`}
-            title={`Wi-Fi Connection: ${wifiConfig.label}`}
-          >
-            <Wifi className="w-3.5 h-3.5 shrink-0" />
-            <span className={`w-1.5 h-1.5 rounded-full ${wifiConfig.dot} ${wifiConfig.pulse ? 'animate-pulse' : ''}`} />
-            <span className="font-semibold">{wifiConfig.label}</span>
-          </div>
-
-          {/* UNIFIED MONITORING: Component 2 — MAVLink */}
-          <div
-            className={`flex items-center gap-1 px-2 py-1 rounded-[6px] border text-[10px] font-mono shrink-0 transition-colors ${mavlinkConfig.bg}`}
-            title={`MAVLink Stream: ${mavlinkConfig.label}`}
-          >
-            <Radio className="w-3.5 h-3.5 shrink-0" />
-            <span className={`w-1.5 h-1.5 rounded-full ${mavlinkConfig.dot} ${mavlinkConfig.pulse ? 'animate-pulse' : ''}`} />
-            <span className="font-semibold">{mavlinkConfig.label}</span>
-          </div>
-
-          {/* UNIFIED MONITORING: Component 3 — Pixhawk */}
-          <div
-            className={`flex items-center gap-1 px-2 py-1 rounded-[6px] border text-[10px] font-mono shrink-0 transition-colors ${pixhawkConfig.bg}`}
-            title={`Pixhawk Flight Controller: ${pixhawkConfig.label}`}
-          >
-            <Crosshair className="w-3.5 h-3.5 shrink-0" />
-            <span className={`w-1.5 h-1.5 rounded-full ${pixhawkConfig.dot} ${pixhawkConfig.pulse ? 'animate-pulse' : ''}`} />
-            <span className="font-semibold">{pixhawkConfig.label}</span>
-          </div>
-
-          {/* UNIFIED MONITORING: Component 4 — GPS */}
-          <div
-            className={`flex items-center gap-1 px-2 py-1 rounded-[6px] border text-[10px] font-mono shrink-0 transition-colors ${gpsConfig.bg}`}
-            title={`Pixhawk GPS: ${gpsConfig.label}`}
-          >
-            <Satellite className="w-3.5 h-3.5 shrink-0" />
-            <span className={`w-1.5 h-1.5 rounded-full ${gpsConfig.dot} ${gpsConfig.pulse ? 'animate-pulse' : ''}`} />
-            <span className="font-semibold">{gpsConfig.label}</span>
-          </div>
-
-          {/* UNIFIED MONITORING: Component 5 — Drone Port */}
-          <div
-            className={`flex items-center gap-1 px-2 py-1 rounded-[6px] border text-[10px] font-mono shrink-0 transition-colors ${dronePortConfig.bg}`}
-            title={`Drone Port & Video Streaming: ${dronePortConfig.label}`}
-          >
-            <span className="text-[10px]">📹</span>
-            <span className={`w-1.5 h-1.5 rounded-full ${dronePortConfig.dot} ${dronePortConfig.pulse ? 'animate-pulse' : ''}`} />
-            <span className="font-semibold">{dronePortConfig.label}</span>
-          </div>
-        </div>
-
-        {/* Short Status Message Pill when Wi-Fi is connected but telemetry or GPS is not ready */}
-        {showDiagnosticMessage && (
-          <div className="flex items-center gap-1.5 text-[10px] font-mono text-amber-300 bg-amber-950/60 border border-amber-600/40 px-2 py-0.5 rounded animate-in fade-in">
-            <AlertTriangle className="w-3 h-3 text-amber-400 shrink-0" />
-            <span className="font-semibold tracking-tight">{shortDiagnosticString}</span>
-          </div>
         )}
+
+        {/* TL Diagnostics System Button */}
+        <button
+          type="button"
+          onClick={onOpenDiagnostics}
+          className="hidden xl:flex items-center gap-1.5 px-2.5 py-1.5 rounded-[8px] border border-amber-500/50 bg-amber-950/40 hover:bg-amber-900/60 text-amber-300 text-[11px] font-mono font-bold transition shadow-sm cursor-pointer"
+          title="Open Telemetry Link (TL) & Complete Pixhawk 2.4.8 Diagnostic System"
+        >
+          <Activity className="w-3.5 h-3.5 text-amber-400" />
+          <span>TL DIAGNOSTICS</span>
+        </button>
+
+        {/* SIMPLIFIED 3-SYMBOL CONNECTION INDICATORS (Wi-Fi, MAVLink, Pixhawk) */}
+        <SimpleConnectionIndicators
+          isWifiConnected={isWifiConnected}
+          isMavlinkConnected={isMavlinkConnected}
+          isPixhawkConnected={isPixhawkConnected}
+        />
+      </div>
+
+      {/* Mobile-only 3-Symbol Connection Indicators */}
+      <div className="flex md:hidden items-center shrink-0">
+        <SimpleConnectionIndicators
+          isWifiConnected={isWifiConnected}
+          isMavlinkConnected={isMavlinkConnected}
+          isPixhawkConnected={isPixhawkConnected}
+        />
       </div>
 
       {/* 3. Right: Vehicle State Pills & Settings */}
@@ -504,7 +462,7 @@ export const Header: React.FC<HeaderProps> = ({
               isArmed ? 'bg-rose-500 animate-pulse' : 'bg-[#22C55E]'
             }`}
           />
-          <span className="text-[10px] sm:text-[11px]">{isArmed ? 'ARMED (DISARM)' : 'DISARMED'}</span>
+          <span className="text-[10px] sm:text-[11px]">{isArmed ? 'ARMED' : 'DISARMED'}</span>
         </button>
 
         {/* RC Gamepad Link Toggle Button */}
@@ -516,7 +474,7 @@ export const Header: React.FC<HeaderProps> = ({
               ? 'RC Manual Control: ENABLED (Click to Disable RC Override)'
               : 'RC Manual Control: DISABLED (Click to Enable RC Override)'
           }
-          className={`hidden xl:flex items-center gap-1.5 px-2.5 py-1 rounded-[8px] border text-[11px] font-mono transition-all active:scale-95 cursor-pointer ${
+          className={`hidden 2xl:flex items-center gap-1.5 px-2.5 py-1 rounded-[8px] border text-[11px] font-mono transition-all active:scale-95 cursor-pointer ${
             rcOverrideEnabled
               ? 'border-[#1b4d36] bg-[#0c2419] text-[#22C55E] hover:bg-[#123826]'
               : 'border-[var(--uav-card-border)] bg-[#161B22] text-slate-400 hover:text-white hover:bg-[#21262D]'
@@ -533,7 +491,7 @@ export const Header: React.FC<HeaderProps> = ({
         </button>
 
         {/* Battery Percent & Voltage Pill */}
-        <div className={`hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-[8px] border text-[11px] font-mono transition-colors ${
+        <div className={`hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-[8px] border text-[11px] font-mono transition-colors ${
           telemetry.batteryVoltage <= 0
             ? 'border-[var(--uav-card-border)] bg-[#161B22] text-slate-500'
             : telemetry.batteryVoltage < 10.5
@@ -555,25 +513,25 @@ export const Header: React.FC<HeaderProps> = ({
           </span>
         </div>
 
-        {/* Settings Button */}
+        {/* Settings Button: Always visible and accessible across desktop, tablets, and mobile (Req 2) */}
         <button
           type="button"
           onClick={onOpenSettings}
-          title="Open Settings"
-          aria-label="Open Settings"
-          className="hidden sm:flex w-8 h-8 rounded-[8px] border border-[var(--uav-card-border)] bg-[#161B22] hover:bg-[#21262D] hover:text-white items-center justify-center text-[var(--uav-muted)] transition cursor-pointer"
+          title="Open GCS Settings"
+          aria-label="Open GCS Settings"
+          className="flex w-8 h-8 rounded-[8px] border border-[var(--uav-card-border)] bg-[#161B22] hover:bg-[#21262D] hover:text-white items-center justify-center text-[var(--uav-muted)] transition cursor-pointer shrink-0"
         >
           <Settings className="w-4 h-4" />
         </button>
 
-        {/* Optional Logout Button */}
+        {/* Logout Button: Always visible and accessible across desktop, tablets, and mobile (Req 2) */}
         {onLogout && (
           <button
             type="button"
             onClick={onLogout}
             title="Log Out / Switch Operator"
             aria-label="Log Out / Switch Operator"
-            className="hidden sm:flex w-8 h-8 rounded-[8px] border border-[var(--uav-card-border)] bg-[#161B22] hover:bg-red-950/60 hover:text-red-400 hover:border-red-500/40 items-center justify-center text-[var(--uav-muted)] transition cursor-pointer"
+            className="flex w-8 h-8 rounded-[8px] border border-[var(--uav-card-border)] bg-[#161B22] hover:bg-red-950/60 hover:text-red-400 hover:border-red-500/40 items-center justify-center text-[var(--uav-muted)] transition cursor-pointer shrink-0"
           >
             <LogOut className="w-4 h-4" />
           </button>
@@ -583,7 +541,7 @@ export const Header: React.FC<HeaderProps> = ({
         <button
           type="button"
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          className="xl:hidden w-8 h-8 rounded-[8px] border border-[var(--uav-card-border)] bg-[#161B22] text-slate-300 hover:text-white flex items-center justify-center transition cursor-pointer active:scale-95"
+          className="md:hidden w-8 h-8 rounded-[8px] border border-[var(--uav-card-border)] bg-[#161B22] text-slate-300 hover:text-white flex items-center justify-center transition cursor-pointer active:scale-95 shrink-0"
           title={mobileMenuOpen ? 'Close Menu' : 'Open GCS Controls Menu'}
           aria-label="Toggle Navigation Menu"
         >
@@ -663,35 +621,18 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
           </div>
 
-          {/* C. Unified Connection Status Monitoring */}
+          {/* C. Simplified Connection Indicators (3 Symbols) */}
           <div className="space-y-1.5">
-            <div className="text-[10px] font-mono text-slate-400 uppercase tracking-wider font-bold">Unified Connection Status Monitoring:</div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2">
-              <div className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-xs font-mono ${wifiConfig.bg}`}>
-                <Wifi className="w-4 h-4 shrink-0" />
-                <span className={`w-2 h-2 rounded-full ${wifiConfig.dot}`} />
-                <span>{wifiConfig.label}</span>
-              </div>
-              <div className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-xs font-mono ${mavlinkConfig.bg}`}>
-                <Radio className="w-4 h-4 shrink-0" />
-                <span className={`w-2 h-2 rounded-full ${mavlinkConfig.dot}`} />
-                <span>{mavlinkConfig.label}</span>
-              </div>
-              <div className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-xs font-mono ${pixhawkConfig.bg}`}>
-                <Crosshair className="w-4 h-4 shrink-0" />
-                <span className={`w-2 h-2 rounded-full ${pixhawkConfig.dot}`} />
-                <span>{pixhawkConfig.label}</span>
-              </div>
-              <div className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-xs font-mono ${gpsConfig.bg}`}>
-                <Satellite className="w-4 h-4 shrink-0" />
-                <span className={`w-2 h-2 rounded-full ${gpsConfig.dot}`} />
-                <span>{gpsConfig.label}</span>
-              </div>
-              <div className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-xs font-mono ${dronePortConfig.bg}`}>
-                <span>📹</span>
-                <span className={`w-2 h-2 rounded-full ${dronePortConfig.dot}`} />
-                <span>{dronePortConfig.label}</span>
-              </div>
+            <div className="text-[10px] font-mono text-slate-400 uppercase tracking-wider font-bold">Connection Status:</div>
+            <div className="flex items-center gap-3 p-2 rounded-lg bg-[#11161F] border border-[var(--uav-card-border)]">
+              <SimpleConnectionIndicators
+                isWifiConnected={isWifiConnected}
+                isMavlinkConnected={isMavlinkConnected}
+                isPixhawkConnected={isPixhawkConnected}
+              />
+              <span className="text-[11px] font-mono text-slate-400">
+                Wi-Fi • MAVLink • Pixhawk
+              </span>
             </div>
           </div>
 

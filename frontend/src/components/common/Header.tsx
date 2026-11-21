@@ -28,6 +28,7 @@ import { audioService } from '../../services/audioService';
 import { ThemeController } from './ThemeController';
 import { authService } from '../../services/authService';
 import { mavlinkService } from '../../services/mavlinkService';
+import { SimpleConnectionIndicators } from './SimpleConnectionIndicators';
 
 interface HeaderProps {
   currentRole: AppRole;
@@ -139,7 +140,7 @@ export const Header: React.FC<HeaderProps> = ({
       {/* Center: Clean Tactical Cockpit Designation */}
       <div className="flex items-center gap-2">
         <span className="font-orbitron font-extrabold text-[12px] tracking-widest text-slate-200 uppercase">
-          AERORECON MISSION INTERFACE
+          SKYCON MISSION INTERFACE
         </span>
       </div>
 
@@ -167,11 +168,12 @@ export const Header: React.FC<HeaderProps> = ({
           <span className="text-slate-500 text-[10px]">({telemetry.gps?.hdop || 0.8})</span>
         </div>
 
-        {/* Wi-Fi & WSS Status */}
-        <div className="px-1.5 py-0.5 bg-[#1b1c1e] border border-[#343537] rounded text-slate-300 hidden lg:flex items-center gap-1">
-          <span className={`material-symbols-outlined text-[13px] ${pixhawkState.isConnected ? 'text-[#57df85]' : 'text-slate-500'}`}>wifi</span>
-          <span>{pixhawkState.isConnected ? '98%' : 'OFF'}</span>
-        </div>
+        {/* Simplified 3-Symbol Connection Indicators: Wi-Fi, MAVLink, Pixhawk */}
+        <SimpleConnectionIndicators
+          isWifiConnected={typeof navigator !== 'undefined' ? navigator.onLine : false}
+          isMavlinkConnected={pixhawkState.isConnected}
+          isPixhawkConnected={pixhawkState.isConnected}
+        />
 
         {/* Battery Badge */}
         <div

@@ -104,7 +104,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
 
       {/* Central Login / Selection Card (Ground Station Design System) */}
       <div className={`relative z-10 w-full ${selectedRole ? 'max-w-md' : 'max-w-xl'} rounded-[12px] border border-[var(--uav-card-border)] bg-[var(--uav-card)] shadow-2xl p-6 sm:p-8 flex flex-col gap-6 backdrop-blur-md transition-all duration-200`}>
-        {/* AERORECON Brand Header */}
+        {/* SKYCON Brand Header */}
         <div className="flex flex-col items-center text-center gap-2">
           <div className="flex items-center gap-2.5">
             {/* Custom Quadcopter Glyph matching Ground Station */}
@@ -132,7 +132,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
             </div>
             <div className="flex items-center gap-2">
               <span className="font-orbitron font-black text-2xl tracking-[0.14em] text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-teal-200 to-amber-300 leading-none">
-                AERORECON
+                SKYCON
               </span>
               <span className="px-2 py-0.5 rounded bg-emerald-500/15 border border-emerald-400/30 text-[10px] font-mono font-bold text-emerald-300 tracking-wider">
                 PORTAL

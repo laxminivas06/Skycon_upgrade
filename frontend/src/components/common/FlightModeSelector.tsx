@@ -110,12 +110,14 @@ export const ALL_FLIGHT_MODES: FlightModeConfig[] = [
 
 interface FlightModeSelectorProps {
   variant?: 'strip' | 'dropdown';
+  direction?: 'up' | 'down';
   className?: string;
   onModeChanged?: (mode: FlightModeName) => void;
 }
 
 export const FlightModeSelector: React.FC<FlightModeSelectorProps> = ({
   variant = 'strip',
+  direction = 'down',
   className = '',
   onModeChanged
 }) => {
@@ -225,7 +227,7 @@ export const FlightModeSelector: React.FC<FlightModeSelectorProps> = ({
               className="fixed inset-0 z-40"
               onClick={() => setDropdownOpen(false)}
             />
-            <div className="absolute right-0 mt-1.5 w-64 bg-[#0d1117] border border-slate-700 rounded-xl shadow-2xl py-1.5 z-50 animate-in fade-in zoom-in-95">
+            <div className={`absolute ${direction === 'up' ? 'left-0 bottom-full mb-1.5' : 'right-0 mt-1.5'} w-64 bg-[#0d1117] border border-slate-700 rounded-xl shadow-2xl py-1.5 z-50 animate-in fade-in zoom-in-95`}>
               <div className="px-3 py-1.5 border-b border-slate-800 text-[10px] font-mono font-bold text-slate-400 flex items-center justify-between">
                 <span>SELECT FLIGHT MODE</span>
                 <span className="text-emerald-400 font-normal">Active: {currentModeStr}</span>
