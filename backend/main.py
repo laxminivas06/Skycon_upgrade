@@ -1133,12 +1133,37 @@ def flask_receive_cloud_events():
 # STATIC ASSET SERVING & WEB ENTRY POINTS
 # =============================================================================
 
+DIST_CANDIDATES = [
+    os.path.join(PROJECT_ROOT, "frontend", "dist"),
+    os.path.join(PROJECT_ROOT, "dist"),
+    os.path.join(CURRENT_DIR, "dist")
+]
+
+
+def get_static_dist():
+    for d in DIST_CANDIDATES:
+        if os.path.exists(os.path.join(d, "index.html")):
+            return d
+    return None
+
+
+@app.route("/assets/<path:filename>")
+def serve_static_assets(filename):
+    """Directly serve bundled JS/CSS Vite assets."""
+    dist_dir = get_static_dist()
+    if dist_dir:
+        assets_dir = os.path.join(dist_dir, "assets")
+        if os.path.exists(os.path.join(assets_dir, filename)):
+            return send_from_directory(assets_dir, filename)
+    return api_response(error="Asset not found", code=404)
+
+
 @app.route("/drone-core", methods=["GET"])
 def serve_drone_core():
     """Dedicated mobile-first Drone Core entry point."""
-    html_file = os.path.join(PROJECT_ROOT, "frontend", "dist", "index.html")
-    if os.path.exists(html_file):
-        return send_from_directory(os.path.dirname(html_file), "index.html")
+    dist_dir = get_static_dist()
+    if dist_dir:
+        return send_from_directory(dist_dir, "index.html")
     return render_template_string("""
     <!DOCTYPE html>
     <html lang="en">
@@ -1155,10 +1180,11 @@ def serve_drone_core():
 @app.route("/", defaults={"path": ""})
 @app.route("/<path:path>")
 def serve_frontend_spa(path):
-    dist_dir = os.path.join(PROJECT_ROOT, "frontend", "dist")
-    if os.path.exists(os.path.join(dist_dir, path)) and path != "":
-        return send_from_directory(dist_dir, path)
-    if os.path.exists(os.path.join(dist_dir, "index.html")):
+    dist_dir = get_static_dist()
+    if dist_dir:
+        target_path = os.path.join(dist_dir, path)
+        if path and os.path.isfile(target_path):
+            return send_from_directory(dist_dir, path)
         return send_from_directory(dist_dir, "index.html")
 
     return render_template_string("""

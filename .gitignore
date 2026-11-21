@@ -6,12 +6,14 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 
-# Production build outputs
-dist/
+# Production build outputs (tracked frontend/dist and dist for cloud hosting)
 build/
 out/
-*/dist/
 */build/
+!dist/
+!dist/**
+!frontend/dist/
+!frontend/dist/**
 
 # Android & Mobile built binaries
 *.apk

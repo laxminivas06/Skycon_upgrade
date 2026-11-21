@@ -755,9 +755,11 @@ export const GroundStationDashboard: React.FC<GroundStationDashboardProps> = ({
                 <GoogleMapGroundStation
                   telemetry={telemetry}
                   homePoint={homePoint}
+                  pixhawkState={pixhawkState}
                   missionState={missionState}
                   onSetHomePoint={onSetHomePoint}
-                  disabled={isMissionActive}
+                  onStartMission={onStartMission}
+                  onEmergencyRTL={onEmergencyRTL}
                 />
               </div>
             </div>

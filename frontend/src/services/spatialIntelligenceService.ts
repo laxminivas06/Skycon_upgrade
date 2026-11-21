@@ -281,6 +281,11 @@ class SpatialIntelligenceService {
     } catch {}
   }
 
+  public async fetchNetworkDiagnostics(): Promise<CommunicationDiagnosticsData> {
+    await this.fetchDiagnostics();
+    return this.commDiagnostics;
+  }
+
   private async fetchDiagnostics() {
     try {
       const res = await fetchWithFallback('/api/comm/diagnostics', { method: 'GET' });

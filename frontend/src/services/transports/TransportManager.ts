@@ -71,10 +71,6 @@ export class TransportManager {
     return this.piTransport;
   }
 
-  public getEsp32Transport(): any {
-    return this.piTransport;
-  }
-
   private bindActiveTransport() {
     if (this.currentUnsubData) this.currentUnsubData();
     if (this.currentUnsubState) this.currentUnsubState();

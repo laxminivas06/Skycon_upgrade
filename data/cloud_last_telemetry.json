@@ -1,11 +1,11 @@
 {
   "_schema_version": "2.0",
   "_collection": "cloud_last_telemetry",
-  "_updated_at": "2026-11-21T06:14:00.886483+00:00",
-  "_checksum_sha256": "64ed1ac4dc7b4927933f2ae7b7940fd8a45a666fccde7198214a25908106d4e8",
+  "_updated_at": "2026-11-21T06:33:49.926942+00:00",
+  "_checksum_sha256": "e272211b17b718fa8721263bffc63a706e5ea3c4c8972cb142e9ec006a6b01a6",
   "_data": {
     "source": "SKYCON_COMPANION_PI4",
-    "timestampUtc": "2026-11-21T06:14:00.886441+00:00",
+    "timestampUtc": "2026-11-21T06:33:49.926911+00:00",
     "telemetry": {
       "voltage_battery": 16.2,
       "flight_mode": "LOITER",
