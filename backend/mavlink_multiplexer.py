@@ -171,10 +171,10 @@ class MavlinkMultiplexer:
     Raspberry Pi 4 Model B and Pixhawk 2.4.8 autopilot.
     """
 
-    def __init__(self, port: Optional[str] = None, baud: int = 921600):
+    def __init__(self, port: Optional[str] = None, baud: int = 57600):
         self.port = port
         self.baud = baud
-        self.candidate_bauds = [921600, 115200, 57600]
+        self.candidate_bauds = [57600, 115200, 921600]
         self.seq = 0
         self.system_id = 255     # GCS system ID
         self.component_id = 190  # Mission Planner / GCS component
@@ -473,7 +473,8 @@ class MavlinkMultiplexer:
         while self._running:
             try:
                 # Use in_waiting to read only bytes that are actually ready in the buffer
-                available = getattr(self._serial_conn, "in_waiting", 0)
+                raw_avail = getattr(self._serial_conn, "in_waiting", 0)
+                available = raw_avail if isinstance(raw_avail, int) else 0
                 if available > 0:
                     data = self._serial_conn.read(min(available, 1024))
                 else:
