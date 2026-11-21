@@ -163,6 +163,27 @@ def system_metrics():
 def drone_state():
     state = mavlink_mux.get_state()
     fsm_state = mission_engine.get_state()
+    if not state.get("connected", False):
+        cloud_payload = json_store.load("cloud_last_telemetry", fallback={})
+        if cloud_payload and isinstance(cloud_payload, dict):
+            telem = cloud_payload.get("telemetry", {})
+            mission_data = cloud_payload.get("mission", {})
+            if telem.get("connected", False):
+                state = {
+                    **state,
+                    "connected": True,
+                    "connection_state": telem.get("connection_state", "CONNECTED"),
+                    "flight_mode": telem.get("flight_mode", "DISCONNECTED"),
+                    "armed": telem.get("armed", False),
+                    "is_in_air": telem.get("is_in_air", False),
+                    "heartbeat_age_s": telem.get("heartbeat_age_s", 0.0),
+                    "telemetry_age_s": telem.get("telemetry_age_s", 0.0),
+                }
+                return api_response(data={
+                    "mavlink": state,
+                    "mission_state": mission_data.get("state", fsm_state["state"]),
+                    "remaining_time_s": mission_data.get("remaining_time_s", fsm_state["remaining_time_s"])
+                }, code=200)
     return api_response(data={
         "mavlink": state,
         "mission_state": fsm_state["state"],
@@ -296,9 +317,19 @@ def legacy_generic_command():
 # 4. TELEMETRY (/api/telemetry)
 # =============================================================================
 
+def _get_effective_telemetry() -> Dict[str, Any]:
+    """Returns local MAVLink telemetry, or falls back to cloud-synced companion data."""
+    telem = mavlink_mux.get_telemetry()
+    if not telem.get("connected", False):
+        cloud_payload = json_store.load("cloud_last_telemetry", fallback={})
+        if cloud_payload and "telemetry" in cloud_payload and isinstance(cloud_payload["telemetry"], dict):
+            return {**telem, **cloud_payload["telemetry"]}
+    return telem
+
+
 @app.route("/api/telemetry", methods=["GET"])
 def telemetry_get_snapshot():
-    telem = mavlink_mux.get_telemetry()
+    telem = _get_effective_telemetry()
     return api_response(data=telem, code=200)
 
 
@@ -314,7 +345,7 @@ def telemetry_get_history():
 
 @app.route("/api/telemetry/gps", methods=["GET"])
 def telemetry_get_gps():
-    telem = mavlink_mux.get_telemetry()
+    telem = _get_effective_telemetry()
     gps_data = {
         "latitude": telem.get("lat", 13.0827),
         "longitude": telem.get("lon", 80.2707),
@@ -329,7 +360,7 @@ def telemetry_get_gps():
 
 @app.route("/api/telemetry/battery", methods=["GET"])
 def telemetry_get_battery():
-    telem = mavlink_mux.get_telemetry()
+    telem = _get_effective_telemetry()
     batt = {
         "voltage_v": telem.get("voltage_battery", 15.2),
         "current_a": telem.get("current_battery", 0.8),
@@ -342,7 +373,7 @@ def telemetry_get_battery():
 
 @app.route("/api/telemetry/attitude", methods=["GET"])
 def telemetry_get_attitude():
-    telem = mavlink_mux.get_telemetry()
+    telem = _get_effective_telemetry()
     att = {
         "pitch_deg": telem.get("pitch", 0.0),
         "roll_deg": telem.get("roll", 0.0),
@@ -360,6 +391,20 @@ def telemetry_get_attitude():
 @app.route("/api/mavlink/connection", methods=["GET"])
 def mavlink_connection_status():
     state = mavlink_mux.get_state()
+    if not state.get("connected", False):
+        cloud_payload = json_store.load("cloud_last_telemetry", fallback={})
+        if cloud_payload and isinstance(cloud_payload, dict):
+            telem = cloud_payload.get("telemetry", {})
+            if telem.get("connected", False):
+                state = {
+                    **state,
+                    "connected": True,
+                    "connection_state": telem.get("connection_state", "CONNECTED"),
+                    "flight_mode": telem.get("flight_mode", "STABILIZE"),
+                    "armed": telem.get("armed", False),
+                    "heartbeat_age_s": telem.get("heartbeat_age_s", 0.5),
+                    "source": "CLOUD_SYNC_RELAY"
+                }
     return api_response(data=state, code=200)
 
 
