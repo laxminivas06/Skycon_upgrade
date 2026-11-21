@@ -4,8 +4,18 @@ Manages configurations for development, production, Raspberry Pi companion, and 
 """
 
 import os
+import sys
 from dataclasses import dataclass
 from typing import Optional
+
+try:
+    from dotenv import load_dotenv
+    CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
+    PROJECT_ROOT = os.path.dirname(CURRENT_DIR)
+    load_dotenv(os.path.join(PROJECT_ROOT, ".env"))
+    load_dotenv()
+except Exception:
+    pass
 
 
 @dataclass

@@ -70,10 +70,12 @@ class CloudSyncService:
         with self._lock:
             if self._running:
                 return
+            if not self.cloud_url:
+                self.cloud_url = os.environ.get("SKYCON_CLOUD_URL", "").rstrip("/")
             self._running = True
             self._thread = threading.Thread(target=self._sync_loop, daemon=True, name="SkyconCloudSync")
             self._thread.start()
-            logger.info("CloudSyncService worker thread started.")
+            logger.info(f"CloudSyncService worker thread started (target: {self.cloud_url or 'Local-Only'}).")
 
     def stop(self):
         """Stops synchronization worker."""
