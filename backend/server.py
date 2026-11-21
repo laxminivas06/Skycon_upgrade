@@ -612,7 +612,7 @@ def get_detections():
 @app.get("/api/recon/detections/latest")
 def get_latest_detection():
     dets = json_store.get_detections(limit=1)
-    return {"success": True, "detection": dets[0] if dets else None}
+    return {"success": True, "detection": dets[-1] if dets else None}
 
 
 @app.delete("/api/recon/detections")

@@ -224,10 +224,14 @@ class SimpleJsonStore:
 
         return self.save(collection_name, current)
 
-    def get_detections(self) -> List[Dict[str, Any]]:
-        """Returns list of recorded detections."""
+    def get_detections(self, limit: Optional[int] = None) -> List[Dict[str, Any]]:
+        """Returns list of recorded detections, optionally limited to the most recent N items."""
         res = self.load("detections", fallback=[])
-        return res if isinstance(res, list) else []
+        if not isinstance(res, list):
+            return []
+        if limit is not None and limit > 0:
+            return res[-limit:]
+        return res
 
     def get_active_mission(self) -> Optional[Dict[str, Any]]:
         """Returns the most recent active or running mission, if any."""
