@@ -67,12 +67,25 @@ else
   echo "Host is not Raspberry Pi ($(uname -s) $(uname -m))"
 fi
 
-# 5. Network & 4G Connectivity Check
+# 5. Network, Wi-Fi Hotspot & Cloud Connectivity Check
 echo -n "[5/7] Network & Internet Connection: "
 if curl -s --connect-timeout 3 https://www.google.com >/dev/null 2>&1; then
   echo "ONLINE (Internet accessible)"
+  # Check Wi-Fi SSID
+  if command -v nmcli >/dev/null 2>&1; then
+    ACTIVE_WIFI=$(nmcli -t -f active,ssid dev wifi 2>/dev/null | grep "^yes:" | cut -d: -f2 || true)
+    [ -n "$ACTIVE_WIFI" ] && echo "      Wi-Fi Hotspot: Connected to '$ACTIVE_WIFI'"
+  fi
+  # Check PythonAnywhere Cloud sync if configured
+  if [ -n "$SKYCON_CLOUD_URL" ]; then
+    if curl -s --connect-timeout 3 "$SKYCON_CLOUD_URL/api/status" >/dev/null 2>&1; then
+      echo "      Cloud Backend: REACHABLE ($SKYCON_CLOUD_URL)"
+    else
+      echo "      Cloud Backend: UNREACHABLE ($SKYCON_CLOUD_URL) - Spooling active"
+    fi
+  fi
 else
-  echo "OFFLINE (Local-only operation active)"
+  echo "OFFLINE (Local-only operation active - MAVLink and Autonomy running locally)"
 fi
 
 # 6. Service Status

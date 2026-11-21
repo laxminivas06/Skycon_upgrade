@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { PixhawkConnectionState } from '../../types/mavlink';
 import { RunnerLinkState } from '../../types/runner';
 import { DroneTelemetry } from '../../types/mission';
-import { Wifi, Radio, Activity, Video, Smartphone, Cpu, Signal } from 'lucide-react';
+import { Wifi, Radio, Activity, Video, Smartphone, Cpu, Signal, Cloud } from 'lucide-react';
+import { spatialIntelligenceService, CommunicationDiagnosticsData } from '../../services/spatialIntelligenceService';
 
 interface ConnectionStatusDeckProps {
   pixhawkState: PixhawkConnectionState;
@@ -41,7 +42,7 @@ const StatusItem: React.FC<StatusItemProps> = ({ icon, label, value, status }) =
         <span className="font-bold uppercase text-[10px] tracking-wide text-slate-300">{label}</span>
       </div>
       <div className="flex items-center space-x-1.5">
-        <span className="font-black">{value}</span>
+        <span className="font-black truncate max-w-[80px]" title={value}>{value}</span>
         <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${dotColors[status]}`} />
       </div>
     </div>
@@ -55,12 +56,24 @@ export const ConnectionStatusDeck: React.FC<ConnectionStatusDeckProps> = ({
   videoState = 'DISCONNECTED',
   className = '',
 }) => {
-  const isWifiOn = typeof navigator !== 'undefined' && navigator.onLine;
+  const [commDiag, setCommDiag] = useState<CommunicationDiagnosticsData>(() =>
+    spatialIntelligenceService.getDiagnostics()
+  );
+
+  useEffect(() => {
+    return spatialIntelligenceService.subscribeDiagnostics(setCommDiag);
+  }, []);
+
+  const isWifiOn = commDiag.wifi_connected || (typeof navigator !== 'undefined' && navigator.onLine);
+  const wifiLabel = commDiag.wifi_ssid && commDiag.wifi_ssid !== 'Not Connected' && commDiag.wifi_ssid !== 'Unknown' 
+    ? commDiag.wifi_ssid 
+    : (pixhawkState.wifiSsid || 'HOTSPOT');
   const isPiReachable = pixhawkState.isUsbConnected || pixhawkState.isConnected;
   const isWsOpen = pixhawkState.isUsbConnected;
   const isMavlinkUp = pixhawkState.isConnected;
   const isDroneAndroid = telemetry.pixhawkConnected || pixhawkState.isConnected;
   const isRunnerUp = runnerLink.isConnected;
+  const isCloudUp = commDiag.cloud_accessible || false;
 
   return (
     <div className={`bg-[#161B22]/90 border border-[var(--uav-card-border)] rounded-xl p-2.5 space-y-1.5 ${className}`}>
@@ -70,9 +83,9 @@ export const ConnectionStatusDeck: React.FC<ConnectionStatusDeckProps> = ({
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-1.5">
         <StatusItem
           icon={<Wifi className="w-3.5 h-3.5" />}
-          label="Wi-Fi"
-          value={pixhawkState.isUsbConnected ? (pixhawkState.wifiSsid || 'drone123') : isWifiOn ? (pixhawkState.wifiSsid || 'ONLINE') : 'OFF'}
-          status={pixhawkState.isUsbConnected || isWifiOn ? 'ok' : 'error'}
+          label="Wi-Fi Hotspot"
+          value={isWifiOn ? wifiLabel : 'OFFLINE'}
+          status={isWifiOn ? 'ok' : 'error'}
         />
         <StatusItem
           icon={<Cpu className="w-3.5 h-3.5" />}
@@ -81,10 +94,10 @@ export const ConnectionStatusDeck: React.FC<ConnectionStatusDeckProps> = ({
           status={isPiReachable ? 'ok' : pixhawkState.phase === 'DISCONNECTED' ? 'error' : 'warn'}
         />
         <StatusItem
-          icon={<Signal className="w-3.5 h-3.5" />}
-          label="WebSocket"
-          value={isWsOpen ? 'OPEN' : pixhawkState.connectionType === 'ESP32_WEBSOCKET' ? 'CLOSED' : 'IDLE'}
-          status={isWsOpen ? 'ok' : pixhawkState.connectionType === 'ESP32_WEBSOCKET' ? 'error' : 'idle'}
+          icon={<Cloud className="w-3.5 h-3.5" />}
+          label="Cloud Sync"
+          value={isCloudUp ? 'SYNCED' : commDiag.spooled_packets_count ? `${commDiag.spooled_packets_count} SPOOLED` : 'OFFLINE'}
+          status={isCloudUp ? 'ok' : commDiag.spooled_packets_count ? 'warn' : 'idle'}
         />
         <StatusItem
           icon={<Radio className="w-3.5 h-3.5" />}
@@ -114,3 +127,4 @@ export const ConnectionStatusDeck: React.FC<ConnectionStatusDeckProps> = ({
     </div>
   );
 };
+

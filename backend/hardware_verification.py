@@ -342,14 +342,29 @@ class HardwareVerificationService:
         }
 
     # -------------------------------------------------------------------------
-    # 6. Cellular 4G USB Modem & Network Connectivity
+    # 6. Cellular 4G USB Modem, Mobile Hotspot & Network Connectivity
     # -------------------------------------------------------------------------
 
     def audit_cellular_and_network(self) -> Dict[str, Any]:
-        """Detects cellular network interface and internet reachability."""
+        """Detects mobile hotspot Wi-Fi, cellular interface, and internet reachability."""
         interfaces = list(psutil.net_if_addrs().keys())
         has_wwan = any("wwan" in iface.lower() or "usb" in iface.lower() for iface in interfaces)
         has_eth_cellular = any(iface.startswith("eth1") for iface in interfaces)
+        has_wlan = any("wlan" in iface.lower() for iface in interfaces)
+
+        # Query NetworkManager for built-in Wi-Fi status
+        try:
+            from backend.network_manager import network_manager
+            net_status = network_manager.get_status()
+            wifi_ok = net_status.get("wifi_connected", False)
+            ssid = net_status.get("ssid")
+            rssi = net_status.get("rssi_dbm", -99)
+            net_state = net_status.get("state", "UNKNOWN")
+        except Exception:
+            wifi_ok = False
+            ssid = None
+            rssi = -99
+            net_state = "UNKNOWN"
 
         # Internet check
         internet_ok = False
@@ -365,10 +380,17 @@ class HardwareVerificationService:
         issues = []
         if not internet_ok:
             issues.append("No active internet connection. Operating in autonomous local mode.")
+        if not wifi_ok and not has_wwan and not has_eth_cellular:
+            issues.append("Neither Wi-Fi mobile hotspot nor cellular interface is connected.")
 
         return {
             "status": status.value,
+            "network_state": net_state,
             "internet_accessible": internet_ok,
+            "wifi_connected": wifi_ok,
+            "wifi_interface_detected": has_wlan,
+            "ssid": ssid,
+            "rssi_dbm": rssi,
             "cellular_interface_detected": (has_wwan or has_eth_cellular),
             "network_interfaces": interfaces,
             "issues": issues

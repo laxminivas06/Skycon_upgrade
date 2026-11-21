@@ -78,10 +78,21 @@ export interface ReconStageStatus {
 
 export interface CommunicationDiagnosticsData {
   health_status: 'HEALTHY' | 'DEGRADED' | 'CRITICAL' | 'OFFLINE';
+  network_state?: 'ONLINE' | 'OFFLINE' | 'RECONNECTING' | 'STALE' | 'UNKNOWN';
   esp32_connected: boolean;
   wifi_connected: boolean;
   wifi_ssid: string;
   rssi_dbm: number;
+  signal_strength_pct?: number;
+  ip_address?: string | null;
+  internet_accessible?: boolean;
+  cloud_accessible?: boolean;
+  last_heartbeat_time?: number;
+  last_heartbeat_age_s?: number;
+  last_disconnection_time?: number;
+  reconnection_in_progress?: boolean;
+  reconnect_attempts?: number;
+  spooled_packets_count?: number;
   packets_transmitted: number;
   packets_received: number;
   packets_lost: number;

@@ -45,14 +45,23 @@ if [ -f "$SERVICE_SRC" ]; then
   echo "Service skycon.service enabled for auto-start on boot."
 fi
 
-# 4. Check 4G USB Modem interface
-echo "[3/4] Checking network interfaces for 4G USB Dongle..."
+# 4. Check Mobile Hotspot Wi-Fi & 4G USB Modem interface
+echo "[3/4] Configuring Wi-Fi (wlan0) & checking mobile data interfaces..."
+
+# Disable Wi-Fi power management to avoid sleep latency and dropouts
+if command -v iwconfig >/dev/null 2>&1; then
+  sudo iwconfig wlan0 power off 2>/dev/null && echo "Disabled Wi-Fi power-save on wlan0 (Low Latency Mode)" || true
+fi
+
+if ip link show wlan0 >/dev/null 2>&1; then
+  echo "Found built-in Wi-Fi: wlan0 (Ready for Mobile Phone Hotspot)"
+  echo "To connect to mobile hotspot run: sudo ./setup_mobile_hotspot.sh [SSID] [PASSWORD]"
+fi
+
 if ip link show wwan0 >/dev/null 2>&1; then
-  echo "Found cellular interface: wwan0 (Ready for mobile data)"
+  echo "Found cellular interface: wwan0 (Ready for optional 4G USB dongle)"
 elif ip link show eth1 >/dev/null 2>&1; then
-  echo "Found USB tethered interface: eth1 (Ready for mobile data)"
-else
-  echo "[NOTE] No cellular USB interface currently detected. Connect 4G USB dongle when deploying."
+  echo "Found USB tethered interface: eth1 (Ready for optional 4G USB tethering)"
 fi
 
 # 5. Bench safety lock verification

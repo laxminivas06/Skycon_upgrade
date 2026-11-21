@@ -35,6 +35,7 @@ from backend.stream_capture import smartphone_stream
 from backend.qr_detector import qr_detector_service, validate_strict_two_digit, QRCandidateState
 from backend.hardware_verification import hardware_verification_service
 from backend.cloud_sync import cloud_sync_service
+from backend.network_manager import network_manager, NetworkState
 
 logging.basicConfig(level=logging.INFO, format="[%(asctime)s] [%(levelname)s] [%(name)s] %(message)s")
 logger = logging.getLogger("SkyconServer")
@@ -106,6 +107,10 @@ async def startup_event():
     logger.info("Initializing SKYCON Master Backend...")
     # Start MAVLink multiplexer
     mavlink_mux.start()
+    # Start Network Manager auto-reconnect watchdog
+    network_manager.start()
+    # Start Cloud Sync worker if configured
+    cloud_sync_service.start()
     # Start telemetry broadcast task
     asyncio.create_task(telemetry_broadcast_loop())
     logger.info("SKYCON Companion Services Online (Raspberry Pi 4 / Pixhawk 2.4.8).")
@@ -113,6 +118,8 @@ async def startup_event():
 
 @app.on_event("shutdown")
 def shutdown_event():
+    network_manager.stop()
+    cloud_sync_service.stop()
     mavlink_mux.stop()
     logger.info("SKYCON Companion Services Stopped.")
 
@@ -807,6 +814,92 @@ async def receive_cloud_events(payload: Dict[str, Any] = Body(...)):
         "success": True,
         "receivedAt": datetime.now(timezone.utc).isoformat()
     }
+
+
+# -----------------------------------------------------------------------------
+# Mobile Hotspot & Network Reconnection API
+# -----------------------------------------------------------------------------
+
+@app.get("/api/network/status")
+def get_network_status():
+    """Returns authoritative Raspberry Pi mobile hotspot, internet, and cloud sync status."""
+    net_status = network_manager.get_status()
+    cloud_status = cloud_sync_service.get_status()
+    return {
+        "success": True,
+        "data": {
+            **net_status,
+            "cloud_sync": cloud_status
+        }
+    }
+
+
+@app.get("/api/comm/diagnostics")
+def get_comm_diagnostics():
+    """Returns combined wireless communication and mobile hotspot network diagnostics for GCS panel."""
+    net_status = network_manager.get_status()
+    cloud_status = cloud_sync_service.get_status()
+    state = net_status.get("state", "UNKNOWN")
+    health = "HEALTHY" if state == "ONLINE" else ("DEGRADED" if state in ("RECONNECTING", "STALE") else "OFFLINE")
+
+    return {
+        "success": True,
+        "diagnostics": {
+            "health_status": health,
+            "network_state": state,
+            "esp32_connected": False,
+            "wifi_connected": net_status.get("wifi_connected", False),
+            "wifi_ssid": net_status.get("ssid") or "Not Connected",
+            "rssi_dbm": net_status.get("rssi_dbm", -99),
+            "signal_strength_pct": net_status.get("signal_strength_pct", 0),
+            "ip_address": net_status.get("ip_address"),
+            "internet_accessible": net_status.get("internet_accessible", False),
+            "cloud_accessible": net_status.get("cloud_accessible", False),
+            "last_heartbeat_time": cloud_status.get("last_sync_time", 0.0),
+            "last_heartbeat_age_s": cloud_status.get("last_sync_age_s", 999.0),
+            "last_disconnection_time": net_status.get("reconnection", {}).get("last_disconnection_time", 0.0),
+            "reconnection_in_progress": net_status.get("reconnection", {}).get("in_progress", False),
+            "reconnect_attempts": net_status.get("reconnection", {}).get("attempts", 0),
+            "spooled_packets_count": cloud_status.get("spooled_records_count", 0),
+            "packets_transmitted": cloud_status.get("total_packets_synced", 0),
+            "packets_received": 0,
+            "packets_lost": cloud_status.get("consecutive_failures", 0),
+            "retries_count": net_status.get("reconnection", {}).get("attempts", 0),
+            "acks_received": cloud_status.get("total_packets_synced", 0),
+            "avg_latency_ms": cloud_status.get("last_latency_ms", 0.0),
+            "ema_latency_ms": cloud_status.get("last_latency_ms", 0.0),
+            "packet_loss_rate": 0.0 if net_status.get("internet_accessible") else 100.0,
+            "last_rx_age_ms": int((cloud_status.get("last_sync_age_s", 999.0)) * 1000),
+            "timestamp": int(time.time() * 1000)
+        }
+    }
+
+
+@app.post("/api/network/wifi/connect")
+async def configure_wifi_hotspot(req: Request):
+    """
+    Provisions mobile hotspot credentials securely onto Raspberry Pi 4.
+    Passphrase is encrypted/protected and never returned in responses.
+    """
+    body = await req.json()
+    ssid = body.get("ssid", "")
+    password = body.get("password", "")
+    is_hidden = body.get("is_hidden", False)
+
+    result = network_manager.configure_mobile_hotspot(ssid=ssid, password=password, is_hidden=is_hidden)
+    return result
+
+
+@app.post("/api/network/reconnect")
+def trigger_network_reconnect():
+    """Triggers an immediate network probe and OS reconnection attempt."""
+    state = network_manager.probe_network()
+    return {
+        "success": True,
+        "state": state.value,
+        "data": network_manager.get_status()
+    }
+
 
 
 # -----------------------------------------------------------------------------

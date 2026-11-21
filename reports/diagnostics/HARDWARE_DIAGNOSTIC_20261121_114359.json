@@ -1,0 +1,123 @@
+{
+  "report_type": "SKYCON_HARDWARE_VERIFICATION_AUDIT",
+  "overall_health": "CRITICAL",
+  "timestampUtc": "2026-11-21T06:13:59.508663+00:00",
+  "overallStatus": "CRITICAL",
+  "flightReady": false,
+  "subsystems": {
+    "platform": {
+      "status": "HEALTHY",
+      "system": "Windows",
+      "machine": "AMD64",
+      "model": "Host Machine (Development/Simulation)",
+      "is_raspberry_pi": false,
+      "cpu_cores": 8,
+      "cpu_count": 8,
+      "cpu_usage_percent": 25.0,
+      "ram_total_mb": 16122.8,
+      "ram_available_mb": 3192.5,
+      "ram_percent": 80.2,
+      "disk_total_gb": 458.75,
+      "disk_free_gb": 98.69,
+      "disk_percent": 78.5
+    },
+    "power_and_thermals": {
+      "status": "HEALTHY",
+      "has_vcgencmd": false,
+      "throttled_raw_hex": "0x0",
+      "cpu_temperature_c": 42.0,
+      "active_flags": {
+        "under_voltage": false,
+        "arm_frequency_capped": false,
+        "throttled": false,
+        "soft_temp_limit": false
+      },
+      "historical_flags": {
+        "under_voltage_occurred": false,
+        "arm_frequency_capped_occurred": false,
+        "throttled_occurred": false,
+        "soft_temp_limit_occurred": false
+      },
+      "issues": []
+    },
+    "pixhawk_autopilot": {
+      "status": "CRITICAL",
+      "connection_state": "DISCONNECTED",
+      "is_simulation": false,
+      "port": null,
+      "serial_port": null,
+      "baud": 921600,
+      "baud_rate": 921600,
+      "heartbeat_received": false,
+      "heartbeat_age_s": 999.0,
+      "heartbeat_rate_hz": 0.0,
+      "flight_mode": "RTL",
+      "armed": true,
+      "gps_fix_type": 0,
+      "satellites": 0,
+      "hdop": 99.9,
+      "ekf_healthy": false,
+      "battery_voltage": 0.0,
+      "battery_remaining_pct": 0,
+      "issues": [
+        "Pixhawk MAVLink is DISCONNECTED."
+      ]
+    },
+    "multilink_rc": {
+      "status": "WARNING",
+      "connected": false,
+      "channels_count": 8,
+      "channels": [
+        1500,
+        1500,
+        1500,
+        1500,
+        1500,
+        1500,
+        1500,
+        1500
+      ],
+      "rssi": 0,
+      "manual_override_active": false,
+      "override_safe": true,
+      "issues": [
+        "No active MultiLink RC channel stream detected on Pixhawk RC IN."
+      ]
+    },
+    "camera_perception": {
+      "status": "WARNING",
+      "camera_state": "DISCONNECTED",
+      "camera_source": "IPHONE_SAFARI_PWA",
+      "source_type": "AUTO",
+      "actual_fps": 0.0,
+      "frames_captured": 0,
+      "frames_dropped": 0,
+      "transport_latency_ms": 0.0,
+      "frame_quality": null,
+      "issues": [
+        "iPhone camera stream is DISCONNECTED."
+      ]
+    },
+    "cellular_network": {
+      "status": "WARNING",
+      "network_state": "UNKNOWN",
+      "internet_accessible": false,
+      "wifi_connected": false,
+      "wifi_interface_detected": false,
+      "ssid": null,
+      "rssi_dbm": -99,
+      "cellular_interface_detected": false,
+      "network_interfaces": [
+        "Local Area Connection",
+        "Local Area Connection* 1",
+        "Local Area Connection* 2",
+        "Wi-Fi",
+        "Loopback Pseudo-Interface 1"
+      ],
+      "issues": [
+        "No active internet connection. Operating in autonomous local mode.",
+        "Neither Wi-Fi mobile hotspot nor cellular interface is connected."
+      ]
+    }
+  }
+}
