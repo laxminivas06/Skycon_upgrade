@@ -470,13 +470,24 @@ class MavlinkMultiplexer:
         rx_buffer = bytearray()
         while self._running:
             try:
-                data = self._serial_conn.read(256)
+                # Use in_waiting to read only bytes that are actually ready in the buffer
+                available = getattr(self._serial_conn, "in_waiting", 0)
+                if available > 0:
+                    data = self._serial_conn.read(min(available, 1024))
+                else:
+                    data = self._serial_conn.read(1)
+
                 if data:
                     rx_buffer.extend(data)
                     self._process_buffer(rx_buffer)
                 else:
                     time.sleep(0.01)
             except Exception as e:
+                err_str = str(e).lower()
+                # If spurious select trigger or transient zero-byte read, back off briefly without breaking state
+                if "device reports readiness to read but returned no data" in err_str:
+                    time.sleep(0.02)
+                    continue
                 logger.error(f"Serial stream error on {self.port}: {e}")
                 self.connection_state = ConnectionState.ERROR
                 time.sleep(1.0)
