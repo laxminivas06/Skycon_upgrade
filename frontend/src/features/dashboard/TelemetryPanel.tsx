@@ -86,8 +86,8 @@ export const TelemetryPanel: React.FC<TelemetryPanelProps> = ({
 
       if (success) {
         audioService.playBeep(1100, 150);
-        setArmFeedback('Vehicle Armed — Motors spinning ✓');
-        onNotification?.('Vehicle Armed — Motors spinning ✓');
+        setArmFeedback('Arm command sent to Pixhawk... (Awaiting physical motor spin)');
+        onNotification?.('Arm command sent to Pixhawk... (Awaiting physical motor spin)');
       } else {
         const failReason = mavlinkService.getConnectionState().preArmFailReason;
         const msg = failReason

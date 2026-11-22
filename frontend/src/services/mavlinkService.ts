@@ -515,7 +515,7 @@ class MAVLinkService {
         }
       });
 
-      // Production Cloud REST Telemetry Polling (HTTPS - PythonAnywhere)
+      // Production Cloud REST Telemetry Polling (HTTPS - PythonAnywhere @ 4 Hz)
       setInterval(async () => {
         const isDirectStream = this.isDirectByteTransportOpen();
         if (!isDirectStream) {
@@ -540,7 +540,7 @@ class MAVLinkService {
             this.notifyConnection();
           }
         }
-      }, 1000);
+      }, 250);
 
       // Immediate initial telemetry poll
       setTimeout(async () => {
@@ -554,15 +554,15 @@ class MAVLinkService {
             }
           }
         } catch (e) {}
-      }, 100);
+      }, 50);
 
-      // Telemetry Freshness Ticker (every 500ms)
+      // Telemetry Freshness Ticker (every 250ms)
       setInterval(() => {
         if (this.connectionState.lastTelemetryTime && this.connectionState.lastTelemetryTime > 0) {
           this.connectionState.telemetryFreshnessMs = Date.now() - this.connectionState.lastTelemetryTime;
           this.notifyConnection();
         }
-      }, 500);
+      }, 250);
     }
   }
 
@@ -2868,10 +2868,12 @@ class MAVLinkService {
           if (res.ok) {
             const data = await res.json();
             if (data.success) {
-              this.telemetry.isArmed = true;
-              this.telemetry.vehicleState = 'ARMED';
-              this.connectionState.vehicleState = 'ARMED';
-              this.addStatusMessage('INFO', 6, 'Motors Armed ✓ Confirmed by Cloud/Companion Relay');
+              if (data.confirmed || data.armed) {
+                this.telemetry.isArmed = true;
+                this.telemetry.vehicleState = 'ARMED';
+                this.connectionState.vehicleState = 'ARMED';
+              }
+              this.addStatusMessage('INFO', 6, 'Arm command dispatched to Pixhawk (awaiting physical motor spin)');
               this.notifyConnection();
               this.notifyTelemetry();
               return true;
@@ -3029,10 +3031,12 @@ class MAVLinkService {
           if (res.ok) {
             const data = await res.json();
             if (data.success) {
-              this.telemetry.isArmed = false;
-              this.telemetry.vehicleState = 'DISARMED';
-              this.connectionState.vehicleState = 'DISARMED';
-              this.addStatusMessage('INFO', 6, 'Motors Disarmed ✓ Confirmed by Cloud/Companion Relay');
+              if (data.confirmed || !data.armed) {
+                this.telemetry.isArmed = false;
+                this.telemetry.vehicleState = 'DISARMED';
+                this.connectionState.vehicleState = 'DISARMED';
+              }
+              this.addStatusMessage('INFO', 6, 'Disarm command dispatched to Pixhawk');
               this.notifyConnection();
               this.notifyTelemetry();
               return true;

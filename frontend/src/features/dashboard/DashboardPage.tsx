@@ -286,7 +286,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
       try {
         const success = await mavlinkService.sendArmCommand(false);
         if (success) {
-          showNotification('Vehicle Armed — Motors spinning ✓');
+          showNotification('Arm command sent to Pixhawk... (Awaiting physical motor spin)');
           audioService.playBeep(1100, 150);
         } else {
           showNotification('Arm rejected by Pixhawk. Check safety switch, GPS 3D fix, and compass.');

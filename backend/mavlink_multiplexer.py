@@ -143,6 +143,7 @@ CRC_EXTRA: Dict[int, int] = {
     47: 153,   # MISSION_ACK
     51: 196,   # MISSION_REQUEST_INT
     65: 118,   # RC_CHANNELS
+    66: 148,   # REQUEST_DATA_STREAM
     73: 38,    # MISSION_ITEM_INT
     74: 20,    # VFR_HUD
     76: 152,   # COMMAND_LONG
@@ -488,6 +489,8 @@ class MavlinkMultiplexer:
                             self.telemetry["pixhawkConnected"] = True
                             connected = True
                             logger.info(f"Confirmed Pixhawk MAVLink link on {port} @ {baud} baud")
+                            # Immediately request telemetry data streams (GPS, Attitude, Battery, RC)
+                            self.request_all_data_streams(rate_hz=5)
                             break
                         else:
                             s.close()
@@ -515,8 +518,17 @@ class MavlinkMultiplexer:
 
             # Physical Serial Read Loop
             rx_buffer = bytearray()
+            last_hb_sent = 0.0
+            last_stream_req = time.time()
             while self._running and self.is_connected:
                 try:
+                    now_loop = time.time()
+                    if now_loop - last_hb_sent >= 1.0:
+                        self.send_heartbeat()
+                        last_hb_sent = now_loop
+                    if now_loop - last_stream_req >= 4.0:
+                        self.request_all_data_streams(rate_hz=5)
+                        last_stream_req = now_loop
                     raw_avail = getattr(self._serial_conn, "in_waiting", 0)
                     available = raw_avail if isinstance(raw_avail, int) else 0
                     if available > 0:
@@ -873,6 +885,43 @@ class MavlinkMultiplexer:
         res_code = res_dict.get("result", -1)
         res_name = res_dict.get("result_name", "UNKNOWN")
         return (res_code == 0), res_name, res_code
+
+    # -------------------------------------------------------------------------
+    # Telemetry Stream Control & Autopilot Heartbeat
+    # -------------------------------------------------------------------------
+
+    def send_heartbeat(self):
+        """Sends GCS heartbeat (msg_id 0) to ArduPilot."""
+        if not self._serial_conn or self.is_simulation:
+            return
+        self.seq = (self.seq + 1) % 256
+        payload = struct.pack('<IBBBBB', 0, 6, 8, 0, 4, 3)
+        header = struct.pack('<BBBBBBBBBB', 0xFD, len(payload), 0, 0, self.seq, self.system_id, self.component_id, 0, 0, 0)
+        crc = calculate_mavlink_crc(header[1:] + payload, 50)
+        try:
+            self._serial_conn.write(header + payload + struct.pack('<H', crc))
+        except Exception:
+            pass
+
+    def build_request_data_stream_packet(self, stream_id: int, rate_hz: int = 5, start_stop: int = 1) -> bytes:
+        """Encodes MAVLink v2 REQUEST_DATA_STREAM frame (msg_id 66)."""
+        self.seq = (self.seq + 1) % 256
+        payload = struct.pack('<HBBBB', int(rate_hz), self.target_system, self.target_component, int(stream_id), int(start_stop))
+        header = struct.pack('<BBBBBBBBBB', 0xFD, len(payload), 0, 0, self.seq, self.system_id, self.component_id, 66 & 0xFF, (66 >> 8) & 0xFF, (66 >> 16) & 0xFF)
+        crc = calculate_mavlink_crc(header[1:] + payload, 148)
+        return header + payload + struct.pack('<H', crc)
+
+    def request_all_data_streams(self, rate_hz: int = 5):
+        """Requests real-time telemetry streams (GPS, Attitude, Battery, RC) from Pixhawk."""
+        if not self._serial_conn or self.is_simulation:
+            return
+        # Stream IDs: 0=ALL, 1=RAW_SENSORS, 2=EXTENDED_STATUS (battery), 3=RC_CHANNELS, 6=POSITION, 10=EXTRA1 (attitude), 11=EXTRA2
+        for s_id in (0, 1, 2, 3, 6, 10, 11):
+            try:
+                pkt = self.build_request_data_stream_packet(s_id, rate_hz, 1)
+                self._serial_conn.write(pkt)
+            except Exception:
+                pass
 
     # -------------------------------------------------------------------------
     # MAVLink Mission Protocol (Waypoints & Upload Transfer)

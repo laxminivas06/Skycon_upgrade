@@ -41,7 +41,7 @@ class CloudSyncService:
         self,
         cloud_url: Optional[str] = None,
         api_key: Optional[str] = None,
-        sync_interval_s: float = 2.0,
+        sync_interval_s: float = 0.25,
         max_spool_records: int = 500
     ):
         raw_cloud = cloud_url or os.environ.get("SKYCON_CLOUD_URL", "https://teamskycon.pythonanywhere.com").rstrip("/")
@@ -167,6 +167,7 @@ class CloudSyncService:
 
     def _execute_cloud_commands(self, commands: List[Dict[str, Any]]):
         """Executes operator flight commands retrieved from cloud queue."""
+        executed_any = False
         for cmd in commands:
             cmd_type = cmd.get("command")
             params = cmd.get("params", {})
@@ -175,20 +176,34 @@ class CloudSyncService:
                 if cmd_type == "SET_MODE":
                     mode = params.get("mode", "LOITER")
                     mavlink_mux.set_mode_verified(mode)
+                    executed_any = True
                 elif cmd_type in ("RTL", "RETURN"):
                     mavlink_mux.command_rtl()
+                    executed_any = True
                 elif cmd_type == "BRAKE":
                     mavlink_mux.command_brake()
+                    executed_any = True
                 elif cmd_type == "ARM":
                     mavlink_mux.arm_motors_verified(True, force=params.get("force", False))
+                    executed_any = True
                 elif cmd_type == "DISARM":
                     mavlink_mux.arm_motors_verified(False)
+                    executed_any = True
                 elif cmd_type == "TAKEOFF":
                     mavlink_mux.takeoff_verified(float(params.get("altitude", 10.0)))
+                    executed_any = True
                 elif cmd_type == "LAND":
                     mavlink_mux.land_verified()
+                    executed_any = True
             except Exception as e:
                 logger.error(f"[CloudSync] Error executing command {cmd_type}: {e}")
+
+        # Immediately dispatch state update back to cloud without waiting for next interval
+        if executed_any:
+            try:
+                self._perform_sync_cycle()
+            except Exception:
+                pass
 
     def _build_sync_payload(self) -> Dict[str, Any]:
         """Assembles authoritative companion telemetry and mission state."""
