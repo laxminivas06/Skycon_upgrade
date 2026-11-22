@@ -766,7 +766,7 @@ export class PhoneDroneMissionService {
       }).catch(() => {});
     }
 
-    // Path B: MAVLink STATUSTEXT downlink fallback to Pixhawk/ESP32 link
+    // Path B: MAVLink STATUSTEXT downlink fallback to Pixhawk/Raspberry Pi link
     mavlinkService.sendStatusText(`QR_CODE_DETECTED: ${twoDigits}`, 6);
 
     // Auto-RTL on Decode: Immediately transition drone to RTL without blocking

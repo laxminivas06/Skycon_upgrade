@@ -53,7 +53,7 @@ export const HIGH_PRIORITY_TYPES = new Set<MessageType>([
 
 /**
  * Standard CCITT-FALSE CRC-16 (Polynomial 0x1021, Initial 0xFFFF).
- * Byte-for-byte identical to Python & ESP32-S3 C++.
+ * Byte-for-byte identical to Python backend.
  */
 export function crc16Ccitt(data: Uint8Array): number {
   let crc = 0xffff;

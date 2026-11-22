@@ -973,7 +973,7 @@ export const GoogleMapGroundStation: React.FC<GoogleMapGroundStationProps> = ({
   };
 
   // -------------------------------------------------------------
-  // Upload Mission to Drone FC (ESP32-S3 / Pixhawk Layer)
+  // Upload Mission to Drone FC (RPi 4 / Pixhawk Layer)
   // -------------------------------------------------------------
   const handleUploadMission = async () => {
     if (!generatedMission) {

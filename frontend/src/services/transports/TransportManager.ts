@@ -6,8 +6,7 @@ import { WebSerialTransport } from './WebSerialTransport';
 import { WebUsbTransport } from './WebUsbTransport';
 import { UdpTransport } from './UdpTransport';
 import { SimulatorTransport } from './SimulatorTransport';
-import { PiWebSocketTransport } from './PiWebSocketTransport';
-import { Esp32WebSocketTransport } from './Esp32WebSocketTransport';
+import { PiWebSocketTransport, PiWebSocketOptions } from './PiWebSocketTransport';
 
 export class TransportManager {
   private transports: Map<string, MavlinkTransport> = new Map();
@@ -173,13 +172,17 @@ export class TransportManager {
     return this.activeTransport.getDiagnostics();
   }
 
-  public getEsp32Transport(): Esp32WebSocketTransport {
-    return this.esp32Transport;
+  public async connectPi(options?: PiWebSocketOptions): Promise<boolean> {
+    this.setTransport('pi_websocket');
+    return this.activeTransport.connect(options);
   }
 
-  public async connectEsp32(options?: import('./Esp32WebSocketTransport').Esp32WebSocketOptions): Promise<boolean> {
-    this.setTransport('esp32_websocket');
-    return this.activeTransport.connect(options);
+  public getEsp32Transport(): any {
+    return this.piTransport;
+  }
+
+  public async connectEsp32(options?: any): Promise<boolean> {
+    return this.connectPi(options);
   }
 
   public subscribeData(listener: (chunk: Uint8Array) => void): () => void {

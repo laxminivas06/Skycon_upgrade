@@ -486,7 +486,7 @@ class CustomRouteService {
   }
 
   /**
-   * Upload mission to Pixhawk / ESP32 (Requirement 4 & 20).
+   * Upload mission to Pixhawk via companion / cloud relay.
    */
   public async uploadMission(): Promise<{ success: boolean; message: string }> {
     const val = this.validateRoute();

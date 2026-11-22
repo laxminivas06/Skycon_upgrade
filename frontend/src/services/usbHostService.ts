@@ -105,12 +105,16 @@ class UsbHostService {
     return await transportManager.connect({ baudRate });
   }
 
-  public async connectEsp32(options?: import('./transports/Esp32WebSocketTransport').Esp32WebSocketOptions): Promise<boolean> {
-    return await transportManager.connectEsp32(options);
+  public async connectPi(options?: any): Promise<boolean> {
+    return await transportManager.connectPi(options);
+  }
+
+  public async connectEsp32(options?: any): Promise<boolean> {
+    return await this.connectPi(options);
   }
 
   public async checkEsp32Http(host?: string, port?: number): Promise<{ reachable: boolean; latencyMs?: number; message?: string }> {
-    return await transportManager.getEsp32Transport().checkEsp32Http(host, port);
+    return { reachable: false, message: 'Companion operates via Raspberry Pi 4' };
   }
 
   public async requestUsbPermission(): Promise<boolean> {

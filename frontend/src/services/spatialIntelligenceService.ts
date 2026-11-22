@@ -143,7 +143,8 @@ export interface ValidatedCoordinateData {
 export interface CommunicationDiagnosticsData {
   health_status: 'HEALTHY' | 'DEGRADED' | 'CRITICAL' | 'OFFLINE';
   network_state?: 'ONLINE' | 'OFFLINE' | 'RECONNECTING' | 'STALE' | 'UNKNOWN';
-  esp32_connected: boolean;
+  companion_connected: boolean;
+  esp32_connected?: boolean;
   wifi_connected: boolean;
   wifi_ssid: string;
   active_priority?: number | null;
@@ -207,7 +208,8 @@ class SpatialIntelligenceService {
 
   private commDiagnostics: CommunicationDiagnosticsData = {
     health_status: 'HEALTHY',
-    esp32_connected: false,
+    companion_connected: true,
+    esp32_connected: true,
     wifi_connected: true,
     wifi_ssid: 'drone123',
     rssi_dbm: -64,

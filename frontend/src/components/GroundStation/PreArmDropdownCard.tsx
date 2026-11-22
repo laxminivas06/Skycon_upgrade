@@ -82,12 +82,11 @@ export const PreArmDropdownCard: React.FC<PreArmDropdownCardProps> = ({
   const batt = telemetry.batteryPercent;
   const battStatus: CheckState = batt > 25 ? 'PASS' : batt > 15 ? 'WAITING' : 'FAIL';
 
-  // 8. ESP32 <-> Pixhawk Connection
-  const esp32Status: CheckState = (isPixhawkConnected || connectionState.connectionType === 'ESP32_WEBSOCKET') ? 'PASS' : 'WAITING';
+  // 8. RPi 4 <-> Pixhawk Connection
+  const piPixhawkStatus: CheckState = isPixhawkConnected ? 'PASS' : (connectionState.piAgentConnected ? 'WAITING' : 'FAIL');
 
-  // 9. Phone <-> ESP32 Connection
-  const phoneConnected = Boolean(runnerLink && runnerLink.isConnected);
-  const phoneStatus: CheckState = phoneConnected ? 'PASS' : 'WAITING';
+  // 9. Cloud Sync Connection
+  const cloudSyncStatus: CheckState = connectionState.cloudConnected !== false ? 'PASS' : 'WAITING';
 
   // 10. Flight Mode
   const activeMode = (telemetry.flightMode || '').toUpperCase();
@@ -150,18 +149,18 @@ export const PreArmDropdownCard: React.FC<PreArmDropdownCardProps> = ({
       icon: <Battery className="w-3.5 h-3.5" />
     },
     {
-      id: 'esp32_pixhawk',
-      name: 'ESP32 ↔ Pixhawk Connection',
-      state: esp32Status,
-      detail: esp32Status === 'PASS' ? 'MAVLink Bridge OK' : 'Waiting for Telemetry',
-      icon: <Wifi className="w-3.5 h-3.5" />
+      id: 'pi_pixhawk',
+      name: 'RPi 4 ↔ Pixhawk Link',
+      state: piPixhawkStatus,
+      detail: isPixhawkConnected ? 'GPIO UART @ 57600 OK' : 'Waiting on TELEM2',
+      icon: <Cpu className="w-3.5 h-3.5" />
     },
     {
-      id: 'phone_esp32',
-      name: 'Phone ↔ ESP32 Connection',
-      state: phoneStatus,
-      detail: phoneConnected ? 'P2P / Relay Linked' : 'Connecting...',
-      icon: <Smartphone className="w-3.5 h-3.5" />
+      id: 'cloud_sync',
+      name: 'PythonAnywhere Cloud Sync',
+      state: cloudSyncStatus,
+      detail: connectionState.cloudConnected !== false ? 'Cloud Telemetry Active' : 'Offline',
+      icon: <Wifi className="w-3.5 h-3.5" />
     },
     {
       id: 'flight_mode',

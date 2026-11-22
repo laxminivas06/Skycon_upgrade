@@ -62,7 +62,7 @@ export const ManualControlDashboard: React.FC<ManualControlDashboardProps> = ({
     setArmFeedback(null);
     setIsArming(true);
     const sent = await mavlinkService.sendArmCommand(force);
-    if (!sent) { setIsArming(false); setArmFeedback('ARM FAILED: Check ESP32 connection.'); return; }
+    if (!sent) { setIsArming(false); setArmFeedback('ARM FAILED: Check companion connection.'); return; }
     const t0 = Date.now();
     const wd = setInterval(() => {
       if (mavlinkService.getTelemetry().isArmed) { setIsArming(false); setArmFeedback(null); clearInterval(wd); }
@@ -328,7 +328,7 @@ export const ManualControlDashboard: React.FC<ManualControlDashboardProps> = ({
             {!pixhawkState.isConnected && !pixhawkState.isUsbConnected && pixhawkState.connectionType !== 'SIMULATED' && (
               <div className="p-2 bg-slate-950/70 border border-slate-700 rounded-lg text-slate-400 text-[11px] flex items-center space-x-1.5">
                 <AlertTriangle className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                <span>Connect to flight controller first via ESP32 or USB</span>
+                <span>Connect to flight controller first via Raspberry Pi Agent or USB</span>
               </div>
             )}
           </div>

@@ -951,7 +951,8 @@ def get_comm_diagnostics():
         "diagnostics": {
             "health_status": health,
             "network_state": state,
-            "esp32_connected": False,
+            "pi_agent_connected": True,
+            "companion_connected": True,
             "wifi_connected": net_status.get("wifi_connected", False),
             "wifi_ssid": net_status.get("ssid") or "Not Connected",
             "rssi_dbm": net_status.get("rssi_dbm", -99),

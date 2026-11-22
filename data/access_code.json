@@ -1,8 +1,8 @@
 {
   "_schema_version": "2.0",
   "_collection": "access_code",
-  "_updated_at": "2026-11-22T04:13:23.362201+00:00",
-  "_checksum_sha256": "a61f0ec077f77a797d4957ec2a6ad0715b5f0b796e14f562a0d60c34f5ad9570",
+  "_updated_at": "2026-11-22T10:42:25.403129+00:00",
+  "_checksum_sha256": "91281c412aba65c7689a7241aee85c4a7a102be180587bf668dad48f3ba8e986",
   "_data": {
     "missionId": "ADDC_E2E_21STEP",
     "aerialQrCode": "73",
@@ -10,6 +10,6 @@
     "combinedAccessCode": "7328",
     "verified": true,
     "operativeId": "FIELD_RUNNER_1",
-    "timestamp": 1795320803362
+    "timestamp": 1795344145403
   }
 }

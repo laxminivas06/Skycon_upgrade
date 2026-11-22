@@ -199,7 +199,7 @@ class DiagnosticService {
         'flight_controller_overview', 'FC_DETECT', 'Flight Controller Connection', 'FAILED',
         'DISCONNECTED', 'Active Pixhawk 2.4.8 Connection',
         'No flight controller heartbeat detected on active USB / Wi-Fi telemetry bridge.',
-        'Connect Pixhawk via USB cable (115200 baud) or power ESP32-S3 Wi-Fi bridge (57600 baud).'
+        'Connect Pixhawk via USB cable (115200 baud) or check Raspberry Pi 4 GPIO UART connection (57600 baud).'
       );
       report.sections.flight_controller_overview.status = 'FAILED';
     } else {
@@ -559,7 +559,7 @@ class DiagnosticService {
 
     addCheck(
       'backend_frontend_diagnostics', 'RELAY_LATENCY', 'Telemetry Bridge Responsiveness', 'PASSED',
-      `Latency: ${conn.esp32LatencyMs || 15}ms | Bytes RX: ${conn.bytesReceived || 0} B | Bytes TX: ${conn.bytesSent || 0} B`,
+      `Latency: ${conn.esp32LatencyMs || conn.telemetryFreshnessMs || 15}ms | Bytes RX: ${conn.bytesReceived || 0} B | Bytes TX: ${conn.bytesSent || 0} B`,
       'Telemetry bridge latency < 150ms',
       undefined, undefined
     );

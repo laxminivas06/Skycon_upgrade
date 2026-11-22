@@ -138,7 +138,7 @@ export const QrVisionTelemetryCard: React.FC<QrVisionTelemetryCardProps> = ({
     onDigitsDecoded?.(cleanDigits);
   };
 
-  // Listen to Window Custom Events (e.g. from Esp32WebSocketTransport or MAVLink STATUSTEXT)
+  // Listen to Window Custom Events (e.g. from Pi Companion Agent or MAVLink STATUSTEXT)
   useEffect(() => {
     const handleCustomQrAlert = (e: any) => {
       const detail = e.detail;

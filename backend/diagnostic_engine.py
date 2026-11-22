@@ -313,7 +313,7 @@ class S500DiagnosticEngine:
                 sec, "FC_DETECT", "Flight Controller Detection", "FAILED",
                 "No Heartbeat Received", "Active Pixhawk 2.4.8 Heartbeat",
                 "Pixhawk flight controller is not responding over USB or telemetry link.",
-                "Connect Pixhawk 2.4.8 via USB cable or power the ESP32 Wi-Fi bridge. Ensure driver (STM32 CDC) is installed."
+                "Connect Pixhawk 2.4.8 via USB cable or check Raspberry Pi 4 GPIO UART connection (/dev/serial0). Ensure driver (STM32 CDC) is installed."
             )
             self.results["sections"][sec]["status"] = "FAILED"
             return

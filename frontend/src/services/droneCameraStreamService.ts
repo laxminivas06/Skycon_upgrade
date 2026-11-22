@@ -48,6 +48,9 @@ const BROADCAST_CHANNEL_NAME = 'DRONE_CORE_CAMERA_STREAM_CHANNEL';
 const RELAY_TOKEN_DEFAULT = 'saeindia_secret_token_2026';
 const getCompanionWsUrl = (): string => {
   if (typeof window !== 'undefined') {
+    if (window.location.hostname.includes('pythonanywhere.com')) {
+      return ''; // PythonAnywhere operates via HTTP MJPEG stream (/api/camera/stream)
+    }
     const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const host = window.location.hostname || 'localhost';
     const port = window.location.port ? window.location.port : '8443';
@@ -123,7 +126,7 @@ class DroneCameraStreamService {
 
   private getRelayWebSocketUrl(): string {
     if (typeof window === 'undefined') return '';
-    const envUrl = (import.meta as any).env?.VITE_SECURE_RELAY_URL || (import.meta as any).env?.VITE_ESP32_WS_URL;
+    const envUrl = (import.meta as any).env?.VITE_SECURE_RELAY_URL || (import.meta as any).env?.VITE_PI_WS_URL;
     const token = (import.meta as any).env?.VITE_RELAY_TOKEN || RELAY_TOKEN_DEFAULT;
 
     if (envUrl && typeof envUrl === 'string' && envUrl.trim().length > 0) {

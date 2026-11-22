@@ -497,10 +497,10 @@ export const PreArmChecksPanel: React.FC<PreArmChecksPanelProps> = ({
                 </span>
               </div>
 
-              {/* 4. ESP32 WS RX & Pixhawk TX */}
+              {/* 4. RPi 4 RX & Pixhawk TX */}
               <div className="p-2.5 bg-slate-900 rounded-lg border border-slate-800 flex items-center justify-between">
                 <div>
-                  <div className="text-slate-400 uppercase font-bold">ESP32 &amp; Pixhawk TX</div>
+                  <div className="text-slate-400 uppercase font-bold">RPi 4 &amp; Pixhawk TX</div>
                   <div className="text-slate-300 font-mono mt-0.5">
                     RX: {connectionState.bytesReceived} B | TX: {connectionState.bytesSent} B
                   </div>

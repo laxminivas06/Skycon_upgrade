@@ -12,6 +12,7 @@ import {
 import { usbHostService } from './usbHostService';
 import { transportManager } from './transports/TransportManager';
 import { systemAlertService } from './systemAlertService';
+import { fetchWithFallback } from './apiClient';
 
 type TelemetryListener = (telemetry: DroneTelemetry) => void;
 type MAVLinkPacketListener = (packet: MAVLinkPacket) => void;
@@ -273,12 +274,12 @@ class MAVLinkService {
   private connectionListeners: Set<ConnectionStateListener> = new Set();
 
   private connectionState: PixhawkConnectionState = {
-    connectionType: 'ESP32_WEBSOCKET',
+    connectionType: 'CLOUD_RELAY',
     phase: 'DISCONNECTED',
-    phaseMessage: 'Ready for ESP32 wireless telemetry connection',
+    phaseMessage: 'Ready for Raspberry Pi 4 Local Agent synchronization',
     isConnected: false,
     isUsbConnected: false,
-    portOrAddress: 'Disconnected',
+    portOrAddress: 'PythonAnywhere Cloud (teamskycon.pythonanywhere.com)',
     baudRate: 57600,
     bytesReceived: 0,
     bytesSent: 0,
@@ -298,14 +299,19 @@ class MAVLinkService {
     statusHistory: [],
     commandAckHistory: [],
     diagnosticsLogs: [],
-    isRealHardware: true,
+    isRealHardware: false,
     wifiSsid: 'drone123',
     wifiState: 'CONNECTED',
+    piAgentConnected: false,
+    pixhawkHeartbeatConnected: false,
+    cloudConnected: false,
+    telemetryFreshnessMs: 0,
+    lastTelemetryTime: 0,
     esp32LinkState: 'DISCONNECTED',
     diagnostics: {
       totalPacketsReceived: 0,
       heartbeatsCount: 0,
-      driverType: 'ESP32_WEBSOCKET',
+      driverType: 'WEBSERIAL',
       hostPowerStatus: 'HOST_ACTIVE',
       serialDataReceived: false
     }
@@ -487,9 +493,9 @@ class MAVLinkService {
   }
 
   constructor() {
-    this.logDiagnostic('SYSTEM', 'MAVLink Engine Initialized. Ready for ESP32 Wi-Fi bridge (drone123).', 'info');
+    this.logDiagnostic('SYSTEM', 'MAVLink Engine Initialized. Ready for Raspberry Pi 4 Local Agent synchronization.', 'info');
 
-    // Subscribe to byte stream from unified cross-platform USB / ESP32 Host
+    // Subscribe to byte stream from unified cross-platform USB / Hardware Host
     usbHostService.subscribeData((chunk: Uint8Array) => {
       this.connectionState.bytesReceived += chunk.length;
       this.processIncomingSerialBytes(chunk);
@@ -500,48 +506,63 @@ class MAVLinkService {
       this.handleUsbHostStateChange(phase, message, diag);
     });
 
-    // Auto-connect to ESP32 wireless bridge on startup if not explicitly disconnected by user
+    // Initialize cloud telemetry synchronization and polling
     if (typeof window !== 'undefined') {
-      // Ingest companion telemetry packets from WebSocket
+      // Ingest companion telemetry packets from custom events
       window.addEventListener('sae:telemetry_packet', (e: any) => {
         if (e.detail) {
           this.ingestCompanionTelemetry(e.detail);
         }
       });
 
-      // Periodic cloud / companion REST polling fallback (e.g. for PythonAnywhere or WSS timeout)
+      // Production Cloud REST Telemetry Polling (HTTPS - PythonAnywhere)
       setInterval(async () => {
         const isDirectStream = this.isDirectByteTransportOpen();
         if (!isDirectStream) {
           try {
-            const res = await fetch('/api/telemetry');
+            const res = await fetchWithFallback('/api/telemetry');
             if (res.ok) {
               const data = await res.json();
               const companionTelem = data?.telemetry || (data?.data && (data.data.telemetry || data.data)) || data;
-              if (companionTelem && (companionTelem.connected || companionTelem.armed !== undefined || companionTelem.flight_mode || companionTelem.lat !== undefined || companionTelem.packets_received_total > 0)) {
+              if (companionTelem) {
                 if (this.simInterval) {
                   clearInterval(this.simInterval);
                   this.simInterval = null;
                 }
                 this.ingestCompanionTelemetry(companionTelem);
               }
+            } else {
+              this.connectionState.cloudConnected = false;
+              this.notifyConnection();
             }
           } catch (e) {
-            // Ignore during offline
+            this.connectionState.cloudConnected = false;
+            this.notifyConnection();
           }
         }
       }, 1000);
 
-      try {
-        const manualDis = localStorage.getItem('esp32_manual_disconnect');
-        if (manualDis !== 'true') {
-          setTimeout(() => {
-            this.connectEsp32().catch((err) => {
-              console.warn('[MAVLINK] Auto-connect to ESP32 postponed:', err);
-            });
-          }, 350);
+      // Immediate initial telemetry poll
+      setTimeout(async () => {
+        try {
+          const res = await fetchWithFallback('/api/telemetry');
+          if (res.ok) {
+            const data = await res.json();
+            const companionTelem = data?.telemetry || (data?.data && (data.data.telemetry || data.data)) || data;
+            if (companionTelem) {
+              this.ingestCompanionTelemetry(companionTelem);
+            }
+          }
+        } catch (e) {}
+      }, 100);
+
+      // Telemetry Freshness Ticker (every 500ms)
+      setInterval(() => {
+        if (this.connectionState.lastTelemetryTime && this.connectionState.lastTelemetryTime > 0) {
+          this.connectionState.telemetryFreshnessMs = Date.now() - this.connectionState.lastTelemetryTime;
+          this.notifyConnection();
         }
-      } catch (e) {}
+      }, 500);
     }
   }
 
@@ -551,31 +572,49 @@ class MAVLinkService {
   public ingestCompanionTelemetry(telem: any): void {
     if (!telem || typeof telem !== 'object') return;
     const now = Date.now();
-    const isActuallyConnected = Boolean(
-      telem.connected ||
-      telem.pixhawkConnected ||
+    this.connectionState.cloudConnected = true;
+    this.connectionState.lastTelemetryTime = now;
+    this.connectionState.telemetryFreshnessMs = 0;
+
+    // Distinguish 1: Raspberry Pi 4 Companion Agent Connection
+    const isPiAgentActive = Boolean(
       telem.cloud_synced ||
-      telem.connection_state === 'TELEMETRY_ACTIVE' ||
-      telem.connection_state === 'HEARTBEAT_RECEIVED' ||
-      telem.connection_state === 'CONNECTED' ||
-      (telem.heartbeat_age_s !== undefined && telem.heartbeat_age_s < 8.0) ||
-      (telem.flight_mode && telem.flight_mode !== 'DISCONNECTED' && telem.flight_mode !== 'UNKNOWN') ||
-      (telem.flightMode && telem.flightMode !== 'DISCONNECTED' && telem.flightMode !== 'UNKNOWN')
+      telem.companion_synced ||
+      telem.companion_source === 'SKYCON_COMPANION_PI4' ||
+      telem.source === 'SKYCON_COMPANION_PI4' ||
+      (telem.telemetry_age_s !== undefined && telem.telemetry_age_s < 15.0)
+    );
+    this.connectionState.piAgentConnected = isPiAgentActive;
+
+    // Distinguish 2: Pixhawk MAVLink Heartbeat (Strict - No Fake Connected State)
+    const hbAge = telem.heartbeat_age_s !== undefined ? telem.heartbeat_age_s : (telem.lastHeartbeat ? (now - telem.lastHeartbeat) / 1000 : 999.0);
+    const isActuallyConnected = Boolean(
+      (telem.connected || telem.pixhawkConnected) &&
+      hbAge < 8.0 &&
+      telem.flight_mode !== 'DISCONNECTED' &&
+      telem.connection_state !== 'DISCONNECTED'
     );
 
+    this.connectionState.pixhawkHeartbeatConnected = isActuallyConnected;
     this.connectionState.isConnected = isActuallyConnected;
-    this.connectionState.isReceivingTelemetry = isActuallyConnected;
-    this.connectionState.lastHeartbeat = now;
-    this.connectionState.heartbeatHz = telem.heartbeat_rate_hz || (telem.heartbeat_age_s ? Math.max(0.1, 1.0 / telem.heartbeat_age_s) : 1.0);
+    this.connectionState.isReceivingTelemetry = isActuallyConnected || isPiAgentActive;
+    if (isActuallyConnected) {
+      this.connectionState.lastHeartbeat = now;
+    }
+    this.connectionState.heartbeatHz = isActuallyConnected ? (telem.heartbeat_rate_hz || (hbAge > 0 ? Math.max(0.1, 1.0 / hbAge) : 1.0)) : 0.0;
     this.connectionState.bytesReceived = Math.max(this.connectionState.bytesReceived || 0, (telem.packets_received_total || 0) * 32, 1024);
-    this.connectionState.phase = isActuallyConnected ? 'PIXHAWK_CONNECTED' : 'WAITING_FOR_MAVLINK';
+    this.connectionState.phase = isActuallyConnected ? 'PIXHAWK_CONNECTED' : (isPiAgentActive ? 'WAITING_FOR_MAVLINK' : 'DISCONNECTED');
     const activeMode = telem.flight_mode || telem.flightMode || 'STABILIZE';
     this.connectionState.phaseMessage = isActuallyConnected
       ? `Pixhawk connected ✓ (${activeMode})`
-      : 'Waiting for Pixhawk MAVLink heartbeat...';
-    this.connectionState.isRealHardware = isActuallyConnected;
-    this.connectionState.connectionType = 'CLOUD_RELAY';
-    this.connectionState.portOrAddress = telem.cloud_synced ? 'Cloud Sync (teamskycon.pythonanywhere.com)' : 'GPIO UART (/dev/serial0)';
+      : isPiAgentActive
+      ? 'Raspberry Pi Agent synced (Waiting for Pixhawk MAVLink heartbeat)'
+      : 'Waiting for telemetry...';
+    this.connectionState.isRealHardware = isActuallyConnected || isPiAgentActive;
+    if (!this.isDirectByteTransportOpen()) {
+      this.connectionState.connectionType = 'CLOUD_RELAY';
+    }
+    this.connectionState.portOrAddress = telem.cloud_synced ? 'PythonAnywhere Cloud (teamskycon.pythonanywhere.com)' : 'Raspberry Pi 4 GPIO UART (/dev/serial0)';
     this.telemetry.pixhawkConnected = isActuallyConnected;
 
     if (activeMode && activeMode !== 'UNKNOWN') {
@@ -767,17 +806,10 @@ class MAVLinkService {
       this.addStatusMessage('ERROR', 3, message);
     }
 
-    // Synchronize ESP32 WebSocket Link State if currently on ESP32
-    if (this.connectionState.connectionType === 'ESP32_WEBSOCKET') {
-      const esp32Transport = transportManager.getEsp32Transport();
-      this.connectionState.esp32LinkState = esp32Transport.getLinkState();
-      this.connectionState.esp32ProtocolMode = esp32Transport.getProtocolMode();
-      this.connectionState.esp32Path = esp32Transport.getPath();
-      this.connectionState.esp32LatencyMs = esp32Transport.getLatencyMs();
-      this.connectionState.esp32ErrorCategory = esp32Transport.getErrorCategory();
-      this.connectionState.esp32ErrorMessage = esp32Transport.getLastErrorMessage();
-      this.connectionState.esp32ConnectorOnline = esp32Transport.isConnectorOnline();
-      this.connectionState.esp32DeviceOnline = esp32Transport.isEsp32Online();
+    // Synchronize link state if on physical transport
+    if (this.connectionState.connectionType === 'PI_AGENT') {
+      const piTransport = transportManager.getPiTransport();
+      this.connectionState.piAgentConnected = piTransport.isPiOnline();
     }
 
     this.notifyConnection();
@@ -1120,7 +1152,7 @@ class MAVLinkService {
 
   public evaluatePreArmSafety(): { passed: boolean; reason?: string } {
     if (!this.connectionState.isConnected && !this.simInterval) {
-      return { passed: false, reason: 'Pixhawk FC Disconnected (Connect ESP32-S3 / USB & verify MAVLink Heartbeat)' };
+      return { passed: false, reason: 'Pixhawk FC Disconnected (Verify Raspberry Pi 4 GPIO UART / USB & MAVLink Heartbeat)' };
     }
 
     if (!this.simInterval && Date.now() - this.connectionState.lastHeartbeat > 10000) {
@@ -1194,90 +1226,48 @@ class MAVLinkService {
   }
 
   /**
-   * 1-Click ESP32-S3 Wireless Bridge Connection (WebSocket)
-   * Supports AUTO (protocol negotiation), direct WS, and WSS connection modes.
+   * Connect to Raspberry Pi 4 Companion Agent via Cloud Sync / Telemetry API
    */
-  public async connectEsp32(options?: import('./transports/Esp32WebSocketTransport').Esp32WebSocketOptions | string, port: number = 8080, protocol: 'ws' | 'wss' = 'ws', baudRate: number = 57600): Promise<boolean> {
+  public async connectPi(): Promise<boolean> {
     if (this.simInterval) {
       clearInterval(this.simInterval);
       this.simInterval = null;
     }
+    this.connectionState.connectionType = 'CLOUD_RELAY';
+    this.connectionState.portOrAddress = 'PythonAnywhere Cloud (teamskycon.pythonanywhere.com)';
+    this.connectionState.phase = 'CONNECTING';
+    this.connectionState.phaseMessage = 'Syncing Raspberry Pi 4 telemetry from PythonAnywhere...';
+    this.notifyConnection();
+    return await this.syncTelemetry();
+  }
 
-    let resolvedOptions: import('./transports/Esp32WebSocketTransport').Esp32WebSocketOptions & {
-      protocolMode: 'AUTO' | 'WS' | 'WSS';
-      mode: 'LOCAL' | 'SECURE';
-      host: string;
-      port: number;
-      path: string;
-      secureEndpoint: string;
-      protocol: 'ws' | 'wss';
-      baudRate: number;
-      wifiSsid?: string;
-    };
+  public async connectEsp32(_options?: any): Promise<boolean> {
+    return await this.connectPi();
+  }
 
-    if (typeof options === 'string') {
-      // Legacy string overload: connectEsp32(host, port, protocol, baudRate)
-      const pMode: 'AUTO' | 'WS' | 'WSS' = protocol === 'wss' ? 'WSS' : 'WS';
-      resolvedOptions = {
-        protocolMode: pMode,
-        mode: protocol === 'wss' ? 'SECURE' : 'LOCAL',
-        host: options.trim(),
-        port,
-        path: '/ws',
-        secureEndpoint: `${options}:${port}`,
-        protocol,
-        baudRate,
-        wifiSsid: transportManager.getEsp32Transport().getWifiSsid()
-      };
-    } else {
-      const defaultRelayUrl = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SECURE_RELAY_URL) || '';
-      const protocolMode = options?.protocolMode || (options?.mode === 'SECURE' ? 'WSS' : 'AUTO');
-      const mode = options?.mode || (protocolMode === 'WSS' ? 'SECURE' : 'LOCAL');
-      const host = (options?.host && options.host.trim().length > 0 ? options.host.trim() : '192.168.31.194');
-      const p = options?.port || 8080;
-      const path = options?.path !== undefined ? options.path.trim() : '/ws';
-      const secureEp = (options?.secureEndpoint || defaultRelayUrl || transportManager.getEsp32Transport().getSecureEndpoint()).trim();
-      const relayToken = options?.relayToken || transportManager.getEsp32Transport().getRelayToken();
-      const proto = options?.protocol || (protocolMode === 'WSS' ? 'wss' : 'ws');
-      const baud = options?.baudRate || 57600;
-      const ssid = options?.wifiSsid || transportManager.getEsp32Transport().getWifiSsid();
-
-      resolvedOptions = {
-        protocolMode,
-        mode,
-        host,
-        port: p,
-        path,
-        secureEndpoint: secureEp,
-        relayToken,
-        protocol: proto,
-        baudRate: baud,
-        wifiSsid: ssid
-      };
+  public async syncTelemetry(): Promise<boolean> {
+    try {
+      const res = await fetchWithFallback('/api/telemetry');
+      if (res.ok) {
+        const data = await res.json();
+        const companionTelem = data?.telemetry || (data?.data && (data.data.telemetry || data.data)) || data;
+        if (companionTelem) {
+          if (this.simInterval) {
+            clearInterval(this.simInterval);
+            this.simInterval = null;
+          }
+          this.ingestCompanionTelemetry(companionTelem);
+          return true;
+        }
+      } else {
+        this.connectionState.cloudConnected = false;
+        this.notifyConnection();
+      }
+    } catch (e) {
+      this.connectionState.cloudConnected = false;
+      this.notifyConnection();
     }
-
-    transportManager.getEsp32Transport().setConfig(resolvedOptions);
-    const resolvedUrl = transportManager.getEsp32Transport().getResolvedUrl();
-
-    this.connectionState.connectionType = 'ESP32_WEBSOCKET';
-    this.connectionState.portOrAddress = resolvedUrl;
-    this.connectionState.baudRate = resolvedOptions.baudRate;
-    this.connectionState.isRealHardware = true;
-    this.connectionState.diagnostics.serialDataReceived = false;
-    this.connectionState.esp32ProtocolMode = resolvedOptions.protocolMode;
-    this.connectionState.esp32Path = resolvedOptions.path;
-    this.connectionState.esp32LinkState = 'CONNECTING';
-
-    this.logDiagnostic(
-      'TRANSPORT',
-      `[WS] Initiating [${resolvedOptions.protocolMode}] bridge connection to ${resolvedUrl} (${resolvedOptions.baudRate} baud)…`,
-      'info'
-    );
-
-    this.connectionState.wifiSsid = resolvedOptions.wifiSsid || transportManager.getEsp32Transport().getWifiSsid();
-    this.connectionState.wifiState = 'CONNECTED';
-
-    return await usbHostService.connectEsp32(resolvedOptions);
+    return false;
   }
 
   public getWifiSsid(): string {
@@ -2870,7 +2860,7 @@ class MAVLinkService {
     if (!isWsOpen && !isSimMode) {
       if (this.connectionState.isConnected || this.telemetry.pixhawkConnected) {
         try {
-          const res = await fetch('/api/command/arm', {
+          const res = await fetchWithFallback('/api/command/arm', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ arm: true, force })
@@ -3031,7 +3021,7 @@ class MAVLinkService {
     if (!isWsOpen && !isSimMode) {
       if (this.connectionState.isConnected || this.telemetry.pixhawkConnected) {
         try {
-          const res = await fetch('/api/command/disarm', {
+          const res = await fetchWithFallback('/api/command/disarm', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ arm: false, force })
@@ -3177,7 +3167,7 @@ class MAVLinkService {
     // Direct HTTP REST dispatch when direct byte transport is not open
     if (!this.isDirectByteTransportOpen() && (this.connectionState.isConnected || this.telemetry.pixhawkConnected)) {
       try {
-        const res = await fetch('/api/command/mode', {
+        const res = await fetchWithFallback('/api/command/mode', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ mode: modeName })
@@ -3313,7 +3303,7 @@ class MAVLinkService {
 
     if (!this.isDirectByteTransportOpen() && (this.connectionState.isConnected || this.telemetry.pixhawkConnected)) {
       try {
-        const res = await fetch('/api/command/takeoff', {
+        const res = await fetchWithFallback('/api/command/takeoff', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ altitude: targetAltMeters })
@@ -4023,7 +4013,7 @@ class MAVLinkService {
     if (this.connectionState.isRealHardware && !this.simInterval) {
       if (!isConnected || heartbeatAgeMs > 4000) {
         const ageSec = Number.isFinite(heartbeatAgeMs) ? (heartbeatAgeMs / 1000).toFixed(1) + 's' : 'never received';
-        const errMsg = `Cannot upload mission: No fresh MAVLink heartbeat from Pixhawk in last 4s (last RX: ${ageSec} ago). Ensure Pixhawk is powered and TELEM2 baud matches ESP32 (57600).`;
+        const errMsg = `Cannot upload mission: No fresh MAVLink heartbeat from Pixhawk in last 4s (last RX: ${ageSec} ago). Ensure Pixhawk is powered and TELEM2 baud matches Raspberry Pi 4 /dev/serial0 (57600).`;
         this.logDiagnostic('ERROR', errMsg, 'error');
         return { success: false, message: errMsg };
       }
@@ -4239,7 +4229,7 @@ class MAVLinkService {
                   const age = ((Date.now() - this.connectionState.lastHeartbeat) / 1000).toFixed(1);
                   res({
                     success: false,
-                    message: `Upload failed: Pixhawk did not respond to MISSION_COUNT after ${maxCountAttempts} attempts (last RX heartbeat: ${age}s ago). Verify ESP32 TX pin is wired to Pixhawk TELEM1 RX (Pin 3), set BRD_SER1_RTSCTS=0, and disconnect Mission Planner USB.`
+                    message: `Upload failed: Pixhawk did not respond to MISSION_COUNT after ${maxCountAttempts} attempts (last RX heartbeat: ${age}s ago). Verify Raspberry Pi 4 GPIO UART TX pin is wired to Pixhawk TELEM2 RX, set BRD_SER2_RTSCTS=0, and disconnect Mission Planner USB.`
                   });
                 }
               }, 1800);

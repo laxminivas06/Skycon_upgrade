@@ -152,7 +152,7 @@ export const GroundStationDashboard: React.FC<GroundStationDashboardProps> = ({
     const sent = await mavlinkService.sendArmCommand(force);
     if (!sent) {
       setIsArming(false);
-      setArmFeedback('ARM TRANSMISSION FAILED: Check WebSocket / ESP32 TX Link.');
+      setArmFeedback('ARM TRANSMISSION FAILED: Check companion link.');
       return;
     }
     const startWait = Date.now();

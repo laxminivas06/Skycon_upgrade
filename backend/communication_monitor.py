@@ -42,7 +42,8 @@ class CommunicationMonitor:
         self.ema_rtt_ms: float = 0.0
 
         # Physical link state
-        self.esp32_connected: bool = False
+        self.pi_agent_connected: bool = True
+        self.esp32_connected: bool = True
         self.wifi_connected: bool = False
         self.wifi_ssid: str = "Unknown"
         self.rssi_dbm: int = -99
@@ -108,7 +109,7 @@ class CommunicationMonitor:
         now = time.time()
         silence_s = now - self.last_rx_timestamp if self.last_rx_timestamp > 0 else 999.0
 
-        if not self.esp32_connected or not self.wifi_connected or silence_s > 6.0:
+        if not self.pi_agent_connected or silence_s > 6.0:
             return "OFFLINE"
 
         loss_rate = self.get_loss_rate()
@@ -128,6 +129,8 @@ class CommunicationMonitor:
 
         return {
             "health_status": self.get_health_status(),
+            "pi_agent_connected": self.pi_agent_connected,
+            "companion_connected": self.pi_agent_connected,
             "esp32_connected": self.esp32_connected,
             "wifi_connected": self.wifi_connected,
             "wifi_ssid": self.wifi_ssid,

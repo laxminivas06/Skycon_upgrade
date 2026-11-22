@@ -175,7 +175,7 @@ export const BatteryMonitorCard: React.FC<BatteryMonitorCardProps> = ({
               </span>
               {mavlinkService.getConnectionState().isConnected
                 ? 'ArduPilot requires BATT_MONITOR=4 and SR1_EXT_STAT=4 configured in Mission Planner.'
-                : 'Connect your ESP32 Wi-Fi bridge or USB cable, or launch Simulator mode to test 3S battery UI.'}
+                : 'Connect via Raspberry Pi 4 Agent or USB cable, or launch Simulator mode to test 3S battery UI.'}
             </div>
           </div>
 

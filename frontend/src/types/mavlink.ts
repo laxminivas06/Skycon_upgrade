@@ -27,12 +27,13 @@ export interface MAVLinkPacket {
 
 export type FlightControllerConnection = 
   | 'USB_SERIAL' 
+  | 'PI_AGENT'
+  | 'CLOUD_RELAY'
   | 'ESP32_WEBSOCKET'
   | 'UDP_TELEMETRY' 
   | 'TCP_CLIENT' 
   | 'BLUETOOTH' 
   | 'IOS_ACCESSORY' 
-  | 'CLOUD_RELAY'
   | 'SIMULATED';
 
 export type ConnectionPhase =
@@ -182,6 +183,11 @@ export interface PixhawkConnectionState {
   lastArmParam2?: number;
   lastArmWsSendState?: 'START' | 'COMPLETE' | 'FAILED';
   lastArmAckResult?: string;
+  piAgentConnected?: boolean;
+  pixhawkHeartbeatConnected?: boolean;
+  cloudConnected?: boolean;
+  telemetryFreshnessMs?: number;
+  lastTelemetryTime?: number;
   esp32WsRxBytes?: number;
   esp32PixhawkTxBytes?: number;
   esp32LinkState?: 'DISCONNECTED' | 'CONNECTING' | 'CONNECTED' | 'RECONNECTING' | 'ERROR';

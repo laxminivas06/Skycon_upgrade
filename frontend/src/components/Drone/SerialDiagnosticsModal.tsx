@@ -91,7 +91,7 @@ export const SerialDiagnosticsModal: React.FC<SerialDiagnosticsModalProps> = ({
   const phase = connectionState.phase;
   const isConnected = connectionState.isConnected;
   const isUsbConnected = connectionState.isUsbConnected;
-  const isEsp32 = connectionState.connectionType === 'ESP32_WEBSOCKET';
+  const isPiOrCloud = connectionState.connectionType === 'CLOUD_RELAY' || connectionState.connectionType === 'PI_AGENT' || connectionState.connectionType === 'ESP32_WEBSOCKET';
 
   const pageProtocol = typeof window !== 'undefined' ? window.location.protocol.replace(':', '').toUpperCase() : 'HTTP';
   const isHttpsOrigin = typeof window !== 'undefined' && window.location.protocol === 'https:';
@@ -121,8 +121,8 @@ export const SerialDiagnosticsModal: React.FC<SerialDiagnosticsModalProps> = ({
   const handleConnect = async () => {
     setIsActionInProgress(true);
     try {
-      if (isEsp32 || activeTab === 'hardware') {
-        await mavlinkService.connectEsp32();
+      if (isPiOrCloud || activeTab === 'hardware') {
+        await mavlinkService.syncTelemetry();
       } else {
         await mavlinkService.connectHardware(selectedBaud);
       }
@@ -155,7 +155,7 @@ export const SerialDiagnosticsModal: React.FC<SerialDiagnosticsModalProps> = ({
                 <span>SERIAL LINK &amp; HARDWARE CONNECTIVITY HUB</span>
               </h2>
               <p className="text-[10px] sm:text-[11px] text-slate-400">
-                ESP32-S3 Wi-Fi SSID, Cloud WSS Relay, USB OTG, MAVLink packets &amp; live telemetry
+                Raspberry Pi 4 Agent, PythonAnywhere Cloud, USB OTG, MAVLink packets &amp; live telemetry
               </p>
             </div>
           </div>
@@ -372,9 +372,9 @@ export const SerialDiagnosticsModal: React.FC<SerialDiagnosticsModalProps> = ({
                     </div>
                   </div>
 
-                  {/* 5. ESP32 WS RX */}
+                  {/* 5. Pi Telemetry RX */}
                   <div className="p-2 bg-[#0D1117] rounded-lg border border-[#21262D]">
-                    <div className="text-[9px] text-slate-500 uppercase font-bold">ESP32 WS RX</div>
+                    <div className="text-[9px] text-slate-500 uppercase font-bold">Pi Telemetry RX</div>
                     <div className="font-bold text-purple-400 mt-0.5">
                       {connectionState.bytesReceived} B
                     </div>
@@ -459,7 +459,7 @@ export const SerialDiagnosticsModal: React.FC<SerialDiagnosticsModalProps> = ({
                   <span>Pixhawk Power Condition &amp; Host Limitation</span>
                 </div>
                 <p className="text-[11px] text-slate-300 leading-relaxed">
-                  Pixhawk flight controllers with GPS and telemetry radios require adequate current. Ensure Pixhawk is powered by its LiPo battery module when connecting to ESP32 or phone USB.
+                  Pixhawk flight controllers with GPS and telemetry radios require adequate current. Ensure Pixhawk is powered by its LiPo battery module when connecting to Raspberry Pi 4 GPIO UART or phone USB.
                 </p>
               </div>
 
@@ -472,8 +472,8 @@ export const SerialDiagnosticsModal: React.FC<SerialDiagnosticsModalProps> = ({
                   <li><strong>Check TELEM2 wiring:</strong> TX➔RX, RX➔TX, GND➔GND, 5V➔5V.</li>
                   <li><strong>Verify Baud Rate:</strong> Ensure Pixhawk parameter <code>SERIAL2_BAUD = 57</code> (57600 baud).</li>
                   <li><strong>Verify Protocol:</strong> Ensure Pixhawk parameter <code>SERIAL2_PROTOCOL = 2</code> (MAVLink2).</li>
-                  <li><strong>Verify Wi-Fi Network:</strong> Phone/PC must be connected to the same Wi-Fi SSID network as the ESP32 (e.g. <code>drone123</code>).</li>
-                  <li><strong>Verify Relay Status:</strong> On HTTPS origins (Netlify), ensure WSS relay mode is enabled.</li>
+                  <li><strong>Verify RPi 4 Service:</strong> Ensure <code>skycon.service</code> is running on Raspberry Pi 4.</li>
+                  <li><strong>Verify Cloud Status:</strong> PythonAnywhere cloud API at <code>teamskycon.pythonanywhere.com</code>.</li>
                 </ol>
               </div>
             </div>

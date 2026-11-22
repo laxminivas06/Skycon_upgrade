@@ -173,6 +173,7 @@ export const FlightModeSelector: React.FC<FlightModeSelectorProps> = ({
     connState.isUsbConnected ||
     connState.isRealHardware ||
     connState.connectionType === 'SIMULATED' ||
+    (telemetry as any).isConnected ||
     telemetry.pixhawkConnected ||
     (telemetry.flightMode && telemetry.flightMode !== 'DISCONNECTED' && telemetry.flightMode !== 'WAITING FOR TELEMETRY')
   );
@@ -244,11 +245,10 @@ export const FlightModeSelector: React.FC<FlightModeSelectorProps> = ({
             if (!dropdownOpen) updateDropdownPosition();
             setDropdownOpen(!dropdownOpen);
           }}
-          className={`flex items-center gap-1.5 px-2.5 py-1 rounded-[8px] border text-[11px] font-mono font-bold transition shadow-sm cursor-pointer select-none ${
-            isChangingMode
-              ? 'bg-amber-600/90 border-amber-400 text-white animate-pulse'
-              : 'bg-[#11161F] border-emerald-500/40 text-emerald-300 hover:bg-[#161B22] hover:border-emerald-400'
-          }`}
+          className={`flex items-center gap-1.5 px-2.5 py-1 rounded-[8px] border text-[11px] font-mono font-bold transition shadow-sm cursor-pointer select-none ${isChangingMode
+            ? 'bg-amber-600/90 border-amber-400 text-white animate-pulse'
+            : 'bg-[#11161F] border-emerald-500/40 text-emerald-300 hover:bg-[#161B22] hover:border-emerald-400'
+            }`}
           title="Click to switch Pixhawk Flight Mode (Loiter, RTL, Stabilize, Guided, Auto, etc.)"
         >
           <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
@@ -262,11 +262,10 @@ export const FlightModeSelector: React.FC<FlightModeSelectorProps> = ({
         {/* Floating Transient Toast for Mode Change Feedback */}
         {modeFeedback && !dropdownOpen && (
           <div
-            className={`fixed z-[9999] px-2.5 py-1 rounded-lg border text-[11px] font-mono font-bold shadow-2xl flex items-center gap-1.5 animate-in fade-in zoom-in-95 pointer-events-none ${
-              modeFeedback.success
-                ? 'bg-emerald-950/95 border-emerald-400 text-emerald-200 shadow-emerald-950/50'
-                : 'bg-rose-950/95 border-rose-500 text-rose-200 shadow-rose-950/50'
-            }`}
+            className={`fixed z-[9999] px-2.5 py-1 rounded-lg border text-[11px] font-mono font-bold shadow-2xl flex items-center gap-1.5 animate-in fade-in zoom-in-95 pointer-events-none ${modeFeedback.success
+              ? 'bg-emerald-950/95 border-emerald-400 text-emerald-200 shadow-emerald-950/50'
+              : 'bg-rose-950/95 border-rose-500 text-rose-200 shadow-rose-950/50'
+              }`}
             style={{
               left: `${dropdownCoords.left}px`,
               bottom: dropdownCoords.bottom !== undefined ? `${dropdownCoords.bottom}px` : undefined,
@@ -299,9 +298,8 @@ export const FlightModeSelector: React.FC<FlightModeSelectorProps> = ({
 
               {/* In-Dropdown Feedback Banner */}
               {modeFeedback && (
-                <div className={`mx-2 my-1 px-2 py-1 rounded text-[10px] font-mono ${
-                  modeFeedback.success ? 'bg-emerald-950/90 text-emerald-300 border border-emerald-500/50' : 'bg-rose-950/90 text-rose-300 border border-rose-500/50'
-                }`}>
+                <div className={`mx-2 my-1 px-2 py-1 rounded text-[10px] font-mono ${modeFeedback.success ? 'bg-emerald-950/90 text-emerald-300 border border-emerald-500/50' : 'bg-rose-950/90 text-rose-300 border border-rose-500/50'
+                  }`}>
                   {modeFeedback.msg}
                 </div>
               )}
@@ -316,13 +314,12 @@ export const FlightModeSelector: React.FC<FlightModeSelectorProps> = ({
                       key={cfg.mode}
                       type="button"
                       onClick={() => handleModeSelect(cfg.mode)}
-                      className={`w-full px-3 py-2 flex items-center justify-between text-left transition cursor-pointer text-xs font-mono ${
-                        isActive
-                          ? 'bg-emerald-950/70 text-emerald-300 font-bold border-l-2 border-emerald-400'
-                          : isPending
+                      className={`w-full px-3 py-2 flex items-center justify-between text-left transition cursor-pointer text-xs font-mono ${isActive
+                        ? 'bg-emerald-950/70 text-emerald-300 font-bold border-l-2 border-emerald-400'
+                        : isPending
                           ? 'bg-amber-950/60 text-amber-300 font-bold'
                           : 'text-slate-300 hover:bg-[#161B22] hover:text-white'
-                      }`}
+                        }`}
                     >
                       <div className="flex items-center gap-2">
                         {cfg.icon}
@@ -332,9 +329,8 @@ export const FlightModeSelector: React.FC<FlightModeSelectorProps> = ({
                         </div>
                       </div>
                       <div className="text-right">
-                        <span className={`text-[9px] px-1.5 py-0.5 rounded font-mono ${
-                          cfg.requiresGps ? 'bg-amber-950/60 text-amber-400 border border-amber-800/40' : 'bg-emerald-950/60 text-emerald-400 border border-emerald-800/40'
-                        }`}>
+                        <span className={`text-[9px] px-1.5 py-0.5 rounded font-mono ${cfg.requiresGps ? 'bg-amber-950/60 text-amber-400 border border-amber-800/40' : 'bg-emerald-950/60 text-emerald-400 border border-emerald-800/40'
+                          }`}>
                           {cfg.requiresGps ? 'GPS' : 'NO GPS'}
                         </span>
                       </div>
@@ -407,11 +403,10 @@ export const FlightModeSelector: React.FC<FlightModeSelectorProps> = ({
 
       {/* Mode Change Feedback Alert */}
       {(modeFeedback || connState.lastModeChangeError) && (
-        <div className={`p-2 rounded-lg text-xs flex items-center justify-between border ${
-          modeFeedback?.success
-            ? 'bg-emerald-950/90 border-emerald-500/70 text-emerald-200'
-            : 'bg-amber-950/90 border-amber-500/70 text-amber-200'
-        }`}>
+        <div className={`p-2 rounded-lg text-xs flex items-center justify-between border ${modeFeedback?.success
+          ? 'bg-emerald-950/90 border-emerald-500/70 text-emerald-200'
+          : 'bg-amber-950/90 border-amber-500/70 text-amber-200'
+          }`}>
           <div className="flex items-center gap-2">
             {modeFeedback?.success ? (
               <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
@@ -447,26 +442,24 @@ export const FlightModeSelector: React.FC<FlightModeSelectorProps> = ({
               type="button"
               onClick={() => handleModeSelect(cfg.mode)}
               disabled={isChangingMode !== null}
-              className={`p-1.5 rounded-lg border text-[11px] font-mono transition-all flex flex-col items-center justify-center gap-0.5 cursor-pointer select-none active:scale-95 ${
-                isActive
-                  ? 'bg-emerald-600 border-emerald-400 text-white font-black shadow-lg shadow-emerald-950/60 ring-2 ring-emerald-400'
-                  : isPending
+              className={`p-1.5 rounded-lg border text-[11px] font-mono transition-all flex flex-col items-center justify-center gap-0.5 cursor-pointer select-none active:scale-95 ${isActive
+                ? 'bg-emerald-600 border-emerald-400 text-white font-black shadow-lg shadow-emerald-950/60 ring-2 ring-emerald-400'
+                : isPending
                   ? 'bg-amber-600 border-amber-400 text-white font-bold animate-pulse ring-2 ring-amber-400'
                   : 'bg-[#161B22] border-slate-700/80 text-slate-300 hover:bg-[#21262D] hover:text-white hover:border-slate-500'
-              }`}
+                }`}
               title={`${cfg.label}: ${cfg.shortDesc} (${cfg.requiresGps ? 'Requires 3D GPS lock' : 'Works without GPS'})`}
             >
               <div className="flex items-center gap-1 font-bold">
                 {cfg.icon}
                 <span>{cfg.label}</span>
               </div>
-              <span className={`text-[8px] font-sans font-semibold tracking-tighter ${
-                isActive
-                  ? 'text-emerald-100'
-                  : cfg.requiresGps
+              <span className={`text-[8px] font-sans font-semibold tracking-tighter ${isActive
+                ? 'text-emerald-100'
+                : cfg.requiresGps
                   ? 'text-amber-400/90'
                   : 'text-emerald-400/90'
-              }`}>
+                }`}>
                 {isActive ? 'ACTIVE' : cfg.requiresGps ? 'GPS REQ' : 'NO GPS'}
               </span>
             </button>

@@ -32,7 +32,7 @@ export const VisionStatusCard: React.FC<VisionStatusCardProps> = ({
           </span>
         </div>
         <span className="text-[10px] text-slate-400">
-          Phone On-Device Detection (Zero ESP32 Frame Overhead)
+          On-Device Vision Detection (Real-Time QR &amp; Box Tracking)
         </span>
       </div>
 

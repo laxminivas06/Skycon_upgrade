@@ -31,10 +31,11 @@ export interface PiWebSocketOptions {
 // Environment defaults
 const isLocalhostOrigin = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
 const companionHost = typeof window !== 'undefined' && window.location.hostname ? window.location.hostname : '127.0.0.1';
-const defaultLocalWs = `ws://${companionHost}:8080/ws`;
+const isPythonAnywhereHost = typeof window !== 'undefined' && window.location.hostname.includes('pythonanywhere.com');
+const defaultLocalWs = isLocalhostOrigin ? `ws://127.0.0.1:8443/ws` : '';
 
-const ENV_PI_WS_URL = (typeof import.meta !== 'undefined' && (import.meta.env?.VITE_PI_WS_URL || import.meta.env?.VITE_ESP32_WS_URL)) || defaultLocalWs;
-const ENV_SECURE_RELAY_URL = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SECURE_RELAY_URL) || defaultLocalWs;
+const ENV_PI_WS_URL = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_PI_WS_URL) || defaultLocalWs;
+const ENV_SECURE_RELAY_URL = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SECURE_RELAY_URL) || '';
 const ENV_RELAY_TOKEN = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_RELAY_TOKEN) || 'saeindia_secret_token_2026';
 
 export class PiWebSocketTransport implements MavlinkTransport {
@@ -131,10 +132,13 @@ export class PiWebSocketTransport implements MavlinkTransport {
   }
 
   public getResolvedUrl(): string {
-    if (this.connectionMode === 'SECURE') {
-      return this.secureEndpoint;
+    if (typeof window !== 'undefined' && window.location.hostname.includes('pythonanywhere.com')) {
+      return ''; // PythonAnywhere cloud hosts WSGI REST API; no WebSocket listener.
     }
-    const proto = window.location.protocol === 'https:' ? 'wss' : 'ws';
+    if (this.connectionMode === 'SECURE') {
+      return this.secureEndpoint || '';
+    }
+    const proto = (typeof window !== 'undefined' && window.location.protocol === 'https:') ? 'wss' : 'ws';
     return `${proto}://${this.localHost}:${this.localPort}${this.path}`;
   }
 
@@ -149,10 +153,19 @@ export class PiWebSocketTransport implements MavlinkTransport {
 
     this.manualDisconnect = false;
     this.cleanupSocket();
-    this.linkState = 'CONNECTING';
-    this.notifyState('Connecting', `Connecting to Raspberry Pi 4 (${this.getResolvedUrl()})`);
 
     const targetUrl = this.getResolvedUrl();
+    if (!targetUrl || targetUrl.includes('pythonanywhere.com') || targetUrl.includes(':8080')) {
+      this.linkState = 'DISCONNECTED';
+      this.errorCategory = 'NONE';
+      this.lastErrorMessage = 'Operating via PythonAnywhere HTTPS Telemetry API (/api/telemetry).';
+      this.notifyState('Ready', 'Cloud Telemetry Active (HTTPS)');
+      return false;
+    }
+
+    this.linkState = 'CONNECTING';
+    this.notifyState('Connecting', `Connecting to Raspberry Pi 4 (${targetUrl})`);
+
     try {
       this.connectStartTime = performance.now();
       const ws = new WebSocket(targetUrl);

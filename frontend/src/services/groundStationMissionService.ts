@@ -1430,7 +1430,7 @@ export class GroundStationMissionService {
       console.error('[GCS Mission Upload Error]', err);
       return {
         success: false,
-        message: `Failed to upload mission: ${err?.message || 'Communication error with ESP32-S3 link'}`
+        message: `Failed to upload mission: ${err?.message || 'Communication error with companion link'}`
       };
     }
   }
@@ -1452,7 +1452,7 @@ export class GroundStationMissionService {
       if (!isConnected) {
         return {
           success: false,
-          message: 'Cannot start mission: Drone is not connected via MAVLink. Verify ESP32 Wi-Fi bridge.'
+          message: 'Cannot start mission: Drone is not connected via MAVLink. Verify Raspberry Pi 4 GPIO UART link.'
         };
       }
 

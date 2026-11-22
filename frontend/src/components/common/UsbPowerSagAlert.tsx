@@ -7,7 +7,7 @@
  * - When powered via Micro-USB, internal diode drops cause peripheral voltage (VDD_5V_PERIPH)
  *   to sag below 4.40V (4400 mV).
  * - Under 4.4V, peripheral brownouts are imminent on u-blox NEO-M8N GPS, external compass,
- *   and TELEM2 ESP32-S3 radio transceiver.
+ *   and TELEM2 Raspberry Pi UART transceiver.
  *
  * Flags critical warning when SYS_STATUS.voltage_battery < 4400 mV (< 4.4V).
  */
@@ -65,7 +65,7 @@ export const UsbPowerSagAlert: React.FC<UsbPowerSagAlertProps> = ({
             Pixhawk 2.4.8 is currently operating on <strong>Micro-USB bus power ({measuredV}V)</strong> instead of the calibrated <strong>5.37V nominal LiPo rail</strong>.
           </p>
           <p className="mt-1 text-amber-300 font-semibold">
-            ⚠️ Peripheral brownouts imminent on <strong>u-blox GPS</strong> and <strong>TELEM2 ESP32-S3 radio</strong>. Connect main 3S/4S LiPo battery via the Power Module immediately before arming!
+            ⚠️ Peripheral brownouts imminent on <strong>u-blox GPS</strong> and <strong>TELEM2 Raspberry Pi transceiver</strong>. Connect main 3S/4S LiPo battery via the Power Module immediately before arming!
           </p>
         </div>
       </div>
