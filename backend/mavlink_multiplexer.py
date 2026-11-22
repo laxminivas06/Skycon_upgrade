@@ -409,7 +409,7 @@ class MavlinkMultiplexer:
     # -------------------------------------------------------------------------
 
     def _run_loop(self):
-        """Primary connection manager: auto-probes serial ports, falls back to simulator."""
+        """Primary connection manager: auto-probes serial ports, falls back to simulator on dev PC."""
         try:
             import serial
         except ImportError:
@@ -420,83 +420,121 @@ class MavlinkMultiplexer:
             self._start_simulation()
             return
 
-        candidate_ports = []
-        if self.port:
-            candidate_ports.append(self.port)
-        candidate_ports.extend(["/dev/serial0", "/dev/ttyAMA0", "/dev/ttyUSB0", "/dev/ttyACM0", "/dev/ttyS0"])
+        is_pi = settings.IS_RASPBERRY_PI or os.environ.get("SKYCON_IS_PI", "False").lower() in ("true", "1")
 
-        connected = False
-        self.connection_state = ConnectionState.CONNECTING
-
-        # Prioritize 57600 (default ArduPilot TELEM2) first for rapid lock
-        ordered_bauds = [57600, 115200, 921600] if 57600 in self.candidate_bauds else self.candidate_bauds
-
-        for port in candidate_ports:
-            for baud in ordered_bauds:
-                if not self._running:
-                    return
-                try:
-                    logger.info(f"Probing MAVLink on {port} @ {baud} baud...")
-                    s = serial.Serial(port, baud, timeout=0.5)
-                    # Listen for up to 1.5s for valid MAVLink header
-                    t_probe = time.time()
-                    magic_detected = False
-                    while time.time() - t_probe < 1.5:
-                        b = s.read(1)
-                        if b in (b'\xfd', b'\xfe'):
-                            hdr = s.read(5)
-                            if len(hdr) >= 5:
-                                magic_detected = True
-                                break
-
-                    if magic_detected:
-                        self._serial_conn = s
-                        self.port = port
-                        self.baud = baud
-                        self.is_connected = True
-                        self.is_simulation = False
-                        self.connection_state = ConnectionState.CONNECTED
-                        connected = True
-                        logger.info(f"Confirmed Pixhawk MAVLink link on {port} @ {baud} baud")
-                        break
-                    else:
-                        s.close()
-                except Exception:
-                    continue
-            if connected:
-                break
-
-        if not connected:
-            logger.info("No physical Pixhawk detected. Entering high-fidelity Simulation mode.")
-            self._start_simulation()
-            return
-
-        # Physical Serial Read Loop
-        rx_buffer = bytearray()
         while self._running:
-            try:
-                # Use in_waiting to read only bytes that are actually ready in the buffer
-                raw_avail = getattr(self._serial_conn, "in_waiting", 0)
-                available = raw_avail if isinstance(raw_avail, int) else 0
-                if available > 0:
-                    data = self._serial_conn.read(min(available, 1024))
-                else:
-                    data = self._serial_conn.read(1)
+            self.connection_state = ConnectionState.CONNECTING
+            self.telemetry["connection_state"] = ConnectionState.CONNECTING.value
 
-                if data:
-                    rx_buffer.extend(data)
-                    self._process_buffer(rx_buffer)
-                else:
-                    time.sleep(0.01)
-            except Exception as e:
-                err_str = str(e).lower()
-                # If spurious select trigger or transient zero-byte read, back off briefly without breaking state
-                if "device reports readiness to read but returned no data" in err_str:
-                    time.sleep(0.02)
+            import glob
+            candidate_ports = []
+            if self.port:
+                candidate_ports.append(self.port)
+            candidate_ports.extend(["/dev/serial0", "/dev/ttyAMA0"])
+            candidate_ports.extend(glob.glob("/dev/ttyACM*"))
+            candidate_ports.extend(glob.glob("/dev/ttyUSB*"))
+            candidate_ports.append("/dev/ttyS0")
+            
+            # Filter to existing ports, preserving order and removing duplicates
+            seen = set()
+            ordered_ports = [p for p in candidate_ports if not (p in seen or seen.add(p)) and os.path.exists(p)]
+
+            # Prioritize 57600 (default ArduPilot TELEM2) first for rapid lock
+            ordered_bauds = [57600, 115200, 921600] if 57600 in self.candidate_bauds else self.candidate_bauds
+
+            connected = False
+            for port in ordered_ports:
+                for baud in ordered_bauds:
+                    if not self._running:
+                        return
+                    try:
+                        logger.info(f"Probing MAVLink on {port} @ {baud} baud...")
+                        s = serial.Serial(port, baud, timeout=0.5)
+                        
+                        # Transmit GCS heartbeat to wake up ArduPilot telemetry stream on TELEM
+                        try:
+                            s.write(b'\xfe\t\x00\xff\xbe\x00\x00\x00\x00\x00\x06\x08\x00\x00\x03\xcc\xa3')
+                        except Exception:
+                            pass
+
+                        # Listen for up to 2.5s for valid MAVLink frame
+                        t_probe = time.time()
+                        magic_detected = False
+                        while time.time() - t_probe < 2.5:
+                            b = s.read(1)
+                            if b in (b'\xfd', b'\xfe'):
+                                hdr = s.read(5)
+                                if len(hdr) >= 5:
+                                    magic_detected = True
+                                    break
+
+                        if magic_detected:
+                            self._serial_conn = s
+                            self.port = port
+                            self.baud = baud
+                            self.is_connected = True
+                            self.is_simulation = False
+                            self.connection_state = ConnectionState.CONNECTED
+                            connected = True
+                            logger.info(f"Confirmed Pixhawk MAVLink link on {port} @ {baud} baud")
+                            break
+                        else:
+                            s.close()
+                    except Exception as probe_err:
+                        logger.debug(f"Probe error on {port} @ {baud}: {probe_err}")
+                        continue
+                if connected:
+                    break
+
+            if not connected:
+                if is_pi or os.environ.get("DISABLE_SIMULATION", "False").lower() in ("true", "1"):
+                    logger.warning("No physical Pixhawk detected on companion Pi. Retrying serial scan in 3.0s (Simulation disabled on hardware)...")
+                    with self._lock:
+                        self.is_connected = False
+                        self.is_simulation = False
+                        self.connection_state = ConnectionState.DISCONNECTED
+                        self.telemetry["connected"] = False
+                        self.telemetry["connection_state"] = ConnectionState.DISCONNECTED.value
+                    time.sleep(3.0)
                     continue
-                logger.error(f"Serial stream error on {self.port}: {e}")
-                self.connection_state = ConnectionState.ERROR
-                time.sleep(1.0)
+                else:
+                    logger.info("No physical Pixhawk detected. Entering high-fidelity Simulation mode.")
+                    self._start_simulation()
+                    return
+
+            # Physical Serial Read Loop
+            rx_buffer = bytearray()
+            while self._running and self.is_connected:
+                try:
+                    raw_avail = getattr(self._serial_conn, "in_waiting", 0)
+                    available = raw_avail if isinstance(raw_avail, int) else 0
+                    if available > 0:
+                        data = self._serial_conn.read(min(available, 1024))
+                    else:
+                        data = self._serial_conn.read(1)
+
+                    if data:
+                        rx_buffer.extend(data)
+                        self._process_buffer(rx_buffer)
+                    else:
+                        time.sleep(0.01)
+                except Exception as e:
+                    err_str = str(e).lower()
+                    if "device reports readiness to read but returned no data" in err_str:
+                        time.sleep(0.02)
+                        continue
+                    logger.error(f"Serial stream error on {self.port}: {e}")
+                    self.connection_state = ConnectionState.ERROR
+                    self.is_connected = False
+                    self.telemetry["connected"] = False
+                    if self._serial_conn:
+                        try:
+                            self._serial_conn.close()
+                        except Exception:
+                            pass
+                        self._serial_conn = None
+                    time.sleep(2.0)
+                    break
 
     def _start_simulation(self):
         """Initializes realistic mock dynamics."""
