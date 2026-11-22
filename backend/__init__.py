@@ -9,8 +9,6 @@ import types
 
 # Expose core modules
 from . import (
-    main,
-    server,
     mavlink_multiplexer,
     mission_engine,
     diagnostic_engine,
@@ -44,6 +42,16 @@ from . import (
     logging_config,
     settings,
 )
+
+try:
+    from . import main
+except ImportError:
+    main = None
+
+try:
+    from . import server
+except ImportError:
+    server = None
 
 # Seamless backwards compatibility aliases in sys.modules
 def _alias(name, mod):
