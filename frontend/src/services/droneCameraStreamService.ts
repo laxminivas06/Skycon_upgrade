@@ -126,6 +126,12 @@ class DroneCameraStreamService {
 
   private getRelayWebSocketUrl(): string {
     if (typeof window === 'undefined') return '';
+    
+    // PythonAnywhere uses standard HTTP MJPEG (/api/camera/stream). Do NOT attempt WebSockets.
+    if (window.location.hostname.includes('pythonanywhere.com')) {
+      return '';
+    }
+
     const envUrl = (import.meta as any).env?.VITE_SECURE_RELAY_URL || (import.meta as any).env?.VITE_PI_WS_URL;
     const token = (import.meta as any).env?.VITE_RELAY_TOKEN || RELAY_TOKEN_DEFAULT;
 
@@ -135,15 +141,18 @@ class DroneCameraStreamService {
       return `${url}${sep}token=${encodeURIComponent(token)}`;
     }
 
+    if (!DEFAULT_SECURE_RELAY_URL || DEFAULT_SECURE_RELAY_URL.trim().length === 0) {
+      return '';
+    }
+
     const loc = window.location;
-    // On HTTPS (e.g. Netlify deployment), browsers require WSS and Netlify cannot host WebSockets directly.
-    // Connect to the deployed Render Cloud Relay:
+    // On HTTPS (e.g. Netlify deployment), browsers require WSS:
     if (loc.protocol === 'https:' || loc.hostname.includes('netlify.app')) {
       const sep = DEFAULT_SECURE_RELAY_URL.includes('?') ? '&' : '?';
       return `${DEFAULT_SECURE_RELAY_URL}${sep}token=${encodeURIComponent(token)}`;
     }
 
-    // Local Development: connect to backend server on port 8443 (or Render relay as fallback)
+    // Local Development: connect to backend server on port 8443
     const host = loc.hostname || '127.0.0.1';
     return `ws://${host}:8443/ws?token=${encodeURIComponent(token)}`;
   }
@@ -154,11 +163,14 @@ class DroneCameraStreamService {
       return;
     }
 
+    const url = this.getRelayWebSocketUrl();
+    // Validate that a full valid WebSocket URL exists before attempting connection
+    if (!url || (!url.startsWith('ws://') && !url.startsWith('wss://'))) {
+      return;
+    }
+
     this.isWsConnecting = true;
     try {
-      const url = this.getRelayWebSocketUrl();
-      if (!url) return;
-
       const ws = new WebSocket(url);
 
       ws.onopen = () => {
