@@ -17,6 +17,7 @@ Features:
 10. Air-gapped Emergency RTL path without cloud dependencies.
 """
 
+import os
 import time
 import math
 import struct
@@ -25,6 +26,8 @@ import queue
 import logging
 from enum import Enum
 from typing import Dict, Any, Optional, Callable, List, Tuple
+
+from backend.settings import settings
 
 logger = logging.getLogger("MAVLinkMultiplexer")
 
