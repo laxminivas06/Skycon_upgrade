@@ -72,8 +72,10 @@ export class SearchEngine {
   constructor() {
     // Instantiate Modular Search Algorithms
     this.algorithms.set('GRID', new GridSearch());
+    this.algorithms.set('BOUSTROPHEDON', new GridSearch());
     this.algorithms.set('SPIRAL', new SpiralSearch());
     this.algorithms.set('EXPANDING_SPIRAL', new SpiralSearch());
+    this.algorithms.set('INWARD_SPIRAL', new SpiralSearch());
     this.algorithms.set('PERIMETER', new PerimeterSearch());
     this.algorithms.set('ADAPTIVE', new AdaptiveSearch());
     this.algorithms.set('SECTOR', new SpiralSearch());

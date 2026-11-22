@@ -1,8 +1,8 @@
 {
   "_schema_version": "2.0",
   "_collection": "audit_logs",
-  "_updated_at": "2026-11-21T14:43:31.364739+00:00",
-  "_checksum_sha256": "3c6601d937c60fbadaabb292afdb0970aaa232d55a422cffed75cfc44b9fdc2f",
+  "_updated_at": "2026-11-22T04:13:23.522135+00:00",
+  "_checksum_sha256": "0d5496c924798d266ce58771bf27fead7eb401e0ee154ad3e03198a765415fdf",
   "_data": [
     {
       "timestamp": 1795213548517,
@@ -10272,6 +10272,1954 @@
         "validation_notes": [],
         "rejection_reasons": []
       }
+    },
+    {
+      "timestamp": "2026-11-22T03:54:24.297970+00:00",
+      "event_type": "COORDINATE_PACKAGE_SAVED",
+      "source": "COORDINATE_PACKAGE_MANAGER",
+      "details": {
+        "package_id": "PKG_TEST_01",
+        "version": 1,
+        "created_at_utc": "2026-11-22T03:54:24Z",
+        "source": "LOCAL_VISION",
+        "execution_strategy": "INSPECT_CANDIDATE",
+        "coordinates": [
+          {
+            "lat": 13.0827,
+            "lon": 80.2707,
+            "altitude_m": 10.0,
+            "alt_reference": "AGL",
+            "source_image_id": null,
+            "image_timestamp": null,
+            "vehicle_pose_timestamp": null,
+            "gps_fix_quality": 3,
+            "gps_hdop": 1.0,
+            "ekf_healthy": true,
+            "horizontal_uncertainty_m": 1.0,
+            "vertical_uncertainty_m": 1.0,
+            "camera_calibrated": false,
+            "georef_method": "3D_ATTITUDE_PINHOLE",
+            "confidence_score": 0.85,
+            "consecutive_frames_verified": 3,
+            "quality_state": "APPROXIMATE",
+            "validation_status": "APPROVED",
+            "validation_reasons": [
+              "Altitude 10.0m compliant with envelope [5.0m - 25.0m]",
+              "Autopilot estimator healthy: Fix 3, HDOP 1.00, EKF Nominal",
+              "Multi-frame visual lock confirmed (3 consecutive frames)"
+            ],
+            "rejection_errors": [],
+            "target_label": "TARGET_CANDIDATE",
+            "created_at_utc": "2026-11-22T03:54:24Z"
+          },
+          {
+            "lat": 13.0828,
+            "lon": 80.2708,
+            "altitude_m": 12.0,
+            "alt_reference": "AGL",
+            "source_image_id": null,
+            "image_timestamp": null,
+            "vehicle_pose_timestamp": null,
+            "gps_fix_quality": 3,
+            "gps_hdop": 1.0,
+            "ekf_healthy": true,
+            "horizontal_uncertainty_m": 1.0,
+            "vertical_uncertainty_m": 1.0,
+            "camera_calibrated": false,
+            "georef_method": "3D_ATTITUDE_PINHOLE",
+            "confidence_score": 0.85,
+            "consecutive_frames_verified": 3,
+            "quality_state": "APPROXIMATE",
+            "validation_status": "APPROVED",
+            "validation_reasons": [
+              "Altitude 12.0m compliant with envelope [5.0m - 25.0m]",
+              "Autopilot estimator healthy: Fix 3, HDOP 1.00, EKF Nominal",
+              "Multi-frame visual lock confirmed (3 consecutive frames)"
+            ],
+            "rejection_errors": [],
+            "target_label": "TARGET_CANDIDATE",
+            "created_at_utc": "2026-11-22T03:54:24Z"
+          }
+        ],
+        "checksum_sha256": "246ae9048a30ab80a85b4446d5fc44ddc7e47be288653ac142a020d85633b5b1",
+        "is_validated_by_companion": true,
+        "validation_passed": true,
+        "validation_notes": [],
+        "rejection_reasons": []
+      }
+    },
+    {
+      "timestamp": "2026-11-22T03:54:24.345807+00:00",
+      "event_type": "COORDINATE_PACKAGE_SAVED",
+      "source": "COORDINATE_PACKAGE_MANAGER",
+      "details": {
+        "package_id": "PKG_MAV_01",
+        "version": 2,
+        "created_at_utc": "2026-11-22T03:54:24Z",
+        "source": "LOCAL_VISION",
+        "execution_strategy": "INSPECT_CANDIDATE",
+        "coordinates": [
+          {
+            "lat": 13.0827,
+            "lon": 80.2707,
+            "altitude_m": 10.0,
+            "alt_reference": "AGL",
+            "source_image_id": null,
+            "image_timestamp": null,
+            "vehicle_pose_timestamp": null,
+            "gps_fix_quality": 3,
+            "gps_hdop": 1.0,
+            "ekf_healthy": true,
+            "horizontal_uncertainty_m": 1.0,
+            "vertical_uncertainty_m": 1.0,
+            "camera_calibrated": false,
+            "georef_method": "3D_ATTITUDE_PINHOLE",
+            "confidence_score": 0.85,
+            "consecutive_frames_verified": 3,
+            "quality_state": "APPROXIMATE",
+            "validation_status": "APPROVED",
+            "validation_reasons": [
+              "Altitude 10.0m compliant with envelope [5.0m - 25.0m]",
+              "Autopilot estimator healthy: Fix 3, HDOP 1.00, EKF Nominal",
+              "Multi-frame visual lock confirmed (3 consecutive frames)"
+            ],
+            "rejection_errors": [],
+            "target_label": "TARGET_A",
+            "created_at_utc": "2026-11-22T03:54:24Z"
+          }
+        ],
+        "checksum_sha256": "40a20dd79c6190f0be5116b1a031d15398a03d5ccf51b5eb27312289a449c137",
+        "is_validated_by_companion": true,
+        "validation_passed": true,
+        "validation_notes": [],
+        "rejection_reasons": []
+      }
+    },
+    {
+      "timestamp": "2026-11-22T03:54:24.693217+00:00",
+      "event_type": "AUTH_FAILED",
+      "source": "AUTH",
+      "details": {
+        "username": "admin"
+      }
+    },
+    {
+      "timestamp": "2026-11-22T03:54:24.775268+00:00",
+      "event_type": "AUTH_SUCCESS",
+      "source": "AUTH",
+      "details": {
+        "username": "admin",
+        "role": "OPERATOR"
+      }
+    },
+    {
+      "timestamp": "2026-11-22T03:54:25.459027+00:00",
+      "event_type": "MOTOR_ARMED",
+      "source": "OPERATOR",
+      "details": {
+        "bench_mode": true
+      }
+    },
+    {
+      "timestamp": "2026-11-22T03:54:25.505693+00:00",
+      "event_type": "MOTOR_ARMED",
+      "source": "OPERATOR",
+      "details": {
+        "bench_mode": true
+      }
+    },
+    {
+      "timestamp": "2026-11-22T03:54:25.542779+00:00",
+      "event_type": "TAKEOFF_COMMANDED",
+      "source": "OPERATOR",
+      "details": {
+        "target_altitude_m": 10.0,
+        "result": {
+          "status": "STATE_CONFIRMED",
+          "target_altitude_m": 10.0,
+          "confirmed": true,
+          "message": "Autonomous TAKEOFF initiated to 10.0m (Simulation)"
+        }
+      }
+    },
+    {
+      "timestamp": "2026-11-22T03:54:25.579797+00:00",
+      "event_type": "FLIGHT_MODE_SWITCH",
+      "source": "OPERATOR",
+      "details": {
+        "mode": "GUIDED",
+        "success": true,
+        "detail": {
+          "status": "STATE_CONFIRMED",
+          "flight_mode": "GUIDED",
+          "custom_mode": 4,
+          "confirmed": true,
+          "message": "Flight mode set to GUIDED"
+        }
+      }
+    },
+    {
+      "timestamp": "2026-11-22T03:54:25.613298+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Emergency RTL triggered: TEST_FAILSAFE",
+        "elapsed": 0
+      },
+      "details": "IDLE -> FAILSAFE"
+    },
+    {
+      "timestamp": "2026-11-22T03:54:25.651705+00:00",
+      "event_type": "EMERGENCY_RTL_TRIGGERED",
+      "source": "SAFETY",
+      "details": {
+        "reason": "TEST_FAILSAFE",
+        "detail": {
+          "status": "STATE_CONFIRMED",
+          "flight_mode": "RTL",
+          "custom_mode": 6,
+          "confirmed": true,
+          "message": "Flight mode set to RTL"
+        }
+      }
+    },
+    {
+      "timestamp": "2026-11-22T03:54:26.499448+00:00",
+      "event_type": "QR_DETECTED",
+      "source": "VISION",
+      "details": {
+        "code": "42",
+        "lat": 13.0827,
+        "lon": 80.2707
+      }
+    },
+    {
+      "timestamp": "2026-11-22T03:54:26.624974+00:00",
+      "event_type": "MARSHAL_AUTH",
+      "source": {
+        "missionId": null,
+        "marshalId": "CHIEF_MARSHAL_01",
+        "signature": "SIGNATURE_OK"
+      },
+      "details": "Marshal 'CHIEF_MARSHAL_01' authorized"
+    },
+    {
+      "timestamp": "2026-11-22T03:54:26.677629+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Checks started",
+        "elapsed": 0
+      },
+      "details": "IDLE -> PREFLIGHT"
+    },
+    {
+      "timestamp": "2026-11-22T03:54:26.724306+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "All pre-arm checks pass",
+        "elapsed": 0
+      },
+      "details": "PREFLIGHT -> READY"
+    },
+    {
+      "timestamp": "2026-11-22T03:54:26.774983+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Armed",
+        "elapsed": 0
+      },
+      "details": "READY -> ARMED"
+    },
+    {
+      "timestamp": "2026-11-22T03:54:26.824676+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Climbing",
+        "elapsed": 0
+      },
+      "details": "ARMED -> TAKING_OFF"
+    },
+    {
+      "timestamp": "2026-11-22T03:54:26.876077+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Target reached",
+        "elapsed": 0
+      },
+      "details": "TAKING_OFF -> CLIMBING"
+    },
+    {
+      "timestamp": "2026-11-22T03:54:26.925306+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Executing boustrophedon sweep",
+        "elapsed": 0
+      },
+      "details": "CLIMBING -> SCANNING"
+    },
+    {
+      "timestamp": "2026-11-22T03:54:26.971292+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Cuboid box identified",
+        "elapsed": 0
+      },
+      "details": "SCANNING -> TARGET_INSPECTION"
+    },
+    {
+      "timestamp": "2026-11-22T03:54:27.012325+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Target verified with 2-digit aerial code: '42'",
+        "elapsed": 0
+      },
+      "details": "TARGET_INSPECTION -> QR_DETECTED"
+    },
+    {
+      "timestamp": "2026-11-22T03:54:27.074688+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Aerial QR '42' confirmed. Awaiting ground operative 2-digit puzzle completion.",
+        "elapsed": 0
+      },
+      "details": "QR_DETECTED -> TASK_PENDING"
+    },
+    {
+      "timestamp": "2026-11-22T03:54:27.139089+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Package retrieved. Executing autonomous RTL to finish zone.",
+        "elapsed": 0
+      },
+      "details": "TASK_PENDING -> RETURNING"
+    },
+    {
+      "timestamp": "2026-11-22T03:54:27.200869+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Target verified with 2-digit aerial code: '07'",
+        "elapsed": 0
+      },
+      "details": "IDLE -> QR_DETECTED"
+    },
+    {
+      "timestamp": "2026-11-22T03:54:27.264024+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Aerial QR '07' confirmed. Awaiting ground operative 2-digit puzzle completion.",
+        "elapsed": 0
+      },
+      "details": "QR_DETECTED -> TASK_PENDING"
+    },
+    {
+      "timestamp": "2026-11-22T03:54:27.332859+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Package retrieved. Executing autonomous RTL to finish zone.",
+        "elapsed": 0
+      },
+      "details": "TASK_PENDING -> RETURNING"
+    },
+    {
+      "timestamp": "2026-11-22T03:54:27.377071+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Mission timeout reached. Safe recovery RTL.",
+        "elapsed": 0
+      },
+      "details": "SCANNING -> RETURNING"
+    },
+    {
+      "timestamp": "2026-11-22T03:54:27.417158+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Emergency RTL triggered: Geofence breach: Geofence breached! Distance outside: 761.7m",
+        "elapsed": 0
+      },
+      "details": "SCANNING -> FAILSAFE"
+    },
+    {
+      "timestamp": "2026-11-22T03:54:27.479794+00:00",
+      "event_type": "MARSHAL_AUTH",
+      "source": {
+        "missionId": null,
+        "marshalId": "MARSHAL_42",
+        "signature": "OFFICIAL_AUTH"
+      },
+      "details": "Marshal 'MARSHAL_42' authorized"
+    },
+    {
+      "timestamp": "2026-11-22T03:54:27.523763+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Emergency RTL triggered: TEST_ABORT",
+        "elapsed": 0
+      },
+      "details": "FAILSAFE -> FAILSAFE"
+    },
+    {
+      "timestamp": "2026-11-22T03:54:27.590041+00:00",
+      "event_type": "MARSHAL_AUTH",
+      "source": {
+        "missionId": null,
+        "marshalId": "OFFICIAL_MARSHAL_01",
+        "signature": "SIG_VALID_2026"
+      },
+      "details": "Marshal 'OFFICIAL_MARSHAL_01' authorized"
+    },
+    {
+      "timestamp": "2026-11-22T03:54:27.645742+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Preflight checks initiated",
+        "elapsed": 0
+      },
+      "details": "IDLE -> PREFLIGHT"
+    },
+    {
+      "timestamp": "2026-11-22T03:54:27.684536+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Preflight checks passed",
+        "elapsed": 0
+      },
+      "details": "PREFLIGHT -> READY"
+    },
+    {
+      "timestamp": "2026-11-22T03:54:27.730615+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Pilot commands arm",
+        "elapsed": 0
+      },
+      "details": "READY -> ARMED"
+    },
+    {
+      "timestamp": "2026-11-22T03:54:27.776515+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Autonomous takeoff commanded",
+        "elapsed": 0
+      },
+      "details": "ARMED -> TAKING_OFF"
+    },
+    {
+      "timestamp": "2026-11-22T03:54:27.819849+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Ascending to cruise altitude",
+        "elapsed": 0
+      },
+      "details": "TAKING_OFF -> CLIMBING"
+    },
+    {
+      "timestamp": "2026-11-22T03:54:27.869207+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Commencing boustrophedon sweep",
+        "elapsed": 0
+      },
+      "details": "CLIMBING -> SCANNING"
+    },
+    {
+      "timestamp": "2026-11-22T03:54:27.912386+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Target cuboid detected in FOV",
+        "elapsed": 0
+      },
+      "details": "SCANNING -> TARGET_INSPECTION"
+    },
+    {
+      "timestamp": "2026-11-22T03:54:27.957089+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Target verified with 2-digit aerial code: '42'",
+        "elapsed": 0
+      },
+      "details": "TARGET_INSPECTION -> QR_DETECTED"
+    },
+    {
+      "timestamp": "2026-11-22T03:54:28.026023+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Aerial QR '42' confirmed. Awaiting ground operative 2-digit puzzle completion.",
+        "elapsed": 0
+      },
+      "details": "QR_DETECTED -> TASK_PENDING"
+    },
+    {
+      "timestamp": "2026-11-22T03:54:28.086914+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Package retrieved. Executing autonomous RTL to finish zone.",
+        "elapsed": 0
+      },
+      "details": "TASK_PENDING -> RETURNING"
+    },
+    {
+      "timestamp": "2026-11-22T03:54:28.128225+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Touchdown descent",
+        "elapsed": 0
+      },
+      "details": "RETURNING -> LANDING"
+    },
+    {
+      "timestamp": "2026-11-22T03:54:28.165949+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Sortie complete, disarmed",
+        "elapsed": 0
+      },
+      "details": "LANDING -> COMPLETED"
+    },
+    {
+      "timestamp": "2026-11-22T03:54:28.271526+00:00",
+      "event_type": "MISSION_STAGE_ADVANCE",
+      "source": "CLOUD_INGEST",
+      "details": {
+        "stage": "SEARCHING"
+      }
+    },
+    {
+      "timestamp": "2026-11-22T03:54:28.365749+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Emergency RTL triggered: API_EMERGENCY_RTL",
+        "elapsed": 0
+      },
+      "details": "COMPLETED -> FAILSAFE"
+    },
+    {
+      "timestamp": "2026-11-22T03:54:28.501478+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Operator started checks",
+        "elapsed": 0
+      },
+      "details": "IDLE -> PREFLIGHT"
+    },
+    {
+      "timestamp": "2026-11-22T03:54:28.556278+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "All checks passed",
+        "elapsed": 0
+      },
+      "details": "PREFLIGHT -> READY"
+    },
+    {
+      "timestamp": "2026-11-22T03:54:28.595046+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Safety abort",
+        "elapsed": 0
+      },
+      "details": "READY -> FAILSAFE"
+    },
+    {
+      "timestamp": "2026-11-22T03:54:29.536337+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Offline start",
+        "elapsed": 0
+      },
+      "details": "IDLE -> PREFLIGHT"
+    },
+    {
+      "timestamp": "2026-11-22T03:54:29.593269+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "",
+        "elapsed": 0
+      },
+      "details": "IDLE -> PREFLIGHT"
+    },
+    {
+      "timestamp": "2026-11-22T03:54:29.690183+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Service restart recovery",
+        "elapsed": 0
+      },
+      "details": "PREFLIGHT -> FAILSAFE"
+    },
+    {
+      "timestamp": "2026-11-22T03:54:29.896122+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Target verified with 2-digit aerial code: '56'",
+        "elapsed": 0
+      },
+      "details": "IDLE -> QR_DETECTED"
+    },
+    {
+      "timestamp": "2026-11-22T03:54:29.956340+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Aerial QR '56' confirmed. Awaiting ground operative 2-digit puzzle completion.",
+        "elapsed": 0
+      },
+      "details": "QR_DETECTED -> TASK_PENDING"
+    },
+    {
+      "timestamp": "2026-11-22T03:54:30.037976+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Package retrieved. Executing autonomous RTL to finish zone.",
+        "elapsed": 0
+      },
+      "details": "TASK_PENDING -> RETURNING"
+    },
+    {
+      "timestamp": "2026-11-22T03:54:30.098686+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": "ADDC_E2E_21STEP",
+        "reason": "Mission configured and validated",
+        "elapsed": 0
+      },
+      "details": "IDLE -> PREFLIGHT"
+    },
+    {
+      "timestamp": "2026-11-22T03:54:30.164840+00:00",
+      "event_type": "MARSHAL_AUTH",
+      "source": {
+        "missionId": "ADDC_E2E_21STEP",
+        "marshalId": "CHIEF_MARSHAL_2026",
+        "signature": "AUTH_SIG_OK"
+      },
+      "details": "Marshal 'CHIEF_MARSHAL_2026' authorized"
+    },
+    {
+      "timestamp": "2026-11-22T03:54:30.209355+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": "ADDC_E2E_21STEP",
+        "reason": "Pre-arm pass",
+        "elapsed": 0
+      },
+      "details": "PREFLIGHT -> READY"
+    },
+    {
+      "timestamp": "2026-11-22T03:54:30.281742+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": "ADDC_E2E_21STEP",
+        "reason": "Armed by pilot",
+        "elapsed": 0
+      },
+      "details": "READY -> ARMED"
+    },
+    {
+      "timestamp": "2026-11-22T03:54:30.349927+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": "ADDC_E2E_21STEP",
+        "reason": "Climbing to 10m",
+        "elapsed": 0
+      },
+      "details": "ARMED -> TAKING_OFF"
+    },
+    {
+      "timestamp": "2026-11-22T03:54:30.405326+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": "ADDC_E2E_21STEP",
+        "reason": "Altitude reached",
+        "elapsed": 0
+      },
+      "details": "TAKING_OFF -> CLIMBING"
+    },
+    {
+      "timestamp": "2026-11-22T03:54:30.462253+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": "ADDC_E2E_21STEP",
+        "reason": "Boustrophedon sweep active",
+        "elapsed": 0
+      },
+      "details": "CLIMBING -> SCANNING"
+    },
+    {
+      "timestamp": "2026-11-22T03:54:30.515843+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": "ADDC_E2E_21STEP",
+        "reason": "Target cuboid in FOV",
+        "elapsed": 0
+      },
+      "details": "SCANNING -> TARGET_INSPECTION"
+    },
+    {
+      "timestamp": "2026-11-22T03:54:30.567617+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": "ADDC_E2E_21STEP",
+        "reason": "Target verified with 2-digit aerial code: '73'",
+        "elapsed": 0
+      },
+      "details": "TARGET_INSPECTION -> QR_DETECTED"
+    },
+    {
+      "timestamp": "2026-11-22T03:54:30.647700+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": "ADDC_E2E_21STEP",
+        "reason": "Aerial QR '73' confirmed. Awaiting ground operative 2-digit puzzle completion.",
+        "elapsed": 0
+      },
+      "details": "QR_DETECTED -> TASK_PENDING"
+    },
+    {
+      "timestamp": "2026-11-22T03:54:30.784756+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": "ADDC_E2E_21STEP",
+        "reason": "Package retrieved. Executing autonomous RTL to finish zone.",
+        "elapsed": 0
+      },
+      "details": "TASK_PENDING -> RETURNING"
+    },
+    {
+      "timestamp": "2026-11-22T03:54:30.849965+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": "ADDC_E2E_21STEP",
+        "reason": "Touchdown descent",
+        "elapsed": 0
+      },
+      "details": "RETURNING -> LANDING"
+    },
+    {
+      "timestamp": "2026-11-22T03:54:30.916901+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": "ADDC_E2E_21STEP",
+        "reason": "Disarmed on ground",
+        "elapsed": 0
+      },
+      "details": "LANDING -> COMPLETED"
+    },
+    {
+      "timestamp": "2026-11-22T03:56:14.730655+00:00",
+      "event_type": "MARSHAL_AUTH",
+      "source": {
+        "missionId": null,
+        "marshalId": "CHIEF_MARSHAL_01",
+        "signature": "SIGNATURE_OK"
+      },
+      "details": "Marshal 'CHIEF_MARSHAL_01' authorized"
+    },
+    {
+      "timestamp": "2026-11-22T03:56:14.778979+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Checks started",
+        "elapsed": 0
+      },
+      "details": "IDLE -> PREFLIGHT"
+    },
+    {
+      "timestamp": "2026-11-22T03:56:14.822855+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "All pre-arm checks pass",
+        "elapsed": 0
+      },
+      "details": "PREFLIGHT -> READY"
+    },
+    {
+      "timestamp": "2026-11-22T03:56:14.861272+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Armed",
+        "elapsed": 0
+      },
+      "details": "READY -> ARMED"
+    },
+    {
+      "timestamp": "2026-11-22T03:56:14.901872+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Climbing",
+        "elapsed": 0
+      },
+      "details": "ARMED -> TAKING_OFF"
+    },
+    {
+      "timestamp": "2026-11-22T03:56:14.943675+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Target reached",
+        "elapsed": 0
+      },
+      "details": "TAKING_OFF -> CLIMBING"
+    },
+    {
+      "timestamp": "2026-11-22T03:56:14.991977+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Executing boustrophedon sweep",
+        "elapsed": 0
+      },
+      "details": "CLIMBING -> SCANNING"
+    },
+    {
+      "timestamp": "2026-11-22T03:56:15.031111+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Cuboid box identified",
+        "elapsed": 0
+      },
+      "details": "SCANNING -> TARGET_INSPECTION"
+    },
+    {
+      "timestamp": "2026-11-22T03:56:15.084959+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Target verified with 2-digit aerial code: '42'",
+        "elapsed": 0
+      },
+      "details": "TARGET_INSPECTION -> QR_DETECTED"
+    },
+    {
+      "timestamp": "2026-11-22T03:56:15.147706+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Aerial QR '42' confirmed. Awaiting ground operative 2-digit puzzle completion.",
+        "elapsed": 0
+      },
+      "details": "QR_DETECTED -> TASK_PENDING"
+    },
+    {
+      "timestamp": "2026-11-22T03:56:15.202257+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Package retrieved. Executing autonomous RTL to finish zone.",
+        "elapsed": 0
+      },
+      "details": "TASK_PENDING -> RETURNING"
+    },
+    {
+      "timestamp": "2026-11-22T03:56:15.244732+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Target verified with 2-digit aerial code: '07'",
+        "elapsed": 0
+      },
+      "details": "IDLE -> QR_DETECTED"
+    },
+    {
+      "timestamp": "2026-11-22T03:56:15.299561+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Aerial QR '07' confirmed. Awaiting ground operative 2-digit puzzle completion.",
+        "elapsed": 0
+      },
+      "details": "QR_DETECTED -> TASK_PENDING"
+    },
+    {
+      "timestamp": "2026-11-22T03:56:15.364063+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Package retrieved. Executing autonomous RTL to finish zone.",
+        "elapsed": 0
+      },
+      "details": "TASK_PENDING -> RETURNING"
+    },
+    {
+      "timestamp": "2026-11-22T03:56:15.407967+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Mission timeout reached. Safe recovery RTL.",
+        "elapsed": 0
+      },
+      "details": "SCANNING -> RETURNING"
+    },
+    {
+      "timestamp": "2026-11-22T03:56:15.444767+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Emergency RTL triggered: Geofence breach: Geofence breached! Distance outside: 761.7m",
+        "elapsed": 0
+      },
+      "details": "SCANNING -> FAILSAFE"
+    },
+    {
+      "timestamp": "2026-11-22T03:56:15.516805+00:00",
+      "event_type": "MARSHAL_AUTH",
+      "source": {
+        "missionId": null,
+        "marshalId": "MARSHAL_42",
+        "signature": "OFFICIAL_AUTH"
+      },
+      "details": "Marshal 'MARSHAL_42' authorized"
+    },
+    {
+      "timestamp": "2026-11-22T03:56:15.563571+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Emergency RTL triggered: TEST_ABORT",
+        "elapsed": 0
+      },
+      "details": "IDLE -> FAILSAFE"
+    },
+    {
+      "timestamp": "2026-11-22T03:58:34.368076+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Emergency RTL triggered: API_EMERGENCY_RTL",
+        "elapsed": 0
+      },
+      "details": "IDLE -> FAILSAFE"
+    },
+    {
+      "timestamp": "2026-11-22T03:58:34.528770+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Operator started checks",
+        "elapsed": 0
+      },
+      "details": "IDLE -> PREFLIGHT"
+    },
+    {
+      "timestamp": "2026-11-22T03:58:34.574740+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "All checks passed",
+        "elapsed": 0
+      },
+      "details": "PREFLIGHT -> READY"
+    },
+    {
+      "timestamp": "2026-11-22T03:58:34.621707+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Safety abort",
+        "elapsed": 0
+      },
+      "details": "READY -> FAILSAFE"
+    },
+    {
+      "timestamp": "2026-11-22T04:02:14.561900+00:00",
+      "event_type": "MARSHAL_AUTH",
+      "source": {
+        "missionId": null,
+        "marshalId": "CHIEF_MARSHAL_01",
+        "signature": "SIGNATURE_OK"
+      },
+      "details": "Marshal 'CHIEF_MARSHAL_01' authorized"
+    },
+    {
+      "timestamp": "2026-11-22T04:02:14.611022+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Checks started",
+        "elapsed": 0
+      },
+      "details": "IDLE -> PREFLIGHT"
+    },
+    {
+      "timestamp": "2026-11-22T04:02:14.651314+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "All pre-arm checks pass",
+        "elapsed": 0
+      },
+      "details": "PREFLIGHT -> READY"
+    },
+    {
+      "timestamp": "2026-11-22T04:02:14.695762+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Armed",
+        "elapsed": 0
+      },
+      "details": "READY -> ARMED"
+    },
+    {
+      "timestamp": "2026-11-22T04:02:14.743458+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Climbing",
+        "elapsed": 0
+      },
+      "details": "ARMED -> TAKING_OFF"
+    },
+    {
+      "timestamp": "2026-11-22T04:02:14.784153+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Target reached",
+        "elapsed": 0
+      },
+      "details": "TAKING_OFF -> CLIMBING"
+    },
+    {
+      "timestamp": "2026-11-22T04:02:14.835223+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Executing boustrophedon sweep",
+        "elapsed": 0
+      },
+      "details": "CLIMBING -> SCANNING"
+    },
+    {
+      "timestamp": "2026-11-22T04:02:14.883879+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Cuboid box identified",
+        "elapsed": 0
+      },
+      "details": "SCANNING -> TARGET_INSPECTION"
+    },
+    {
+      "timestamp": "2026-11-22T04:02:14.932647+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Target verified with 2-digit aerial code: '42'",
+        "elapsed": 0
+      },
+      "details": "TARGET_INSPECTION -> QR_DETECTED"
+    },
+    {
+      "timestamp": "2026-11-22T04:02:14.996250+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Aerial QR '42' confirmed. Awaiting ground operative 2-digit puzzle completion.",
+        "elapsed": 0
+      },
+      "details": "QR_DETECTED -> TASK_PENDING"
+    },
+    {
+      "timestamp": "2026-11-22T04:02:15.066601+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Package retrieved. Executing autonomous RTL to finish zone.",
+        "elapsed": 0
+      },
+      "details": "TASK_PENDING -> RETURNING"
+    },
+    {
+      "timestamp": "2026-11-22T04:02:15.119432+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Target verified with 2-digit aerial code: '07'",
+        "elapsed": 0
+      },
+      "details": "IDLE -> QR_DETECTED"
+    },
+    {
+      "timestamp": "2026-11-22T04:02:15.184403+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Aerial QR '07' confirmed. Awaiting ground operative 2-digit puzzle completion.",
+        "elapsed": 0
+      },
+      "details": "QR_DETECTED -> TASK_PENDING"
+    },
+    {
+      "timestamp": "2026-11-22T04:02:15.250892+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Package retrieved. Executing autonomous RTL to finish zone.",
+        "elapsed": 0
+      },
+      "details": "TASK_PENDING -> RETURNING"
+    },
+    {
+      "timestamp": "2026-11-22T04:02:15.299874+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Mission timeout reached. Safe recovery RTL.",
+        "elapsed": 0
+      },
+      "details": "SCANNING -> RETURNING"
+    },
+    {
+      "timestamp": "2026-11-22T04:02:15.346613+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Emergency RTL triggered: Geofence breach: Geofence breached! Distance outside: 761.7m",
+        "elapsed": 0
+      },
+      "details": "SCANNING -> FAILSAFE"
+    },
+    {
+      "timestamp": "2026-11-22T04:02:15.415441+00:00",
+      "event_type": "MARSHAL_AUTH",
+      "source": {
+        "missionId": null,
+        "marshalId": "MARSHAL_42",
+        "signature": "OFFICIAL_AUTH"
+      },
+      "details": "Marshal 'MARSHAL_42' authorized"
+    },
+    {
+      "timestamp": "2026-11-22T04:02:15.477138+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Emergency RTL triggered: TEST_ABORT",
+        "elapsed": 0
+      },
+      "details": "IDLE -> FAILSAFE"
+    },
+    {
+      "timestamp": "2026-11-22T04:02:42.709740+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Offline start",
+        "elapsed": 0
+      },
+      "details": "IDLE -> PREFLIGHT"
+    },
+    {
+      "timestamp": "2026-11-22T04:02:42.756401+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "",
+        "elapsed": 0
+      },
+      "details": "IDLE -> PREFLIGHT"
+    },
+    {
+      "timestamp": "2026-11-22T04:02:42.792172+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Service restart recovery",
+        "elapsed": 0
+      },
+      "details": "PREFLIGHT -> FAILSAFE"
+    },
+    {
+      "timestamp": "2026-11-22T04:02:42.942551+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Target verified with 2-digit aerial code: '56'",
+        "elapsed": 0
+      },
+      "details": "IDLE -> QR_DETECTED"
+    },
+    {
+      "timestamp": "2026-11-22T04:02:43.002335+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Aerial QR '56' confirmed. Awaiting ground operative 2-digit puzzle completion.",
+        "elapsed": 0
+      },
+      "details": "QR_DETECTED -> TASK_PENDING"
+    },
+    {
+      "timestamp": "2026-11-22T04:02:43.066018+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Package retrieved. Executing autonomous RTL to finish zone.",
+        "elapsed": 0
+      },
+      "details": "TASK_PENDING -> RETURNING"
+    },
+    {
+      "timestamp": "2026-11-22T04:02:43.116765+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": "ADDC_E2E_21STEP",
+        "reason": "Mission configured and validated",
+        "elapsed": 0
+      },
+      "details": "IDLE -> PREFLIGHT"
+    },
+    {
+      "timestamp": "2026-11-22T04:02:43.163552+00:00",
+      "event_type": "MARSHAL_AUTH",
+      "source": {
+        "missionId": "ADDC_E2E_21STEP",
+        "marshalId": "CHIEF_MARSHAL_2026",
+        "signature": "AUTH_SIG_OK"
+      },
+      "details": "Marshal 'CHIEF_MARSHAL_2026' authorized"
+    },
+    {
+      "timestamp": "2026-11-22T04:02:43.203183+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": "ADDC_E2E_21STEP",
+        "reason": "Pre-arm pass",
+        "elapsed": 0
+      },
+      "details": "PREFLIGHT -> READY"
+    },
+    {
+      "timestamp": "2026-11-22T04:02:43.265407+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": "ADDC_E2E_21STEP",
+        "reason": "Armed by pilot",
+        "elapsed": 0
+      },
+      "details": "READY -> ARMED"
+    },
+    {
+      "timestamp": "2026-11-22T04:02:43.331548+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": "ADDC_E2E_21STEP",
+        "reason": "Climbing to 10m",
+        "elapsed": 0
+      },
+      "details": "ARMED -> TAKING_OFF"
+    },
+    {
+      "timestamp": "2026-11-22T04:02:43.391156+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": "ADDC_E2E_21STEP",
+        "reason": "Altitude reached",
+        "elapsed": 0
+      },
+      "details": "TAKING_OFF -> CLIMBING"
+    },
+    {
+      "timestamp": "2026-11-22T04:02:43.452502+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": "ADDC_E2E_21STEP",
+        "reason": "Boustrophedon sweep active",
+        "elapsed": 0
+      },
+      "details": "CLIMBING -> SCANNING"
+    },
+    {
+      "timestamp": "2026-11-22T04:02:43.518480+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": "ADDC_E2E_21STEP",
+        "reason": "Target cuboid in FOV",
+        "elapsed": 0
+      },
+      "details": "SCANNING -> TARGET_INSPECTION"
+    },
+    {
+      "timestamp": "2026-11-22T04:02:43.584112+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": "ADDC_E2E_21STEP",
+        "reason": "Target verified with 2-digit aerial code: '73'",
+        "elapsed": 0
+      },
+      "details": "TARGET_INSPECTION -> QR_DETECTED"
+    },
+    {
+      "timestamp": "2026-11-22T04:02:43.670171+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": "ADDC_E2E_21STEP",
+        "reason": "Aerial QR '73' confirmed. Awaiting ground operative 2-digit puzzle completion.",
+        "elapsed": 0
+      },
+      "details": "QR_DETECTED -> TASK_PENDING"
+    },
+    {
+      "timestamp": "2026-11-22T04:02:43.758660+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": "ADDC_E2E_21STEP",
+        "reason": "Package retrieved. Executing autonomous RTL to finish zone.",
+        "elapsed": 0
+      },
+      "details": "TASK_PENDING -> RETURNING"
+    },
+    {
+      "timestamp": "2026-11-22T04:02:43.822468+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": "ADDC_E2E_21STEP",
+        "reason": "Touchdown descent",
+        "elapsed": 0
+      },
+      "details": "RETURNING -> LANDING"
+    },
+    {
+      "timestamp": "2026-11-22T04:02:43.890292+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": "ADDC_E2E_21STEP",
+        "reason": "Disarmed on ground",
+        "elapsed": 0
+      },
+      "details": "LANDING -> COMPLETED"
+    },
+    {
+      "timestamp": "2026-11-22T04:09:57.858549+00:00",
+      "event_type": "MARSHAL_AUTH",
+      "source": {
+        "missionId": null,
+        "marshalId": "CHIEF_MARSHAL_01",
+        "signature": "SIGNATURE_OK"
+      },
+      "details": "Marshal 'CHIEF_MARSHAL_01' authorized"
+    },
+    {
+      "timestamp": "2026-11-22T04:09:57.910072+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Checks started",
+        "elapsed": 0
+      },
+      "details": "IDLE -> PREFLIGHT"
+    },
+    {
+      "timestamp": "2026-11-22T04:09:57.951480+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "All pre-arm checks pass",
+        "elapsed": 0
+      },
+      "details": "PREFLIGHT -> READY"
+    },
+    {
+      "timestamp": "2026-11-22T04:09:57.997882+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Armed",
+        "elapsed": 0
+      },
+      "details": "READY -> ARMED"
+    },
+    {
+      "timestamp": "2026-11-22T04:09:58.047319+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Climbing",
+        "elapsed": 0
+      },
+      "details": "ARMED -> TAKING_OFF"
+    },
+    {
+      "timestamp": "2026-11-22T04:09:58.097972+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Target reached",
+        "elapsed": 0
+      },
+      "details": "TAKING_OFF -> CLIMBING"
+    },
+    {
+      "timestamp": "2026-11-22T04:09:58.146301+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Executing boustrophedon sweep",
+        "elapsed": 0
+      },
+      "details": "CLIMBING -> SCANNING"
+    },
+    {
+      "timestamp": "2026-11-22T04:09:58.198130+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Cuboid box identified",
+        "elapsed": 0
+      },
+      "details": "SCANNING -> TARGET_INSPECTION"
+    },
+    {
+      "timestamp": "2026-11-22T04:09:58.238398+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Target verified with 2-digit aerial code: '42'",
+        "elapsed": 0
+      },
+      "details": "TARGET_INSPECTION -> QR_DETECTED"
+    },
+    {
+      "timestamp": "2026-11-22T04:09:58.308842+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Aerial QR '42' confirmed. Awaiting ground operative 2-digit puzzle completion.",
+        "elapsed": 0
+      },
+      "details": "QR_DETECTED -> TASK_PENDING"
+    },
+    {
+      "timestamp": "2026-11-22T04:09:58.378534+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Package retrieved. Executing autonomous RTL to finish zone.",
+        "elapsed": 0
+      },
+      "details": "TASK_PENDING -> RETURNING"
+    },
+    {
+      "timestamp": "2026-11-22T04:09:58.443622+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Target verified with 2-digit aerial code: '07'",
+        "elapsed": 0
+      },
+      "details": "IDLE -> QR_DETECTED"
+    },
+    {
+      "timestamp": "2026-11-22T04:09:58.533573+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Aerial QR '07' confirmed. Awaiting ground operative 2-digit puzzle completion.",
+        "elapsed": 0
+      },
+      "details": "QR_DETECTED -> TASK_PENDING"
+    },
+    {
+      "timestamp": "2026-11-22T04:09:58.602965+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Package retrieved. Executing autonomous RTL to finish zone.",
+        "elapsed": 0
+      },
+      "details": "TASK_PENDING -> RETURNING"
+    },
+    {
+      "timestamp": "2026-11-22T04:09:58.671215+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Mission started by operator",
+        "elapsed": 0
+      },
+      "details": "IDLE -> ARMED"
+    },
+    {
+      "timestamp": "2026-11-22T04:09:58.733244+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Climbing to 10.0m",
+        "elapsed": 0
+      },
+      "details": "ARMED -> TAKING_OFF"
+    },
+    {
+      "timestamp": "2026-11-22T04:09:58.792640+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Mission timeout reached. Safe recovery RTL.",
+        "elapsed": 0
+      },
+      "details": "SCANNING -> RETURNING"
+    },
+    {
+      "timestamp": "2026-11-22T04:09:58.846290+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Emergency RTL triggered: Geofence breach: Geofence breached! Distance outside: 761.7m",
+        "elapsed": 0
+      },
+      "details": "SCANNING -> FAILSAFE"
+    },
+    {
+      "timestamp": "2026-11-22T04:09:58.930579+00:00",
+      "event_type": "MARSHAL_AUTH",
+      "source": {
+        "missionId": null,
+        "marshalId": "MARSHAL_42",
+        "signature": "OFFICIAL_AUTH"
+      },
+      "details": "Marshal 'MARSHAL_42' authorized"
+    },
+    {
+      "timestamp": "2026-11-22T04:09:58.989109+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Emergency RTL triggered: TEST_ABORT",
+        "elapsed": 0
+      },
+      "details": "IDLE -> FAILSAFE"
+    },
+    {
+      "timestamp": "2026-11-22T04:13:18.265046+00:00",
+      "event_type": "MARSHAL_AUTH",
+      "source": {
+        "missionId": null,
+        "marshalId": "CHIEF_MARSHAL_01",
+        "signature": "SIGNATURE_OK"
+      },
+      "details": "Marshal 'CHIEF_MARSHAL_01' authorized"
+    },
+    {
+      "timestamp": "2026-11-22T04:13:18.320205+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Checks started",
+        "elapsed": 0
+      },
+      "details": "IDLE -> PREFLIGHT"
+    },
+    {
+      "timestamp": "2026-11-22T04:13:18.371408+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "All pre-arm checks pass",
+        "elapsed": 0
+      },
+      "details": "PREFLIGHT -> READY"
+    },
+    {
+      "timestamp": "2026-11-22T04:13:18.411512+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Armed",
+        "elapsed": 0
+      },
+      "details": "READY -> ARMED"
+    },
+    {
+      "timestamp": "2026-11-22T04:13:18.448661+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Climbing",
+        "elapsed": 0
+      },
+      "details": "ARMED -> TAKING_OFF"
+    },
+    {
+      "timestamp": "2026-11-22T04:13:18.488083+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Target reached",
+        "elapsed": 0
+      },
+      "details": "TAKING_OFF -> CLIMBING"
+    },
+    {
+      "timestamp": "2026-11-22T04:13:18.526208+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Executing boustrophedon sweep",
+        "elapsed": 0
+      },
+      "details": "CLIMBING -> SCANNING"
+    },
+    {
+      "timestamp": "2026-11-22T04:13:18.568592+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Cuboid box identified",
+        "elapsed": 0
+      },
+      "details": "SCANNING -> TARGET_INSPECTION"
+    },
+    {
+      "timestamp": "2026-11-22T04:13:18.612900+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Target verified with 2-digit aerial code: '42'",
+        "elapsed": 0
+      },
+      "details": "TARGET_INSPECTION -> QR_DETECTED"
+    },
+    {
+      "timestamp": "2026-11-22T04:13:18.677941+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Aerial QR '42' confirmed. Awaiting ground operative 2-digit puzzle completion.",
+        "elapsed": 0
+      },
+      "details": "QR_DETECTED -> TASK_PENDING"
+    },
+    {
+      "timestamp": "2026-11-22T04:13:18.736451+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Package retrieved. Executing autonomous RTL to finish zone.",
+        "elapsed": 0
+      },
+      "details": "TASK_PENDING -> RETURNING"
+    },
+    {
+      "timestamp": "2026-11-22T04:13:18.781590+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Target verified with 2-digit aerial code: '07'",
+        "elapsed": 0
+      },
+      "details": "IDLE -> QR_DETECTED"
+    },
+    {
+      "timestamp": "2026-11-22T04:13:18.839712+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Aerial QR '07' confirmed. Awaiting ground operative 2-digit puzzle completion.",
+        "elapsed": 0
+      },
+      "details": "QR_DETECTED -> TASK_PENDING"
+    },
+    {
+      "timestamp": "2026-11-22T04:13:18.914336+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Package retrieved. Executing autonomous RTL to finish zone.",
+        "elapsed": 0
+      },
+      "details": "TASK_PENDING -> RETURNING"
+    },
+    {
+      "timestamp": "2026-11-22T04:13:18.966284+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Mission started by operator",
+        "elapsed": 0
+      },
+      "details": "IDLE -> ARMED"
+    },
+    {
+      "timestamp": "2026-11-22T04:13:19.019025+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Climbing to 10.0m",
+        "elapsed": 0
+      },
+      "details": "ARMED -> TAKING_OFF"
+    },
+    {
+      "timestamp": "2026-11-22T04:13:19.069404+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Mission timeout reached. Safe recovery RTL.",
+        "elapsed": 0
+      },
+      "details": "SCANNING -> RETURNING"
+    },
+    {
+      "timestamp": "2026-11-22T04:13:19.121378+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Emergency RTL triggered: Geofence breach: Geofence breached! Distance outside: 761.7m",
+        "elapsed": 0
+      },
+      "details": "SCANNING -> FAILSAFE"
+    },
+    {
+      "timestamp": "2026-11-22T04:13:19.216976+00:00",
+      "event_type": "MARSHAL_AUTH",
+      "source": {
+        "missionId": null,
+        "marshalId": "MARSHAL_42",
+        "signature": "OFFICIAL_AUTH"
+      },
+      "details": "Marshal 'MARSHAL_42' authorized"
+    },
+    {
+      "timestamp": "2026-11-22T04:13:19.287683+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Emergency RTL triggered: TEST_ABORT",
+        "elapsed": 0
+      },
+      "details": "IDLE -> FAILSAFE"
+    },
+    {
+      "timestamp": "2026-11-22T04:13:22.274649+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Offline start",
+        "elapsed": 0
+      },
+      "details": "IDLE -> PREFLIGHT"
+    },
+    {
+      "timestamp": "2026-11-22T04:13:22.340850+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "",
+        "elapsed": 0
+      },
+      "details": "IDLE -> PREFLIGHT"
+    },
+    {
+      "timestamp": "2026-11-22T04:13:22.396950+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Service restart recovery",
+        "elapsed": 0
+      },
+      "details": "PREFLIGHT -> FAILSAFE"
+    },
+    {
+      "timestamp": "2026-11-22T04:13:22.554651+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Target verified with 2-digit aerial code: '56'",
+        "elapsed": 0
+      },
+      "details": "IDLE -> QR_DETECTED"
+    },
+    {
+      "timestamp": "2026-11-22T04:13:22.619626+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Aerial QR '56' confirmed. Awaiting ground operative 2-digit puzzle completion.",
+        "elapsed": 0
+      },
+      "details": "QR_DETECTED -> TASK_PENDING"
+    },
+    {
+      "timestamp": "2026-11-22T04:13:22.684445+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": null,
+        "reason": "Package retrieved. Executing autonomous RTL to finish zone.",
+        "elapsed": 0
+      },
+      "details": "TASK_PENDING -> RETURNING"
+    },
+    {
+      "timestamp": "2026-11-22T04:13:22.730396+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": "ADDC_E2E_21STEP",
+        "reason": "Mission configured and validated",
+        "elapsed": 0
+      },
+      "details": "IDLE -> PREFLIGHT"
+    },
+    {
+      "timestamp": "2026-11-22T04:13:22.783114+00:00",
+      "event_type": "MARSHAL_AUTH",
+      "source": {
+        "missionId": "ADDC_E2E_21STEP",
+        "marshalId": "CHIEF_MARSHAL_2026",
+        "signature": "AUTH_SIG_OK"
+      },
+      "details": "Marshal 'CHIEF_MARSHAL_2026' authorized"
+    },
+    {
+      "timestamp": "2026-11-22T04:13:22.820984+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": "ADDC_E2E_21STEP",
+        "reason": "Pre-arm pass",
+        "elapsed": 0
+      },
+      "details": "PREFLIGHT -> READY"
+    },
+    {
+      "timestamp": "2026-11-22T04:13:22.878540+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": "ADDC_E2E_21STEP",
+        "reason": "Armed by pilot",
+        "elapsed": 0
+      },
+      "details": "READY -> ARMED"
+    },
+    {
+      "timestamp": "2026-11-22T04:13:22.947882+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": "ADDC_E2E_21STEP",
+        "reason": "Climbing to 10m",
+        "elapsed": 0
+      },
+      "details": "ARMED -> TAKING_OFF"
+    },
+    {
+      "timestamp": "2026-11-22T04:13:23.008521+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": "ADDC_E2E_21STEP",
+        "reason": "Altitude reached",
+        "elapsed": 0
+      },
+      "details": "TAKING_OFF -> CLIMBING"
+    },
+    {
+      "timestamp": "2026-11-22T04:13:23.070333+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": "ADDC_E2E_21STEP",
+        "reason": "Boustrophedon sweep active",
+        "elapsed": 0
+      },
+      "details": "CLIMBING -> SCANNING"
+    },
+    {
+      "timestamp": "2026-11-22T04:13:23.145808+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": "ADDC_E2E_21STEP",
+        "reason": "Target cuboid in FOV",
+        "elapsed": 0
+      },
+      "details": "SCANNING -> TARGET_INSPECTION"
+    },
+    {
+      "timestamp": "2026-11-22T04:13:23.211002+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": "ADDC_E2E_21STEP",
+        "reason": "Target verified with 2-digit aerial code: '73'",
+        "elapsed": 0
+      },
+      "details": "TARGET_INSPECTION -> QR_DETECTED"
+    },
+    {
+      "timestamp": "2026-11-22T04:13:23.297774+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": "ADDC_E2E_21STEP",
+        "reason": "Aerial QR '73' confirmed. Awaiting ground operative 2-digit puzzle completion.",
+        "elapsed": 0
+      },
+      "details": "QR_DETECTED -> TASK_PENDING"
+    },
+    {
+      "timestamp": "2026-11-22T04:13:23.383592+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": "ADDC_E2E_21STEP",
+        "reason": "Package retrieved. Executing autonomous RTL to finish zone.",
+        "elapsed": 0
+      },
+      "details": "TASK_PENDING -> RETURNING"
+    },
+    {
+      "timestamp": "2026-11-22T04:13:23.448600+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": "ADDC_E2E_21STEP",
+        "reason": "Touchdown descent",
+        "elapsed": 0
+      },
+      "details": "RETURNING -> LANDING"
+    },
+    {
+      "timestamp": "2026-11-22T04:13:23.509140+00:00",
+      "event_type": "STATE_TRANSITION",
+      "source": {
+        "missionId": "ADDC_E2E_21STEP",
+        "reason": "Disarmed on ground",
+        "elapsed": 0
+      },
+      "details": "LANDING -> COMPLETED"
     }
   ]
 }

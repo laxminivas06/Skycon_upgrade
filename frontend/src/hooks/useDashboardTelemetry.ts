@@ -35,6 +35,7 @@ export interface DashboardTelemetryData {
   magFieldStrength: number;
   isCompassHealthy: boolean;
   isCompassCalibrated: boolean;
+  ekfHealthy: boolean;
   isStale: boolean;
   isLinkLost: boolean;
   isTelemetryAvailable: boolean;
@@ -162,6 +163,7 @@ export const useDashboardTelemetry = (): DashboardTelemetryData => {
       magFieldStrength: 480,
       isCompassHealthy: true,
       isCompassCalibrated: true,
+      ekfHealthy: true,
       isStale: false,
       isLinkLost: false,
       isTelemetryAvailable: true,
@@ -263,6 +265,7 @@ export const useDashboardTelemetry = (): DashboardTelemetryData => {
     magFieldStrength: telemetry.magFieldStrength ?? 480,
     isCompassHealthy: telemetry.isCompassHealthy ?? true,
     isCompassCalibrated: telemetry.isCompassCalibrated ?? true,
+    ekfHealthy: Boolean(telemetry.ekfHealthy ?? connState.ekfHealthy ?? true),
     isStale,
     isLinkLost,
     isTelemetryAvailable,

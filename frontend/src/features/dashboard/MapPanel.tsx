@@ -842,31 +842,12 @@ export const MapPanel: React.FC<MapPanelProps> = ({
         return;
       }
 
-      const latlngs: L.LatLngExpression[] = [];
-
-      mission.waypoints.forEach((wp, idx) => {
-        const pt: L.LatLngExpression = [wp.lat, wp.lng];
-        latlngs.push(pt);
-
-        const wpIcon = L.divIcon({
-          className: 'wp-leaflet-icon',
-          html: `
-            <div style="width: 22px; height: 22px; border-radius: 50%; background: #161B22; border: 2px solid #10B981; color: #ffffff; font-size: 10px; font-weight: bold; font-family: monospace; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(0,0,0,0.6);">
-              ${idx + 1}
-            </div>
-          `,
-          iconSize: [22, 22],
-          iconAnchor: [11, 11],
-        });
-
-        const m = L.marker(pt, { icon: wpIcon }).bindTooltip(`WP ${idx + 1}: ${wp.lat.toFixed(5)}, ${wp.lng.toFixed(5)} (Alt: ${wp.altitude}m)`, {
-          direction: 'top',
-          offset: [0, -12],
-        });
-        wpGroup.addLayer(m);
-      });
-
+      const latlngs: L.LatLngExpression[] = mission.waypoints.map((wp) => [wp.lat, wp.lng]);
       polyline.setLatLngs(latlngs);
+      polyline.bindTooltip('SEARCH PATTERN TRAJECTORY', {
+        direction: 'top',
+        className: 'bg-slate-900 text-emerald-300 font-mono text-[9.5px] px-2 py-0.5 rounded border border-emerald-500/50'
+      });
 
       // Render Search Boundary Vector Polygon (Requirement R4 & Phase 3)
       if (searchBoundaryPolygonRef.current && map.hasLayer(searchBoundaryPolygonRef.current)) {

@@ -926,7 +926,8 @@ def missions_active():
 def missions_start():
     body = request.get_json(silent=True) or {}
     mission_id = body.get("mission_id")
-    success = mission_engine.start_mission(mission_id)
+    res = mission_engine.start_mission(mission_id)
+    success = res.get("success", False) if isinstance(res, dict) else bool(res)
     if success:
         # Switch flight mode to GUIDED
         mavlink_mux.set_mode("GUIDED")

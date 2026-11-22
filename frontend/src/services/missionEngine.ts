@@ -105,8 +105,8 @@ export function isPointInBoundary(lat: number, lng: number, boundary?: SearchBou
 class MissionEngine {
   private currentState: MissionState = 'IDLE';
   private commandAuthority: FlightCommandAuthority = 'NONE';
-  private missionDurationLimitSec: number = 300; // ADDC 2026 Official 5-Minute Competition Window
-  private remainingSeconds: number = 300;
+  private missionDurationLimitSec: number = 240; // SAE INDIA Official 4-Minute Search Window (240s)
+  private remainingSeconds: number = 240;
   private elapsedSeconds: number = 0;
   private missionStartTime: number = 0;
   private timerInterval: any = null;
@@ -151,9 +151,9 @@ class MissionEngine {
       const savedDuration = localStorage.getItem(CONFIG_DURATION_KEY);
       if (savedDuration) {
         let parsed = parseInt(savedDuration, 10);
-        if (parsed === 180) {
-          parsed = 300;
-          localStorage.setItem(CONFIG_DURATION_KEY, '300');
+        if (parsed === 180 || parsed === 300) {
+          parsed = 240;
+          localStorage.setItem(CONFIG_DURATION_KEY, '240');
         }
         if (!isNaN(parsed) && parsed > 0) {
           this.missionDurationLimitSec = parsed;
@@ -636,7 +636,9 @@ class MissionEngine {
     }
 
     // Verification 5: Search Boundary Valid
-    if (!this.missionConfig.searchBoundary || !this.missionConfig.searchBoundary.coordinates?.length) {
+    const hasBoundaryCoords = (this.missionConfig.searchBoundary?.coordinates?.length ?? 0) >= 3;
+    const isCircleBoundary = this.missionConfig.searchBoundary?.type === 'CIRCLE' && (this.missionConfig.searchBoundary?.circleRadiusMeters ?? 0) > 0;
+    if (!this.missionConfig.searchBoundary || (!hasBoundaryCoords && !isCircleBoundary)) {
       errors.push('Search Boundary unconfigured');
     }
 

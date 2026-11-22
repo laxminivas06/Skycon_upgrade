@@ -57,6 +57,8 @@ export type SearchAlgorithmType =
   | 'GRID'
   | 'SPIRAL'
   | 'EXPANDING_SPIRAL'
+  | 'INWARD_SPIRAL'
+  | 'BOUSTROPHEDON'
   | 'PERIMETER'
   | 'ADAPTIVE'
   | 'SECTOR'

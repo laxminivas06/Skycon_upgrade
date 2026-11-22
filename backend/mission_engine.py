@@ -63,18 +63,18 @@ ADDC_COMPETITION_STAGES = [
 
 VALID_TRANSITIONS: Dict[str, List[str]] = {
     "DISCONNECTED": ["IDLE", "PREFLIGHT"],
-    "IDLE": ["PREFLIGHT", "DISCONNECTED", "QR_DETECTED"],
-    "PREFLIGHT": ["READY", "IDLE", "FAILSAFE"],
-    "READY": ["ARMED", "IDLE", "FAILSAFE"],
-    "ARMED": ["TAKING_OFF", "IDLE", "FAILSAFE", "ABORTED"],
-    "TAKING_OFF": ["CLIMBING", "FAILSAFE", "ABORTED", "RETURNING"],
+    "IDLE": ["PREFLIGHT", "READY", "ARMED", "TAKING_OFF", "DISCONNECTED", "QR_DETECTED"],
+    "PREFLIGHT": ["READY", "ARMED", "IDLE", "FAILSAFE"],
+    "READY": ["ARMED", "TAKING_OFF", "IDLE", "FAILSAFE"],
+    "ARMED": ["TAKING_OFF", "CLIMBING", "IDLE", "FAILSAFE", "ABORTED"],
+    "TAKING_OFF": ["CLIMBING", "SCANNING", "FAILSAFE", "ABORTED", "RETURNING"],
     "CLIMBING": ["SCANNING", "FAILSAFE", "ABORTED", "RETURNING"],
     "SCANNING": ["MAPPING", "TARGET_INSPECTION", "QR_DETECTED", "FAILSAFE", "ABORTED", "RETURNING"],
     "MAPPING": ["SCANNING", "TARGET_INSPECTION", "QR_DETECTED", "FAILSAFE", "ABORTED", "RETURNING"],
     "TARGET_INSPECTION": ["QR_DETECTED", "SCANNING", "FAILSAFE", "ABORTED", "RETURNING"],
     "QR_DETECTED": ["TASK_PENDING", "RETURNING", "COMPLETED", "FAILSAFE", "IDLE"],
     "TASK_PENDING": ["RETURNING", "COMPLETED", "FAILSAFE", "ABORTED", "IDLE"],
-    "RETURNING": ["LANDING", "FAILSAFE", "ABORTED"],
+    "RETURNING": ["LANDING", "COMPLETED", "FAILSAFE", "ABORTED"],
     "LANDING": ["COMPLETED", "FAILSAFE", "IDLE"],
     "COMPLETED": ["IDLE"],
     "ABORTED": ["IDLE", "RETURNING", "LANDING"],
@@ -361,9 +361,11 @@ class MissionEngine:
             self.transition_to("PREFLIGHT", "Mission configured and validated")
             return {"success": True, "missionId": self.active_mission_id, "waypointCount": len(self.waypoints)}
 
-    def start_mission(self) -> Dict[str, Any]:
-        """Starts official autonomous competition mission and starts 5-min clock."""
+    def start_mission(self, mission_id: Optional[str] = None) -> Dict[str, Any]:
+        """Starts official autonomous competition mission and starts 4-min clock."""
         with self._lock:
+            if mission_id:
+                self.active_mission_id = mission_id
             now = time.time()
             self.start_time = now
             self.deadline = now + self.target_duration_s

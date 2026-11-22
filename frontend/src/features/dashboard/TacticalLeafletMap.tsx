@@ -637,14 +637,14 @@ export const TacticalLeafletMap: React.FC<TacticalLeafletMapProps> = ({
     }
   }, [telemetry, showUncertaintyLayer]);
 
-  // 11. Render Mission Waypoints
+  // 11. Render Continuous Search Pattern Trajectory (Non-waypoint autonomous guidance)
   useEffect(() => {
     const map = mapRef.current;
     const wpGroup = waypointsLayerRef.current;
     const polyline = missionPolylineRef.current;
-    if (!map || !wpGroup || !polyline) return;
+    if (!map || !polyline) return;
 
-    wpGroup.clearLayers();
+    if (wpGroup) wpGroup.clearLayers();
 
     const wps = propWaypoints || (currentMission?.waypoints.map((w, idx) => ({
       seq: idx + 1,
@@ -657,22 +657,9 @@ export const TacticalLeafletMap: React.FC<TacticalLeafletMapProps> = ({
     if (wps && wps.length > 0) {
       const latlngs = wps.map((w) => [w.lat, w.lon] as [number, number]);
       polyline.setLatLngs(latlngs);
-
-      wps.forEach((wp) => {
-        const isRtl = wp.command === 20;
-        const marker = L.circleMarker([wp.lat, wp.lon], {
-          radius: wp.seq === 1 ? 5 : 3.5,
-          fillColor: isRtl ? '#a855f7' : '#10b981',
-          color: '#ffffff',
-          weight: 1.5,
-          opacity: 1,
-          fillOpacity: 0.9
-        }).bindTooltip(`WP #${wp.seq} (${wp.alt}m)`, {
-          direction: 'top',
-          offset: [0, -6],
-          className: 'bg-slate-900 text-white font-mono text-[9px] px-1 py-0.5 rounded border border-slate-700'
-        });
-        wpGroup.addLayer(marker);
+      polyline.bindTooltip('AUTONOMOUS SEARCH PATTERN TRAJECTORY', {
+        direction: 'top',
+        className: 'bg-slate-900 text-emerald-300 font-mono text-[9.5px] px-2 py-0.5 rounded border border-emerald-500/50'
       });
     } else {
       polyline.setLatLngs([]);

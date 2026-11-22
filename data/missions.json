@@ -1,8 +1,8 @@
 {
   "_schema_version": "2.0",
   "_collection": "missions",
-  "_updated_at": "2026-11-21T14:32:54.789637+00:00",
-  "_checksum_sha256": "7d1d590fa8192af0b54af0e0ea6fb7b43b9791a33a9f1bbda688fd1bac3ee286",
+  "_updated_at": "2026-11-22T04:13:23.560982+00:00",
+  "_checksum_sha256": "955d74fa903480002db5d793d37fb7724b763015782840d1c373fc4d20cba185",
   "_data": [
     {
       "missionId": "MISS_1792487657929",
@@ -58,7 +58,7 @@
           "speed": 3.0
         }
       ],
-      "lastUpdated": 1795271574775
+      "lastUpdated": 1795320803551
     }
   ]
 }

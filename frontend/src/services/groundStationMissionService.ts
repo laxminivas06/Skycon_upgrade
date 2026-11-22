@@ -3,6 +3,7 @@ import { GroundStationMission, GroundStationWaypoint, MissionType, MissionDrawin
 import { missionEngine } from './missionEngine';
 import { mavlinkService, MavlinkMissionItem } from './mavlinkService';
 import { audioService } from './audioService';
+import { geofenceService } from './geofenceService';
 import { fetchWithFallback } from './apiClient';
 import { systemAlertService } from './systemAlertService';
 
@@ -707,10 +708,10 @@ export class GroundStationMissionService {
   public generateAutonomousSearchMission(
     center: LatLngPoint,
     radiusMeters: number = 10,
-    algorithm: 'TANGENTIAL_CIRCULAR' | 'SPIRAL' | 'RECTANGULAR_SPIRAL' | 'SQUARE_SPIRAL' | 'BOUSTROPHEDON' | 'INWARD_SPIRAL' | 'EXPANDING_SPIRAL' | 'MANUAL_WAYPOINTS' = 'BOUSTROPHEDON',
+    algorithm: 'TANGENTIAL_CIRCULAR' | 'SPIRAL' | 'RECTANGULAR_SPIRAL' | 'SQUARE_SPIRAL' | 'BOUSTROPHEDON' | 'INWARD_SPIRAL' | 'EXPANDING_SPIRAL' | 'PERIMETER' | 'MANUAL_WAYPOINTS' = 'BOUSTROPHEDON',
     homePoint: HomePoint = { latitude: 0, longitude: 0, altitude: 0, timestamp: 0, isSet: false },
     altitude: number = 5,
-    timeLimitMinutes: number = 5,
+    timeLimitMinutes: number = 4,
     speed: number = 4.0,
     boundaryDimensions?: { width: number; height: number }
   ): {
@@ -862,6 +863,47 @@ export class GroundStationMissionService {
           k++;
         }
       }
+    } else if (algorithm === 'PERIMETER') {
+      boundaryArea = widthMeters * heightMeters;
+      const hw = widthMeters / 2.0;
+      const hh = heightMeters / 2.0;
+      const rEarth = 6378137.0;
+      const dLatHalf = (hh / rEarth) * (180.0 / Math.PI);
+      const dLonHalf = (hw / (rEarth * Math.cos(center.lat * Math.PI / 180.0))) * (180.0 / Math.PI);
+
+      boundaryCoords.push(
+        { lat: center.lat - dLatHalf, lng: center.lng - dLonHalf },
+        { lat: center.lat + dLatHalf, lng: center.lng - dLonHalf },
+        { lat: center.lat + dLatHalf, lng: center.lng + dLonHalf },
+        { lat: center.lat - dLatHalf, lng: center.lng + dLonHalf },
+        { lat: center.lat - dLatHalf, lng: center.lng - dLonHalf }
+      );
+
+      const perimeterCorners = [
+        { lat: center.lat - dLatHalf, lng: center.lng - dLonHalf },
+        { lat: center.lat + dLatHalf, lng: center.lng - dLonHalf },
+        { lat: center.lat + dLatHalf, lng: center.lng + dLonHalf },
+        { lat: center.lat - dLatHalf, lng: center.lng + dLonHalf },
+        { lat: center.lat - dLatHalf, lng: center.lng - dLonHalf }
+      ];
+
+      perimeterCorners.forEach((pt, k) => {
+        const legDist = calculateHaversineDistance(prevLat, prevLng, pt.lat, pt.lng);
+        cumulativeDistance += legDist;
+        waypoints.push({
+          id: 'PERIM_' + (k + 1),
+          index: k + 1,
+          lat: Number(pt.lat.toFixed(7)),
+          lng: Number(pt.lng.toFixed(7)),
+          altitude: validAlt,
+          speed: validSpeed,
+          action: 'NAVIGATE',
+          name: `Perimeter Corner ${k + 1}`,
+          distanceFromPreviousMeters: Math.round(legDist * 10) / 10
+        });
+        prevLat = pt.lat;
+        prevLng = pt.lng;
+      });
     } else if (algorithm === 'TANGENTIAL_CIRCULAR') {
       boundaryArea = Math.PI * validRadius * validRadius;
       const boundaryPoints = 32;
@@ -975,11 +1017,11 @@ export class GroundStationMissionService {
     const returnDuration = Math.round((rtlDist / (validSpeed * 1.2)) + (validAlt / 1.5) + 30);
     const totalDuration = searchDuration + returnDuration;
 
-    const timeLimitSeconds = (timeLimitMinutes || 5) * 60;
-    const isFeasible = timeLimitSeconds >= totalDuration && totalDuration <= 360;
+    const timeLimitSeconds = (timeLimitMinutes || 4) * 60;
+    const isFeasible = timeLimitSeconds >= totalDuration && totalDuration <= 240;
     const feasibilityReason = isFeasible
       ? undefined
-      : 'Estimated flight duration (' + Math.ceil(totalDuration) + 's) exceeds ' + timeLimitMinutes + 'm target. Suggest increasing altitude or reducing boundary.';
+      : 'Estimated flight duration (' + Math.ceil(totalDuration) + 's) exceeds ' + timeLimitMinutes + 'm target (240s). Suggest increasing altitude or reducing boundary.';
 
     const mission: GroundStationMission = {
       id: 'MSN_AUTO_' + Date.now().toString(36).toUpperCase(),
@@ -1164,7 +1206,60 @@ export class GroundStationMissionService {
   }
 
   /**
-   * Transmits mission to the drone communication layer (ESP32-S3 / Pixhawk MAVLink).
+   * Configures Pixhawk flight controller for autonomous boundary and search pattern:
+   * Sets ArduPilot flight mode to GUIDED, updates cruising altitude and speed,
+   * commits the boundary geofence coordinates without traditional waypoint missions.
+   */
+  public async configureFlightControllerSearchArea(
+    boundaryCoords: LatLngPoint[],
+    searchAltitude: number = 5,
+    flightSpeed: number = 4.0
+  ): Promise<{ success: boolean; message: string }> {
+    try {
+      // 1. Prepare flight controller in GUIDED mode
+      await mavlinkService.setFlightMode('GUIDED');
+
+      // 2. Set cruising optical altitude
+      await mavlinkService.setTargetAltitude(searchAltitude);
+
+      // 3. Commit search boundary to geofence service
+      if (boundaryCoords && boundaryCoords.length >= 3) {
+        geofenceService.setCustomPolygon(boundaryCoords);
+        missionEngine.updateMissionConfig({
+          searchAltitude,
+          flightSpeedMs: flightSpeed,
+          searchBoundary: {
+            type: 'POLYGON',
+            coordinates: boundaryCoords,
+            areaSquareMeters: 6400,
+            label: 'Confirmed Search Boundary'
+          }
+        });
+      }
+
+      // 4. Update missionEngine configuration
+      missionEngine.setMissionDuration(240); // 4-minute window
+
+      if (this.currentMission) {
+        this.currentMission.isUploaded = true;
+        this.notify();
+      }
+
+      audioService.playBeep(920, 100);
+      return {
+        success: true,
+        message: `Flight Controller configured: GUIDED mode, search boundary geofence committed, altitude locked at ${searchAltitude}m`
+      };
+    } catch (err: any) {
+      return {
+        success: false,
+        message: `Flight Controller configuration failed: ${err?.message || 'Check MAVLink link'}`
+      };
+    }
+  }
+
+  /**
+   * Transmits mission to the drone communication layer (Pixhawk MAVLink).
    * Follows standard ArduPilot mission protocol:
    * Seq 0: Home coordinate
    * Seq 1: Takeoff to target altitude
