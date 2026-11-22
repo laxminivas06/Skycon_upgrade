@@ -219,6 +219,22 @@ def drone_disarm():
     return api_response(data={"armed": False, "success": success, "detail": res}, code=200)
 
 
+def queue_cloud_command(cmd_type: str, params: Dict[str, Any]) -> str:
+    """Queues operator commands on cloud backend for retrieval by companion agent."""
+    cmd_id = f"CMD_{int(time.time()*1000)}"
+    commands = json_store.load("cloud_pending_commands", fallback=[])
+    commands.append({
+        "id": cmd_id,
+        "command": cmd_type,
+        "params": params,
+        "timestamp": time.time()
+    })
+    if len(commands) > 20:
+        commands = commands[-20:]
+    json_store.save("cloud_pending_commands", commands)
+    return cmd_id
+
+
 @app.route("/api/drone/mode", methods=["POST"])
 @app.route("/api/mavlink/mode", methods=["POST"])
 @app.route("/api/command/mode", methods=["POST"])
@@ -234,8 +250,8 @@ def drone_mode():
         mode = mode.upper()
 
     if not mavlink_mux.is_connected:
-        # Running as cloud relay on PythonAnywhere or standalone web instance
-        # Persist mode change in cloud_last_telemetry so GCS UI & synced telemetry update immediately
+        # Running as cloud relay on PythonAnywhere: queue for companion Pi
+        queue_cloud_command("SET_MODE", {"mode": mode})
         cloud_payload = json_store.load("cloud_last_telemetry", fallback={})
         telem = cloud_payload.get("telemetry", {})
         telem["flight_mode"] = mode
@@ -243,7 +259,7 @@ def drone_mode():
         cloud_payload["telemetry"] = telem
         json_store.save("cloud_last_telemetry", cloud_payload)
         json_store.log_event("FLIGHT_MODE_SWITCH_RELAY", {"mode": mode}, source="OPERATOR")
-        return api_response(data={"mode": mode, "success": True, "detail": {"status": "RELAY_UPDATED", "mode": mode}}, code=200)
+        return api_response(data={"mode": mode, "success": True, "detail": {"status": "QUEUED_FOR_COMPANION", "mode": mode}}, code=200)
 
     res = mavlink_mux.set_mode_verified(mode)
     success = res.get("confirmed", False) or res["status"] in ("STATE_CONFIRMED", "COMMAND_ACKNOWLEDGED")
@@ -1193,10 +1209,17 @@ def flask_receive_cloud_telemetry():
     """Cloud receiver endpoint for PythonAnywhere GCS to ingest companion telemetry."""
     body = request.get_json(silent=True) or {}
     json_store.save("cloud_last_telemetry", body)
+
+    # Deliver and clear pending commands queued for companion
+    pending_commands = json_store.load("cloud_pending_commands", fallback=[])
+    if pending_commands:
+        json_store.save("cloud_pending_commands", [])
+
     return api_response(data={
         "success": True,
         "receivedAt": datetime.now(timezone.utc).isoformat(),
-        "source": body.get("source", "UNKNOWN")
+        "source": body.get("source", "UNKNOWN"),
+        "pending_commands": pending_commands
     }, code=200)
 
 

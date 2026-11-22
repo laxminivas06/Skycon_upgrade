@@ -134,7 +134,7 @@ class CloudSyncService:
         snapshot = self._build_sync_payload()
 
         # 1. Attempt to send current state
-        success, latency = self._dispatch_post(f"{self.cloud_url}/api/sync/telemetry", snapshot)
+        success, latency, resp_payload = self._dispatch_post(f"{self.cloud_url}/api/sync/telemetry", snapshot)
 
         with self._lock:
             if success:
@@ -144,6 +144,14 @@ class CloudSyncService:
                 self.last_sync_time = time.time()
                 self.last_latency_ms = round(latency, 1)
                 self.total_packets_synced += 1
+
+                # Execute pending operator commands from cloud GCS
+                if resp_payload and isinstance(resp_payload, dict):
+                    data_obj = resp_payload.get("data", {})
+                    if isinstance(data_obj, dict):
+                        commands = data_obj.get("pending_commands", [])
+                        if commands and isinstance(commands, list):
+                            self._execute_cloud_commands(commands)
 
                 # Drain spooled records if any exist
                 self._drain_spooled_records()
@@ -156,6 +164,31 @@ class CloudSyncService:
                 # Spool current payload to disk
                 self._spool_payload(snapshot)
                 return False
+
+    def _execute_cloud_commands(self, commands: List[Dict[str, Any]]):
+        """Executes operator flight commands retrieved from cloud queue."""
+        for cmd in commands:
+            cmd_type = cmd.get("command")
+            params = cmd.get("params", {})
+            logger.info(f"[CloudSync] Executing cloud command: {cmd_type} (params: {params})")
+            try:
+                if cmd_type == "SET_MODE":
+                    mode = params.get("mode", "LOITER")
+                    mavlink_mux.set_mode_verified(mode)
+                elif cmd_type in ("RTL", "RETURN"):
+                    mavlink_mux.command_rtl()
+                elif cmd_type == "BRAKE":
+                    mavlink_mux.command_brake()
+                elif cmd_type == "ARM":
+                    mavlink_mux.arm_motors_verified(True, force=params.get("force", False))
+                elif cmd_type == "DISARM":
+                    mavlink_mux.arm_motors_verified(False)
+                elif cmd_type == "TAKEOFF":
+                    mavlink_mux.takeoff_verified(float(params.get("altitude", 10.0)))
+                elif cmd_type == "LAND":
+                    mavlink_mux.land_verified()
+            except Exception as e:
+                logger.error(f"[CloudSync] Error executing command {cmd_type}: {e}")
 
     def _build_sync_payload(self) -> Dict[str, Any]:
         """Assembles authoritative companion telemetry and mission state."""
@@ -193,7 +226,7 @@ class CloudSyncService:
             if rec_hash and rec_hash in self._synced_event_hashes:
                 continue  # Skip already synced
 
-            ok, _ = self._dispatch_post(f"{self.cloud_url}/api/sync/telemetry", record)
+            ok, _, _ = self._dispatch_post(f"{self.cloud_url}/api/sync/telemetry", record)
             if ok:
                 if rec_hash:
                     self._synced_event_hashes.add(rec_hash)
@@ -204,7 +237,7 @@ class CloudSyncService:
 
         json_store.save("offline_sync_spool", remaining)
 
-    def _dispatch_post(self, url: str, data: Dict[str, Any], timeout_s: float = 3.0) -> Tuple[bool, float]:
+    def _dispatch_post(self, url: str, data: Dict[str, Any], timeout_s: float = 3.0) -> Tuple[bool, float, Optional[Dict[str, Any]]]:
         """Dispatches outbound HTTP POST to remote cloud endpoint."""
         t0 = time.time()
         try:
@@ -239,11 +272,18 @@ class CloudSyncService:
             with resp_ctx as resp:
                 status_code = resp.getcode()
                 latency_ms = (time.time() - t0) * 1000.0
-                return (200 <= status_code < 300), latency_ms
+                resp_payload = None
+                try:
+                    raw_bytes = resp.read()
+                    if raw_bytes:
+                        resp_payload = json.loads(raw_bytes.decode("utf-8"))
+                except Exception:
+                    pass
+                return (200 <= status_code < 300), latency_ms, resp_payload
         except Exception as e:
             latency_ms = (time.time() - t0) * 1000.0
             logger.debug(f"CloudSync dispatch error to {url}: {e}")
-            return False, latency_ms
+            return False, latency_ms, None
 
 
 # Global singleton instance
