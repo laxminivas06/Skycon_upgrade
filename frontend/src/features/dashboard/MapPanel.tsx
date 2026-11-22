@@ -160,6 +160,12 @@ export const MapPanel: React.FC<MapPanelProps> = ({
   const isDrawingPolygonGeofenceRef = useRef<boolean>(isDrawingPolygonGeofence);
   isDrawingPolygonGeofenceRef.current = isDrawingPolygonGeofence;
 
+  // Reconnaissance Vector Layers: Boundary & Swath
+  const searchBoundaryPolygonRef = useRef<L.Polygon | null>(null);
+  const swathLayerGroupRef = useRef<L.LayerGroup | null>(null);
+  const [showReconBoundary, setShowReconBoundary] = useState<boolean>(true);
+  const [showOpticalSwath, setShowOpticalSwath] = useState<boolean>(true);
+
   const hasAutoCenteredRef = useRef<boolean>(false);
   const lastGeofenceAnchorRef = useRef<{ lat: number; lon: number } | null>(null);
 
@@ -236,7 +242,10 @@ export const MapPanel: React.FC<MapPanelProps> = ({
     }).addTo(map);
     breadcrumbsRef.current = breadcrumbs;
 
-    // Layer groups for mission waypoints
+    // Layer groups for mission waypoints & optical swath
+    const swathGroup = L.layerGroup().addTo(map);
+    swathLayerGroupRef.current = swathGroup;
+
     const wpGroup = L.layerGroup().addTo(map);
     waypointsGroupRef.current = wpGroup;
 
@@ -826,6 +835,10 @@ export const MapPanel: React.FC<MapPanelProps> = ({
 
       if (!mission || mission.waypoints.length === 0) {
         polyline.setLatLngs([]);
+        if (searchBoundaryPolygonRef.current && map.hasLayer(searchBoundaryPolygonRef.current)) {
+          map.removeLayer(searchBoundaryPolygonRef.current);
+          searchBoundaryPolygonRef.current = null;
+        }
         return;
       }
 
@@ -854,6 +867,31 @@ export const MapPanel: React.FC<MapPanelProps> = ({
       });
 
       polyline.setLatLngs(latlngs);
+
+      // Render Search Boundary Vector Polygon (Requirement R4 & Phase 3)
+      if (searchBoundaryPolygonRef.current && map.hasLayer(searchBoundaryPolygonRef.current)) {
+        map.removeLayer(searchBoundaryPolygonRef.current);
+        searchBoundaryPolygonRef.current = null;
+      }
+
+      if (showReconBoundary && mission.geometry?.coordinates && mission.geometry.coordinates.length >= 3) {
+        const boundaryPts = mission.geometry.coordinates.map((c) => [c.lat, c.lng] as [number, number]);
+        const boundaryPoly = L.polygon(boundaryPts, {
+          color: '#06b6d4',
+          weight: 2.5,
+          opacity: 0.9,
+          fillColor: '#06b6d4',
+          fillOpacity: 0.08,
+          dashArray: '6, 4'
+        }).addTo(map);
+
+        const areaStr = mission.geometry.areaSquareMeters ? `${Math.round(mission.geometry.areaSquareMeters)} m²` : '';
+        boundaryPoly.bindTooltip(`📐 SEARCH BOUNDARY [${areaStr}]`, {
+          direction: 'top',
+          className: 'bg-slate-900 text-cyan-300 font-mono text-[10px] px-2 py-0.5 rounded border border-cyan-500/50'
+        });
+        searchBoundaryPolygonRef.current = boundaryPoly;
+      }
     });
 
     return () => unsub();

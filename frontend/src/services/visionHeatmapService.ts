@@ -197,6 +197,10 @@ class VisionHeatmapService {
     return this.latestHeatmap;
   }
 
+  public getObjects(): VisionRegisteredObject[] {
+    return [...this.objectQueue];
+  }
+
   public getObjectQueue(): VisionRegisteredObject[] {
     return this.objectQueue;
   }

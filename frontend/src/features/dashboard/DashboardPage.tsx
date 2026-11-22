@@ -26,6 +26,7 @@ import { audioService } from '../../services/audioService';
 import { geofenceService } from '../../services/geofenceService';
 import { reconDetectionService } from '../../services/reconDetectionService';
 import { targetDetectionEngine } from '../../services/targetDetectionEngine';
+import { visionHeatmapService } from '../../services/visionHeatmapService';
 import { phoneDroneMissionService } from '../../services/phoneDroneMissionService';
 import { fetchWithFallback } from '../../services/apiClient';
 import { Header } from './Header';
@@ -164,6 +165,23 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
   const [isComprehensiveDiagOpen, setIsComprehensiveDiagOpen] = useState<boolean>(false);
   const [isFlightControlModalOpen, setIsFlightControlModalOpen] = useState<boolean>(false);
   const [isAIChatModalOpen, setIsAIChatModalOpen] = useState<boolean>(false);
+
+  // Live Optical Recon Detections Count
+  const [confirmedQRs, setConfirmedQRs] = useState<number>(0);
+  const [detectedBoxes, setDetectedBoxes] = useState<number>(0);
+
+  useEffect(() => {
+    const unsubDetections = reconDetectionService.subscribeDetections((records) => {
+      setConfirmedQRs(records.filter((r) => r.twoDigitCode && /^\d{2}$/.test(r.twoDigitCode)).length);
+    });
+    const unsubObjects = visionHeatmapService.subscribeObjects((objs) => {
+      setDetectedBoxes(objs.filter((o) => o.category === 'BOX_STRUCTURE' || o.priority === 2).length);
+    });
+    return () => {
+      unsubDetections();
+      unsubObjects();
+    };
+  }, []);
 
   const showNotification = (msg: string) => {
     setActionNotice(msg);
@@ -718,6 +736,19 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                   <span>🤖</span>
                   <span>AUTONOMOUS</span>
                 </button>
+              </div>
+
+              {/* Optical Recon HUD Indicator */}
+              <div className="hidden md:flex items-center gap-1.5 px-2 py-0.5 rounded bg-[#11161F] border border-slate-800 text-[10px] font-mono">
+                <span className="text-sky-300 font-bold flex items-center gap-1" title="Confirmed QR Codes">
+                  <span>🎯</span>
+                  <span>{confirmedQRs} QR</span>
+                </span>
+                <span className="text-slate-600">|</span>
+                <span className="text-amber-300 font-bold flex items-center gap-1" title="Target Cuboid Boxes">
+                  <span>📦</span>
+                  <span>{detectedBoxes} BOX</span>
+                </span>
               </div>
             </div>
 

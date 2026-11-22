@@ -5,6 +5,7 @@
  */
 
 import { VerifiedTargetEvent } from './targetDetectionEngine';
+import { fetchWithFallback } from './apiClient';
 
 export interface ServerAcknowledgment {
   success: boolean;
@@ -206,7 +207,7 @@ export class EvidenceUploadService {
     };
 
     try {
-      const response = await fetch(endpoint, {
+      const response = await fetchWithFallback(endpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

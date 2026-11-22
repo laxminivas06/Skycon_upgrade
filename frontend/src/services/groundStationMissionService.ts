@@ -707,7 +707,7 @@ export class GroundStationMissionService {
   public generateAutonomousSearchMission(
     center: LatLngPoint,
     radiusMeters: number = 10,
-    algorithm: 'TANGENTIAL_CIRCULAR' | 'SPIRAL' | 'RECTANGULAR_SPIRAL' | 'SQUARE_SPIRAL' = 'SPIRAL',
+    algorithm: 'TANGENTIAL_CIRCULAR' | 'SPIRAL' | 'RECTANGULAR_SPIRAL' | 'SQUARE_SPIRAL' | 'BOUSTROPHEDON' | 'INWARD_SPIRAL' | 'EXPANDING_SPIRAL' | 'MANUAL_WAYPOINTS' = 'BOUSTROPHEDON',
     homePoint: HomePoint = { latitude: 0, longitude: 0, altitude: 0, timestamp: 0, isSet: false },
     altitude: number = 5,
     timeLimitMinutes: number = 5,
@@ -806,6 +806,62 @@ export class GroundStationMissionService {
         curW += laneSpacing;
         curH += laneSpacing * aspect;
       }
+    } else if (algorithm === 'BOUSTROPHEDON') {
+      boundaryArea = widthMeters * heightMeters;
+      const hw = widthMeters / 2.0;
+      const hh = heightMeters / 2.0;
+      const rEarth = 6378137.0;
+      const dLatHalf = (hh / rEarth) * (180.0 / Math.PI);
+      const dLonHalf = (hw / (rEarth * Math.cos(center.lat * Math.PI / 180.0))) * (180.0 / Math.PI);
+
+      boundaryCoords.push(
+        { lat: center.lat - dLatHalf, lng: center.lng - dLonHalf },
+        { lat: center.lat + dLatHalf, lng: center.lng - dLonHalf },
+        { lat: center.lat + dLatHalf, lng: center.lng + dLonHalf },
+        { lat: center.lat - dLatHalf, lng: center.lng + dLonHalf },
+        { lat: center.lat - dLatHalf, lng: center.lng - dLonHalf }
+      );
+
+      const numLanes = Math.max(2, Math.ceil(heightMeters / laneSpacing));
+      const actualSpacing = heightMeters / (numLanes + 1);
+      let k = 1;
+
+      for (let i = 1; i <= numLanes; i++) {
+        const y = -hh + i * actualSpacing;
+        const isLeftToRight = (i % 2 === 1);
+        const xStart = isLeftToRight ? -hw + 1.5 : hw - 1.5;
+        const xEnd = isLeftToRight ? hw - 1.5 : -hw + 1.5;
+
+        const pts = [
+          { x: xStart, y },
+          { x: xEnd, y }
+        ];
+
+        for (const pt of pts) {
+          const dLat = (pt.y / rEarth) * (180.0 / Math.PI);
+          const dLon = (pt.x / (rEarth * Math.cos(center.lat * Math.PI / 180.0))) * (180.0 / Math.PI);
+          const wpPos = { lat: center.lat + dLat, lng: center.lng + dLon };
+
+          const legDist = calculateHaversineDistance(prevLat, prevLng, wpPos.lat, wpPos.lng);
+          cumulativeDistance += legDist;
+
+          waypoints.push({
+            id: 'BOUST_' + k,
+            index: k,
+            lat: Number(wpPos.lat.toFixed(7)),
+            lng: Number(wpPos.lng.toFixed(7)),
+            altitude: validAlt,
+            speed: validSpeed,
+            action: 'NAVIGATE',
+            name: `Lane ${i} Pt ${k}`,
+            distanceFromPreviousMeters: Math.round(legDist * 10) / 10
+          });
+
+          prevLat = wpPos.lat;
+          prevLng = wpPos.lng;
+          k++;
+        }
+      }
     } else if (algorithm === 'TANGENTIAL_CIRCULAR') {
       boundaryArea = Math.PI * validRadius * validRadius;
       const boundaryPoints = 32;
@@ -856,10 +912,11 @@ export class GroundStationMissionService {
       const bArchimedes = laneSpacing / (2.0 * Math.PI);
       const maxTheta = effectiveRadius / bArchimedes;
       const thetaStep = Math.PI / 6.0;
-      let curTheta = Math.PI / 4.0;
+      const isInward = algorithm === 'INWARD_SPIRAL';
+      let curTheta = isInward ? maxTheta : Math.PI / 4.0;
       let k = 1;
 
-      while (curTheta <= maxTheta + 0.1) {
+      while (isInward ? (curTheta >= Math.PI / 4.0 - 0.05) : (curTheta <= maxTheta + 0.1)) {
         const r = Math.min(effectiveRadius, bArchimedes * curTheta);
         const dx = r * Math.sin(curTheta);
         const dy = r * Math.cos(curTheta);
@@ -873,20 +930,26 @@ export class GroundStationMissionService {
         cumulativeDistance += legDist;
 
         waypoints.push({
-          id: 'SPRL_WP_' + k,
+          id: (isInward ? 'IN_SPRL_WP_' : 'SPRL_WP_') + k,
           index: k,
           lat: Number(wpPos.lat.toFixed(7)),
           lng: Number(wpPos.lng.toFixed(7)),
           altitude: validAlt,
           speed: validSpeed,
           action: 'NAVIGATE',
-          name: k === 1 ? 'Spiral Origin' : 'Spiral Loop ' + Math.ceil(k / 12),
+          name: isInward
+            ? (k === 1 ? 'Inward Perimeter Entry' : `Inward Ring ${Math.ceil(k / 12)}`)
+            : (k === 1 ? 'Spiral Origin' : `Spiral Loop ${Math.ceil(k / 12)}`),
           distanceFromPreviousMeters: Math.round(legDist * 10) / 10
         });
 
         prevLat = wpPos.lat;
         prevLng = wpPos.lng;
-        curTheta += thetaStep;
+        if (isInward) {
+          curTheta -= thetaStep;
+        } else {
+          curTheta += thetaStep;
+        }
         k++;
       }
     }

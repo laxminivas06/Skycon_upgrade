@@ -132,8 +132,10 @@ export const UnifiedCameraIntelligenceModal: React.FC<UnifiedCameraIntelligenceM
 
   const handleToggleTorch = async () => {
     const next = !torchActive;
-    await phoneDeviceService.setTorch(next);
-    setTorchActive(next);
+    const res = await phoneDeviceService.setTorch(next);
+    if (res.success) {
+      setTorchActive(next);
+    }
   };
 
   return (
@@ -387,22 +389,22 @@ export const UnifiedCameraIntelligenceModal: React.FC<UnifiedCameraIntelligenceM
               <div className="flex-1 rounded-xl bg-black border border-slate-800 flex flex-col items-center justify-center p-6 text-center font-mono">
                 <Layers className="w-12 h-12 text-cyan-400 mb-3" />
                 <div className="text-white font-bold text-sm mb-1">
-                  OPTICAL COVERAGE HEATMAP ACTIVE
+                  OPTICAL RECONNAISSANCE LAYER ACTIVE
                 </div>
                 <div className="text-slate-400 text-xs max-w-md mb-4">
-                  Autonomous lawnmower and spiral sweeps compute pixel coverage matrices across search boundaries. Targets identified: {detections.length}.
+                  Multi-spectral optical swath tracking across autonomous search boundaries. Verified 2-digit QR codes: {detections.length}.
                 </div>
                 <div className="grid grid-cols-3 gap-3 w-full max-w-lg text-xs">
                   <div className="p-2.5 rounded-lg bg-[#11192b] border border-slate-800">
-                    <span className="text-slate-400 block text-[10px]">COVERAGE</span>
-                    <span className="font-bold text-white">94.2%</span>
+                    <span className="text-slate-400 block text-[10px]">SWATH STATUS</span>
+                    <span className="font-bold text-emerald-400">{telemetry.altitude && telemetry.altitude > 2 ? 'ACTIVE' : 'READY'}</span>
                   </div>
                   <div className="p-2.5 rounded-lg bg-[#11192b] border border-slate-800">
                     <span className="text-slate-400 block text-[10px]">SCAN ALTITUDE</span>
-                    <span className="font-bold text-white">{(telemetry.altitude || 12).toFixed(1)}m</span>
+                    <span className="font-bold text-white">{(telemetry.altitude || 10).toFixed(1)}m</span>
                   </div>
                   <div className="p-2.5 rounded-lg bg-[#11192b] border border-slate-800">
-                    <span className="text-slate-400 block text-[10px]">TARGET BOXES</span>
+                    <span className="text-slate-400 block text-[10px]">VERIFIED TARGETS</span>
                     <span className="font-bold text-emerald-400">{detections.length}</span>
                   </div>
                 </div>

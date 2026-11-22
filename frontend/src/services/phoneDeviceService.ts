@@ -12,6 +12,7 @@ export type ScreenOrientationMode = 'LANDSCAPE' | 'PORTRAIT' | 'AUTO';
 export interface DeviceHardwareCapabilities {
   supportsOrientationLock: boolean;
   supportsTorch: boolean;
+  torchSupportReason?: string;
   supportsFocusMode: boolean;
   supportsExposureCompensation: boolean;
   minExposure?: number;
@@ -42,6 +43,7 @@ export class PhoneDeviceService {
   private capabilities: DeviceHardwareCapabilities = {
     supportsOrientationLock: false,
     supportsTorch: false,
+    torchSupportReason: 'INITIALIZING',
     supportsFocusMode: false,
     supportsExposureCompensation: false,
     supportedFocusModes: []
@@ -114,17 +116,27 @@ export class PhoneDeviceService {
     this.activeVideoTrack = track;
     if (!track) {
       this.capabilities.supportsTorch = false;
+      this.capabilities.torchSupportReason = 'No active video track';
       this.capabilities.supportsFocusMode = false;
       this.capabilities.supportsExposureCompensation = false;
       this.notifyCaps();
       return;
     }
 
+    const isIos = typeof navigator !== 'undefined' && /iPad|iPhone|iPod/i.test(navigator.userAgent);
+
     try {
       const getCapabilities = (track as any).getCapabilities;
       if (typeof getCapabilities === 'function') {
-        const caps = getCapabilities.call(track);
+        const caps = getCapabilities.call(track) || {};
         this.capabilities.supportsTorch = Boolean(caps.torch);
+        if (this.capabilities.supportsTorch) {
+          this.capabilities.torchSupportReason = 'SUPPORTED';
+        } else if (isIos) {
+          this.capabilities.torchSupportReason = 'UNSUPPORTED: Apple WebKit restricts torch control in web browsers. Use native Capacitor camera plugin or companion Pi LED.';
+        } else {
+          this.capabilities.torchSupportReason = 'UNSUPPORTED: Camera hardware has no flash/torch LED.';
+        }
         this.capabilities.supportsFocusMode = Array.isArray(caps.focusMode) && caps.focusMode.length > 0;
         this.capabilities.supportedFocusModes = caps.focusMode || [];
         this.capabilities.supportsExposureCompensation =
@@ -136,9 +148,16 @@ export class PhoneDeviceService {
           this.capabilities.maxExposure = caps.exposureCompensation.max;
           this.capabilities.stepExposure = caps.exposureCompensation.step;
         }
+      } else {
+        this.capabilities.supportsTorch = false;
+        this.capabilities.torchSupportReason = isIos
+          ? 'UNSUPPORTED: iOS Safari WebKit does not expose MediaStreamTrack getCapabilities.'
+          : 'UNSUPPORTED: Browser does not support MediaStreamTrack getCapabilities.';
       }
-    } catch (e) {
+    } catch (e: any) {
       console.warn('[PHONE_DEVICE] Could not inspect track capabilities:', e);
+      this.capabilities.supportsTorch = false;
+      this.capabilities.torchSupportReason = `UNSUPPORTED: ${e?.message || 'Capability probe error'}`;
     }
 
     this.notifyCaps();
@@ -190,7 +209,7 @@ export class PhoneDeviceService {
     }
 
     if (!this.capabilities.supportsTorch) {
-      return { success: false, message: 'Flashlight / Torch hardware is not supported on this camera' };
+      return { success: false, message: this.capabilities.torchSupportReason || 'Torch hardware is not supported on this device/browser.' };
     }
 
     try {
@@ -202,8 +221,18 @@ export class PhoneDeviceService {
       this.notifyFlash();
       return { success: true, message: `Flashlight ${on ? 'ON' : 'OFF'}` };
     } catch (err: any) {
+      this.autoFlashlight.isTorchCurrentlyOn = false;
+      this.capabilities.supportsTorch = false;
+      this.capabilities.torchSupportReason = `Torch failed: ${err.message || 'Restricted by device'}`;
+      this.notifyCaps();
+      this.notifyFlash();
       return { success: false, message: `Torch hardware error: ${err.message}` };
     }
+  }
+
+  public getTorchStatus(): 'TORCH_ON' | 'TORCH_OFF' | 'UNSUPPORTED' {
+    if (!this.capabilities.supportsTorch) return 'UNSUPPORTED';
+    return this.autoFlashlight.isTorchCurrentlyOn ? 'TORCH_ON' : 'TORCH_OFF';
   }
 
   public setAutoFlashlightEnabled(enabled: boolean) {

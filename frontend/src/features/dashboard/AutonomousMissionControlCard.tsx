@@ -31,6 +31,7 @@ import {
 import { mavlinkService } from '../../services/mavlinkService';
 import { audioService } from '../../services/audioService';
 import { geofenceService } from '../../services/geofenceService';
+import { reconDetectionService } from '../../services/reconDetectionService';
 import {
   visionHeatmapService,
   VisionRegisteredObject,
@@ -78,8 +79,8 @@ export const AutonomousMissionControlCard: React.FC<AutonomousMissionControlCard
   const [rectHeight, setRectHeight] = useState<number>(20);
   const [circleRadius, setCircleRadius] = useState<number>(15);
 
-  // 4. Search Algorithm: Spiral (Expanding) vs Tangential Circular
-  const [algorithm, setAlgorithm] = useState<'SPIRAL' | 'TANGENTIAL_CIRCULAR' | 'RECTANGULAR_SPIRAL' | 'SQUARE_SPIRAL'>('RECTANGULAR_SPIRAL');
+  // 4. Search Algorithm: 4 Autonomous Patterns
+  const [algorithm, setAlgorithm] = useState<'BOUSTROPHEDON' | 'EXPANDING_SPIRAL' | 'INWARD_SPIRAL' | 'MANUAL_WAYPOINTS'>('BOUSTROPHEDON');
 
   // 5. 5-Minute Time Limit Target (Default: 5 Minutes / 300s)
   const [timeLimitMinutes, setTimeLimitMinutes] = useState<number>(5);
@@ -96,6 +97,44 @@ export const AutonomousMissionControlCard: React.FC<AutonomousMissionControlCard
   );
   const [isUploading, setIsUploading] = useState<boolean>(false);
   const [uploadNotice, setUploadNotice] = useState<string | null>(null);
+
+  // Optical Geometry & Reconnaissance Pre-Flight Parameters
+  // Camera FOV = 65° total horizontal FOV. Ground swath W = 2 * h * tan(32.5°)
+  const opticalSwathWidth = Math.round(2 * altitude * Math.tan((32.5 * Math.PI) / 180) * 100) / 100;
+  // 25% lateral camera overlap -> lane spacing = W * 0.75
+  const laneSpacingMeters = Math.round(opticalSwathWidth * 0.75 * 100) / 100;
+  const cameraOverlapPercent = 25;
+
+  // Geometric Recommendation Engine
+  // Circularity C = 4 * PI * Area / Perimeter^2
+  const calcBoundaryArea = boundaryType === 'CIRCLE'
+    ? Math.round(Math.PI * circleRadius * circleRadius)
+    : boundaryType === 'SQUARE'
+    ? Math.round(rectWidth * rectWidth)
+    : Math.round(rectWidth * rectHeight);
+
+  const calcBoundaryPerimeter = boundaryType === 'CIRCLE'
+    ? Math.round(2 * Math.PI * circleRadius)
+    : boundaryType === 'SQUARE'
+    ? Math.round(rectWidth * 4)
+    : Math.round((rectWidth + rectHeight) * 2);
+
+  const circularityScore = calcBoundaryPerimeter > 0
+    ? Math.round(((4 * Math.PI * calcBoundaryArea) / (calcBoundaryPerimeter * calcBoundaryPerimeter)) * 100) / 100
+    : 1.0;
+
+  const boundaryAspectRatio = boundaryType === 'CIRCLE' || boundaryType === 'SQUARE'
+    ? 1.0
+    : Math.round((Math.max(rectWidth, rectHeight) / Math.max(1, Math.min(rectWidth, rectHeight))) * 100) / 100;
+
+  const recommendedAlgorithm: 'BOUSTROPHEDON' | 'EXPANDING_SPIRAL' =
+    boundaryType === 'CIRCLE' || circularityScore > 0.82
+      ? 'EXPANDING_SPIRAL'
+      : 'BOUSTROPHEDON';
+
+  const recommendationRationale = recommendedAlgorithm === 'EXPANDING_SPIRAL'
+    ? `High circularity (C = ${circularityScore.toFixed(2)}): Continuous Archimedean spiral minimizes yaw oscillation and maximizes ground dwell time.`
+    : `Elongated geometry (AR = ${boundaryAspectRatio.toFixed(2)}, C = ${circularityScore.toFixed(2)}): Lawnmower (Boustrophedon) provides 100% swath coverage with ${laneSpacingMeters}m lane spacing.`;
 
   // Real-Time Computer-Vision Heatmap & Object Queue State
   const [heatmapData, setHeatmapData] = useState<HeatmapGridData | null>(null);
@@ -134,23 +173,24 @@ export const AutonomousMissionControlCard: React.FC<AutonomousMissionControlCard
       ? mavlinkService.getHomePoint()
       : { latitude: center.lat, longitude: center.lng, altitude: 0, timestamp: Date.now(), isSet: true };
 
-    let algo: 'TANGENTIAL_CIRCULAR' | 'SPIRAL' | 'RECTANGULAR_SPIRAL' | 'SQUARE_SPIRAL' = 'SPIRAL';
+    let algo: any = algorithm;
     let rad = circleRadius;
     const dims = { width: rectWidth, height: rectHeight };
 
     if (boundaryType === 'SQUARE') {
-      algo = 'SQUARE_SPIRAL';
       dims.width = rectWidth;
-      dims.height = rectWidth; // Square has equal sides
+      dims.height = rectWidth;
       rad = rectWidth / 2.0;
+      if (algorithm === 'EXPANDING_SPIRAL') algo = 'SQUARE_SPIRAL';
     } else if (boundaryType === 'RECTANGLE') {
-      algo = 'RECTANGULAR_SPIRAL';
       rad = Math.max(rectWidth, rectHeight) / 2.0;
+      if (algorithm === 'EXPANDING_SPIRAL') algo = 'RECTANGULAR_SPIRAL';
     } else if (boundaryType === 'CIRCLE') {
-      algo = algorithm === 'TANGENTIAL_CIRCULAR' ? 'TANGENTIAL_CIRCULAR' : 'SPIRAL';
       rad = circleRadius;
-    } else {
-      algo = 'RECTANGULAR_SPIRAL';
+      if (algorithm === 'BOUSTROPHEDON') {
+        dims.width = circleRadius * 2;
+        dims.height = circleRadius * 2;
+      }
     }
 
     const result = groundStationMissionService.generateAutonomousSearchMission(
@@ -260,6 +300,40 @@ export const AutonomousMissionControlCard: React.FC<AutonomousMissionControlCard
     ? Math.round(rectWidth * 4)
     : Math.round((rectWidth + rectHeight) * 2);
 
+  // 10-Step Mission Status Flow calculation
+  const getMissionStep = (): { step: number; name: string; label: string } => {
+    if (activeMissionTime?.status === 'RTL' || (!activeMissionTime?.isExecuting && activeMissionTime?.status === 'COMPLETED')) {
+      return { step: 10, name: 'MISSION_RTL', label: '10. RTL Transition' };
+    }
+    if (objectQueue.some((o) => o.two_digit_code) || reconDetectionService.getDetections().length > 0) {
+      return { step: 9, name: 'TARGET_LOCKED', label: '9. Target Locked' };
+    }
+    if (telemetry.isArmed && isMissionExecuting) {
+      return { step: 8, name: 'SEARCH_ACTIVE', label: '8. Search Active' };
+    }
+    if (telemetry.isArmed) {
+      return { step: 7, name: 'ARMED', label: '7. Armed' };
+    }
+    if (currentMission?.isUploaded) {
+      return { step: 6, name: 'FC_UPLOADED', label: '6. FC Uploaded' };
+    }
+    if (isFeasible && isDroneInsideBoundary) {
+      return { step: 5, name: 'PRE_ARM_PENDING', label: '5. Pre-Arm Pending' };
+    }
+    if (currentMission && currentMission.waypoints.length > 0) {
+      return { step: 4, name: 'PARAMETERS_VALIDATED', label: '4. Validated' };
+    }
+    if (currentMission && currentMission.waypoints.length > 0) {
+      return { step: 3, name: 'WAYPOINTS_GENERATED', label: '3. Waypoints Generated' };
+    }
+    if (algorithm) {
+      return { step: 2, name: 'PATTERN_SELECTED', label: '2. Pattern Selected' };
+    }
+    return { step: 1, name: 'BOUNDARY_DEFINED', label: '1. Boundary Defined' };
+  };
+
+  const currentStep = getMissionStep();
+
   return (
     <Card
       title="SKYCON AUTONOMOUS RECON & SPIRAL SCAN"
@@ -305,6 +379,33 @@ export const AutonomousMissionControlCard: React.FC<AutonomousMissionControlCard
       className={`shrink-0 bg-[#0E131A] border-[var(--uav-card-border)] shadow-md select-none ${className}`}
       contentClassName="p-3 flex flex-col gap-3"
     >
+      {/* 10-STEP MISSION WORKFLOW PROGRESS STATUS BAR */}
+      <div className="bg-[#121820] p-2 rounded-lg border border-slate-800 space-y-1.5">
+        <div className="flex items-center justify-between text-[10px] font-mono">
+          <span className="text-slate-400 uppercase font-bold flex items-center gap-1">
+            <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+            <span>MISSION STATUS FLOW:</span>
+          </span>
+          <span className="font-extrabold text-emerald-400 bg-emerald-950/80 px-2 py-0.5 rounded border border-emerald-500/40">
+            STEP {currentStep.step}/10: {currentStep.label}
+          </span>
+        </div>
+        <div className="grid grid-cols-10 gap-1 h-1.5 w-full">
+          {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((s) => (
+            <div
+              key={s}
+              className={`rounded-full transition-colors ${
+                s <= currentStep.step
+                  ? s === currentStep.step
+                    ? 'bg-emerald-400 animate-pulse'
+                    : 'bg-emerald-600'
+                  : 'bg-slate-800'
+              }`}
+            />
+          ))}
+        </div>
+      </div>
+
       {/* ========================================================================= */}
       {/* STRICT PRE-ARM BOUNDARY CONTAINMENT WARNING BANNER                         */}
       {/* ========================================================================= */}
@@ -409,18 +510,89 @@ export const AutonomousMissionControlCard: React.FC<AutonomousMissionControlCard
             )}
           </div>
 
-          {/* 2. SEARCH ALTITUDE (Locked default 5m) */}
-          <div className="bg-[#161B22] p-2.5 rounded-lg border border-slate-800 space-y-1.5">
+          {/* 2. SEARCH ALGORITHM & GEOMETRIC RECOMMENDER */}
+          <div className="bg-[#161B22] p-2.5 rounded-lg border border-slate-800 space-y-2">
             <div className="flex items-center justify-between text-xs font-mono">
               <span className="text-slate-300 font-bold flex items-center gap-1.5">
-                <span className="text-emerald-400">2.</span> SEARCH ALTITUDE:
+                <span className="text-emerald-400">2.</span> SEARCH PATTERN ALGORITHM:
+              </span>
+              <span className="text-[10px] text-sky-400 font-bold bg-slate-900 px-2 py-0.5 rounded border border-slate-700">
+                {algorithm.replace('_', ' ')}
+              </span>
+            </div>
+
+            {/* 4 Pattern Algorithm Buttons */}
+            <div className="grid grid-cols-2 gap-1.5">
+              {[
+                { id: 'BOUSTROPHEDON' as const, label: 'Lawnmower (Grid)', desc: 'Parallel lanes' },
+                { id: 'EXPANDING_SPIRAL' as const, label: 'Expanding Spiral', desc: 'Center out' },
+                { id: 'INWARD_SPIRAL' as const, label: 'Inward Spiral', desc: 'Perimeter in' },
+                { id: 'MANUAL_WAYPOINTS' as const, label: 'Manual Waypoints', desc: 'Custom pins' }
+              ].map((alg) => (
+                <button
+                  key={alg.id}
+                  type="button"
+                  onClick={() => setAlgorithm(alg.id)}
+                  className={`p-2 rounded text-left font-mono transition cursor-pointer border ${
+                    algorithm === alg.id
+                      ? 'bg-emerald-600/90 text-white border-emerald-400 shadow-sm'
+                      : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-white hover:bg-slate-800'
+                  }`}
+                >
+                  <div className="text-[10.5px] font-bold leading-tight">{alg.label}</div>
+                  <div className="text-[9px] opacity-75">{alg.desc}</div>
+                </button>
+              ))}
+            </div>
+
+            {/* Geometric Recommendation Banner */}
+            <div className="p-2 rounded bg-[#0D1520] border border-sky-500/30 space-y-1.5 text-xs font-mono">
+              <div className="flex items-center justify-between">
+                <span className="text-sky-300 font-bold text-[10.5px] flex items-center gap-1">
+                  <span>💡</span> RECOMMENDED: <span className="text-white underline">{recommendedAlgorithm.replace('_', ' ')}</span>
+                </span>
+                <div className="flex items-center gap-1 text-[9.5px]">
+                  <span className="px-1.5 py-0.2 rounded bg-slate-900 border border-slate-700 text-slate-300">
+                    C: {circularityScore.toFixed(2)}
+                  </span>
+                  <span className="px-1.5 py-0.2 rounded bg-slate-900 border border-slate-700 text-slate-300">
+                    AR: {boundaryAspectRatio.toFixed(2)}
+                  </span>
+                </div>
+              </div>
+              <p className="text-[9.5px] text-slate-400 leading-snug">
+                {recommendationRationale}
+              </p>
+              {algorithm !== recommendedAlgorithm ? (
+                <button
+                  type="button"
+                  onClick={() => setAlgorithm(recommendedAlgorithm)}
+                  className="w-full py-1 px-2 rounded bg-sky-600 hover:bg-sky-500 text-white font-bold text-[10px] transition cursor-pointer flex items-center justify-center gap-1 shadow-sm"
+                >
+                  <Check className="w-3 h-3" />
+                  <span>APPLY RECOMMENDATION ({recommendedAlgorithm.replace('_', ' ')})</span>
+                </button>
+              ) : (
+                <div className="text-[9.5px] text-emerald-400 font-bold flex items-center gap-1">
+                  <Check className="w-3 h-3" />
+                  <span>Optimal algorithm selected for current geometry</span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* 3. SEARCH ALTITUDE & OPTICAL PRE-FLIGHT PARAMETERS */}
+          <div className="bg-[#161B22] p-2.5 rounded-lg border border-slate-800 space-y-2">
+            <div className="flex items-center justify-between text-xs font-mono">
+              <span className="text-slate-300 font-bold flex items-center gap-1.5">
+                <span className="text-emerald-400">3.</span> PRE-FLIGHT OPTICAL PARAMETERS:
               </span>
               <span className="font-bold text-white bg-slate-900 px-2 py-0.5 rounded border border-slate-700 text-[11px]">
                 {altitude}m AGL
               </span>
             </div>
 
-            <div className="flex items-center gap-1.5 pt-1">
+            <div className="flex items-center gap-1.5 pt-0.5">
               {[3, 5, 8, 10].map((alt) => (
                 <button
                   key={alt}
@@ -436,13 +608,33 @@ export const AutonomousMissionControlCard: React.FC<AutonomousMissionControlCard
                 </button>
               ))}
             </div>
+
+            {/* Calculated Optical Ground Parameters Grid */}
+            <div className="grid grid-cols-4 gap-1 text-center font-mono text-[9px] pt-1">
+              <div className="bg-slate-900 p-1 rounded border border-slate-800">
+                <span className="text-slate-500 block">SWATH (W)</span>
+                <span className="font-bold text-sky-300">{opticalSwathWidth}m</span>
+              </div>
+              <div className="bg-slate-900 p-1 rounded border border-slate-800">
+                <span className="text-slate-500 block">SPACING (S)</span>
+                <span className="font-bold text-emerald-300">{laneSpacingMeters}m</span>
+              </div>
+              <div className="bg-slate-900 p-1 rounded border border-slate-800">
+                <span className="text-slate-500 block">OVERLAP</span>
+                <span className="font-bold text-amber-300">{cameraOverlapPercent}%</span>
+              </div>
+              <div className="bg-slate-900 p-1 rounded border border-slate-800">
+                <span className="text-slate-500 block">SPEED</span>
+                <span className="font-bold text-white">4.0 m/s</span>
+              </div>
+            </div>
           </div>
 
-          {/* 3. FIVE-MINUTE MISSION BUDGET OPTIMIZER */}
+          {/* 4. FIVE-MINUTE MISSION BUDGET OPTIMIZER */}
           <div className="bg-[#161B22] p-2.5 rounded-lg border border-slate-800 space-y-2">
             <div className="flex items-center justify-between text-xs font-mono">
               <span className="text-slate-300 font-bold flex items-center gap-1.5">
-                <span className="text-emerald-400">3.</span> 5-MINUTE TARGET BUDGET:
+                <span className="text-emerald-400">4.</span> 5-MINUTE TARGET BUDGET:
               </span>
               <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
                 isFeasible ? 'bg-emerald-950 text-emerald-300 border border-emerald-500/40' : 'bg-rose-950 text-rose-300 border border-rose-500/40'

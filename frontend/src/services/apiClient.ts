@@ -1,27 +1,27 @@
 /**
- * AERORECON — Resilient Cloud & Local API Client
+ * SKYCON — Resilient Cloud & Local API Client
  * 
  * Provides unified, resilient request handling for Ground Station API endpoints:
- * 1. Primary: Relative path (e.g. /api/missions/active), routed through Netlify / Vite proxy.
- * 2. Fallback: Direct Render production cloud backend (https://dronebackend-ppgp.onrender.com/api/...)
- *    if the reverse proxy returns 502 Bad Gateway (e.g. during Render free-tier cold starts) or fails.
- * 3. Short-circuit: If Netlify proxy recently failed with 502, bypasses proxy to directly query Render
- *    to avoid flooding the browser console with 502 Bad Gateway errors.
- * 4. Background Wakeup: Pings /health on app launch to preemptively warm up the Render container.
+ * 1. Primary: Relative path (e.g. /api/missions/active), routed through local server / proxy.
+ * 2. Cloud Fallback: Direct PythonAnywhere cloud backend (https://teamskycon.pythonanywhere.com/api/...)
+ *    if the local proxy returns 502/503/504 Bad Gateway or network is unreachable.
+ * 3. Short-circuit: If proxy recently failed with 502, bypasses proxy to directly query PythonAnywhere
+ *    to avoid flooding the browser console with gateway errors.
+ * 4. Background Wakeup: Pings /health on app launch to preemptively warm up the backend.
  */
 
-const RENDER_PROD_API_BASE = 'https://dronebackend-ppgp.onrender.com';
+const CLOUD_PROD_API_BASE = 'https://teamskycon.pythonanywhere.com';
 
-let directRenderUntil = 0;
+let directCloudUntil = 0;
 
 export async function fetchWithFallback(endpoint: string, options: RequestInit = {}): Promise<Response> {
   const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
-  const isNetlifyOrRemote = typeof window !== 'undefined' && !window.location.hostname.includes('localhost') && !window.location.hostname.includes('127.0.0.1');
+  const isRemote = typeof window !== 'undefined' && !window.location.hostname.includes('localhost') && !window.location.hostname.includes('127.0.0.1');
 
-  // If proxy recently failed with 502/503/504, go directly to Render backend
-  if (isNetlifyOrRemote && Date.now() < directRenderUntil) {
+  // If proxy recently failed with 502/503/504, go directly to PythonAnywhere backend
+  if (isRemote && Date.now() < directCloudUntil) {
     try {
-      const directUrl = `${RENDER_PROD_API_BASE}${cleanEndpoint}`;
+      const directUrl = `${CLOUD_PROD_API_BASE}${cleanEndpoint}`;
       return await fetch(directUrl, options);
     } catch (err) {
       // Fallback to standard request below
@@ -32,11 +32,11 @@ export async function fetchWithFallback(endpoint: string, options: RequestInit =
   try {
     const res = await fetch(cleanEndpoint, options);
     
-    // If Netlify proxy returns 502/503/504, attempt direct Render fallback and remember for 30s
+    // If proxy returns 502/503/504, attempt direct PythonAnywhere fallback and remember for 30s
     if (res.status === 502 || res.status === 503 || res.status === 504) {
-      if (isNetlifyOrRemote) {
-        directRenderUntil = Date.now() + 30000;
-        const directUrl = `${RENDER_PROD_API_BASE}${cleanEndpoint}`;
+      if (isRemote) {
+        directCloudUntil = Date.now() + 30000;
+        const directUrl = `${CLOUD_PROD_API_BASE}${cleanEndpoint}`;
         try {
           const directRes = await fetch(directUrl, options);
           return directRes;
@@ -47,10 +47,10 @@ export async function fetchWithFallback(endpoint: string, options: RequestInit =
     }
     return res;
   } catch (err) {
-    // If network failed on proxy, try direct Render backend
-    if (isNetlifyOrRemote) {
-      directRenderUntil = Date.now() + 30000;
-      const directUrl = `${RENDER_PROD_API_BASE}${cleanEndpoint}`;
+    // If network failed on proxy, try direct PythonAnywhere backend
+    if (isRemote) {
+      directCloudUntil = Date.now() + 30000;
+      const directUrl = `${CLOUD_PROD_API_BASE}${cleanEndpoint}`;
       return await fetch(directUrl, options);
     }
     throw err;
@@ -61,9 +61,9 @@ let isWokenUp = false;
 export function wakeUpBackend(): void {
   if (typeof window === 'undefined' || isWokenUp) return;
   isWokenUp = true;
-  // Fire-and-forget background ping to Render /health to warm up cold container
+  // Fire-and-forget background ping to PythonAnywhere /health
   try {
-    fetch(`${RENDER_PROD_API_BASE}/health`, { mode: 'cors' }).catch(() => {});
+    fetch(`${CLOUD_PROD_API_BASE}/health`, { mode: 'cors' }).catch(() => {});
   } catch {}
 }
 

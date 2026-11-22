@@ -17,7 +17,8 @@ import {
   Power,
   Play,
   Square,
-  Loader2
+  Loader2,
+  Flashlight
 } from 'lucide-react';
 import { decodeQRFromImageData } from '../../services/qrDecoderService';
 import { Card } from '../../ui/Card';
@@ -25,12 +26,18 @@ import { audioService } from '../../services/audioService';
 import { reconDetectionService } from '../../services/reconDetectionService';
 import {
   droneCameraStreamService,
-  DroneCameraStreamStatus
+  DroneCameraStreamStatus,
+  CameraStreamMetrics
 } from '../../services/droneCameraStreamService';
 import {
   dronePortStreamingService,
   DronePortStreamState
 } from '../../services/dronePortStreamingService';
+import {
+  phoneDeviceService,
+  DeviceHardwareCapabilities,
+  AutoFlashlightState
+} from '../../services/phoneDeviceService';
 import {
   QRDetectionRecord,
   GCSVisualStatus,
@@ -85,14 +92,28 @@ export const CameraFeed: React.FC<CameraFeedProps> = ({
   const [isApproaching, setIsApproaching] = useState<boolean>(false);
   const [actionNotice, setActionNotice] = useState<string | null>(null);
 
-  // iPhone Onboard Camera Stream & Test Pattern State
-  const [useTestPattern, setUseTestPattern] = useState<boolean>(false);
-  const [phoneStreamUrl, setPhoneStreamUrl] = useState<string>('http://192.168.43.15:8080/video');
-  const [streamRetryCount, setStreamRetryCount] = useState<number>(0);
-  const [streamError, setStreamError] = useState<boolean>(false);
-  const testPatternCanvasRef = useRef<HTMLCanvasElement>(null);
-  const phoneStreamImgRef = useRef<HTMLImageElement>(null);
-  const retryTimerRef = useRef<any>(null);
+  // Real-time Camera Stream Telemetry & Metrics (Phase 1)
+  const [streamMetrics, setStreamMetrics] = useState<CameraStreamMetrics>(() => droneCameraStreamService.getMetrics());
+  const [torchCaps, setTorchCaps] = useState<DeviceHardwareCapabilities>(() => ({
+    supportsOrientationLock: false,
+    supportsTorch: false,
+    torchSupportReason: 'INITIALIZING',
+    supportsFocusMode: false,
+    supportsExposureCompensation: false,
+    supportedFocusModes: []
+  }));
+  const [torchState, setTorchState] = useState<AutoFlashlightState>(() => ({
+    enabled: false,
+    isTorchCurrentlyOn: false,
+    currentLuminance: 128,
+    darkThreshold: 40,
+    brightThreshold: 75,
+    darkDwellTimeMs: 0,
+    brightDwellTimeMs: 0,
+    hysteresisActive: false,
+    statusText: 'Standby'
+  }));
+  const [nowTick, setNowTick] = useState<number>(Date.now());
 
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
   const frameImgRef = useRef<HTMLImageElement>(null);
@@ -106,9 +127,14 @@ export const CameraFeed: React.FC<CameraFeedProps> = ({
   // Drone Port Streaming State (Strictly OFF by default per Master Prompt)
   const [dronePortState, setDronePortState] = useState<DronePortStreamState>(() => dronePortStreamingService.getStreamState());
 
-  // Subscribe to Drone Camera Stream Service (WebRTC + Direct Frames)
+  // Liveness tick timer (updates "last frame Xs ago" readout)
   useEffect(() => {
-    // Listen to user streaming state (OFF by default)
+    const timer = setInterval(() => setNowTick(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  // Subscribe to Drone Camera Stream Service (WebRTC + Direct Frames + Real-Time Metrics)
+  useEffect(() => {
     const unsubPortState = dronePortStreamingService.subscribe((st) => {
       setDronePortState(st);
     });
@@ -126,11 +152,26 @@ export const CameraFeed: React.FC<CameraFeedProps> = ({
       setStreamStatus(st);
     });
 
+    const unsubMetrics = droneCameraStreamService.subscribeMetrics((metrics) => {
+      setStreamMetrics(metrics);
+    });
+
+    const unsubCaps = phoneDeviceService.subscribeCapabilities((caps) => {
+      setTorchCaps(caps);
+    });
+
+    const unsubFlash = phoneDeviceService.subscribeFlashlight((st) => {
+      setTorchState(st);
+    });
+
     return () => {
       unsubPortState();
       unsubStream();
       unsubFrame();
       unsubStatus();
+      unsubMetrics();
+      unsubCaps();
+      unsubFlash();
     };
   }, []);
 
@@ -190,11 +231,7 @@ export const CameraFeed: React.FC<CameraFeedProps> = ({
         let w = 0;
         let h = 0;
 
-        if (useTestPattern && testPatternCanvasRef.current) {
-          source = testPatternCanvasRef.current;
-          w = testPatternCanvasRef.current.width;
-          h = testPatternCanvasRef.current.height;
-        } else if (remoteVideoRef.current && remoteVideoRef.current.readyState >= 2 && remoteVideoRef.current.videoWidth > 0) {
+        if (remoteVideoRef.current && remoteVideoRef.current.readyState >= 2 && remoteVideoRef.current.videoWidth > 0) {
           source = remoteVideoRef.current;
           w = remoteVideoRef.current.videoWidth;
           h = remoteVideoRef.current.videoHeight;
@@ -262,6 +299,57 @@ export const CameraFeed: React.FC<CameraFeedProps> = ({
     } else {
       showNotification('Retry complete: QR code undecodable in this frame.');
     }
+  };
+
+  const handleCaptureSnapshot = async () => {
+    let source: CanvasImageSource | null = null;
+    let w = 0;
+    let h = 0;
+
+    if (remoteVideoRef.current && remoteVideoRef.current.readyState >= 2) {
+      source = remoteVideoRef.current;
+      w = remoteVideoRef.current.videoWidth;
+      h = remoteVideoRef.current.videoHeight;
+    } else if (frameImgRef.current && frameImgRef.current.complete && frameImgRef.current.naturalWidth > 0) {
+      source = frameImgRef.current;
+      w = frameImgRef.current.naturalWidth;
+      h = frameImgRef.current.naturalHeight;
+    }
+
+    if (!source || w === 0 || h === 0) {
+      showNotification('No active camera frame available to capture');
+      return;
+    }
+
+    try {
+      const canvas = document.createElement('canvas');
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+      ctx.drawImage(source, 0, 0, w, h);
+      const photoDataUrl = canvas.toDataURL('image/jpeg', 0.90);
+      const imageData = ctx.getImageData(0, 0, w, h);
+      audioService.playBeep(1200, 100);
+      showNotification('Frame captured. Running optical analysis...');
+      await reconDetectionService.handleRawDetectionEvent({
+        photoDataUrl,
+        thumbnailDataUrl: photoDataUrl,
+        rawImageData: imageData
+      });
+    } catch (err: any) {
+      showNotification(`Capture error: ${err?.message || 'Failed'}`);
+    }
+  };
+
+  const handleToggleTorch = async () => {
+    if (!torchCaps.supportsTorch) {
+      showNotification(torchCaps.torchSupportReason || 'Flashlight unsupported on this device/browser');
+      return;
+    }
+    const next = !torchState.isTorchCurrentlyOn;
+    const res = await phoneDeviceService.setTorch(next);
+    showNotification(res.message);
   };
 
   // Visual Status badge calculation
@@ -337,7 +425,7 @@ export const CameraFeed: React.FC<CameraFeedProps> = ({
   const streamStatusConfig = getStreamStatusConfig(dronePortState);
   const StreamStatusIcon = streamStatusConfig.icon;
 
-  const isFeedActive = (dronePortState === 'STREAMING_ACTIVE' && (hasWebRtcVideo || Boolean(liveFrame))) || useTestPattern;
+  const isFeedActive = dronePortState === 'STREAMING_ACTIVE' && (hasWebRtcVideo || Boolean(liveFrame));
 
   const handleFullscreen = () => {
     if (!containerRef.current) return;
@@ -400,28 +488,48 @@ export const CameraFeed: React.FC<CameraFeedProps> = ({
             <span>{streamStatusConfig.label}</span>
           </div>
 
-          {/* Manual Fallback Test Pattern Toggle */}
+          {/* Manual High-Res Snapshot Capture Control */}
           <button
             type="button"
-            onClick={() => {
-              const next = !useTestPattern;
-              setUseTestPattern(next);
-              showNotification(
-                next
-                  ? 'FALLBACK TEST PATTERN: ON (Simulated QR [4,8] Active)'
-                  : 'TEST PATTERN: OFF (Switched to Camera Stream)'
-              );
-            }}
-            className={`px-2 py-0.5 rounded-[4px] text-[10px] font-mono font-bold transition flex items-center gap-1 cursor-pointer ${
-              useTestPattern
-                ? 'bg-amber-500 text-slate-950 font-extrabold shadow-sm ring-1 ring-amber-400'
-                : 'bg-[#161B22] border border-slate-700 text-slate-400 hover:text-white'
+            onClick={handleCaptureSnapshot}
+            disabled={!isFeedActive}
+            className={`px-2 py-0.5 rounded-[4px] text-[10px] font-mono font-bold transition flex items-center gap-1 ${
+              isFeedActive
+                ? 'bg-sky-950/80 hover:bg-sky-900 border border-sky-500/50 text-sky-300 hover:text-white cursor-pointer shadow-sm'
+                : 'bg-[#161B22] border border-slate-800 text-slate-600 cursor-not-allowed'
             }`}
-            title="Toggle Fallback Test Pattern for bench testing without phone camera"
+            title="Capture current optical frame for high-resolution target & QR inspection"
           >
-            <span>{useTestPattern ? 'PATTERN ON' : 'TEST PATTERN'}</span>
-            {useTestPattern && <span className="w-1.5 h-1.5 rounded-full bg-slate-950 animate-ping" />}
+            <Camera className="w-3 h-3" />
+            <span>CAPTURE</span>
           </button>
+
+          {/* iPhone Flashlight / Torch Control Button */}
+          {torchCaps.supportsTorch ? (
+            <button
+              type="button"
+              onClick={handleToggleTorch}
+              className={`px-2 py-0.5 rounded-[4px] text-[10px] font-mono font-bold transition flex items-center gap-1 cursor-pointer shadow-sm ${
+                torchState.isTorchCurrentlyOn
+                  ? 'bg-amber-500 text-slate-950 font-black ring-1 ring-amber-300'
+                  : 'bg-[#161B22] border border-slate-700 text-slate-300 hover:text-white'
+              }`}
+              title="Toggle iPhone onboard camera LED flashlight"
+            >
+              <Flashlight className="w-3 h-3" />
+              <span>{torchState.isTorchCurrentlyOn ? 'TORCH ON' : 'TORCH OFF'}</span>
+            </button>
+          ) : (
+            <button
+              type="button"
+              disabled
+              className="px-2 py-0.5 rounded-[4px] text-[10px] font-mono font-bold bg-[#161B22] border border-slate-800 text-slate-500 flex items-center gap-1 cursor-not-allowed"
+              title={torchCaps.torchSupportReason || 'Flashlight unsupported on this browser/device'}
+            >
+              <Flashlight className="w-3 h-3 text-slate-600" />
+              <span>UNSUPPORTED</span>
+            </button>
+          )}
 
           {/* Tab Navigation: STREAM | ARCHIVE ({n}) | TARGET */}
           <div className="flex items-center bg-[#161B22] p-0.5 rounded-[6px] border border-[var(--uav-card-border)] text-[10px] font-mono">
@@ -494,16 +602,6 @@ export const CameraFeed: React.FC<CameraFeedProps> = ({
         >
           {isFeedActive ? (
             <div className="w-full h-full relative flex items-center justify-center bg-black overflow-hidden">
-              {/* Fallback Test Pattern Animated Canvas */}
-              {useTestPattern && (
-                <canvas
-                  ref={testPatternCanvasRef}
-                  width={640}
-                  height={480}
-                  className="w-full h-full object-contain select-none"
-                />
-              )}
-
               {/* WebRTC Video Stream Element */}
               <video
                 ref={remoteVideoRef}
@@ -532,11 +630,16 @@ export const CameraFeed: React.FC<CameraFeedProps> = ({
                   <div className="flex items-center gap-1.5 pointer-events-auto">
                     <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-emerald-600/90 backdrop-blur-sm text-white font-mono font-bold text-[10px] tracking-wider uppercase shadow">
                       <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
-                      <span>DRONE CORE CAM</span>
+                      <span>OPTICAL LIVE</span>
                     </div>
                     <div className="px-2 py-0.5 rounded bg-black/60 border border-slate-700 text-sky-300 font-mono font-bold text-[10px]">
-                      {hasWebRtcVideo ? 'WEBRTC 30FPS' : 'LIVE FRAME RELAY'}
+                      {streamMetrics.fps > 0 ? `${streamMetrics.fps} FPS` : (hasWebRtcVideo ? 'WEBRTC 30FPS' : 'LIVE FEED')}
                     </div>
+                    {streamMetrics.lastFrameTimestamp > 0 && (
+                      <div className="px-2 py-0.5 rounded bg-black/60 border border-slate-700 text-slate-300 font-mono text-[9.5px]">
+                        {Math.max(0, Math.round((nowTick - streamMetrics.lastFrameTimestamp) / 1000))}s ago
+                      </div>
+                    )}
                   </div>
 
                   {/* Flight Telemetry Readout */}

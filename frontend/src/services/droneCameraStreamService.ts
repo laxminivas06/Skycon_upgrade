@@ -18,6 +18,15 @@ export type DroneCameraStreamStatus =
   | 'CAMERA_OFFLINE'       // "Camera Offline"
   | 'CONNECTION_LOST';     // "Connection Lost"
 
+export interface CameraStreamMetrics {
+  fps: number;
+  lastFrameTimestamp: number;
+  frameCount: number;
+  isLive: boolean;
+  status: DroneCameraStreamStatus;
+  statusMessage: string;
+}
+
 export interface CameraStreamPayload {
   type: 'CAMERA_STREAM_SIGNAL' | 'CAMERA_FRAME_DATA' | 'CAMERA_STATUS_UPDATE' | 'CAMERA_HEARTBEAT' | 'CAMERA_STATUS_REQUEST';
   senderRole?: 'DRONE' | 'GROUND_STATION';
@@ -33,6 +42,7 @@ export interface CameraStreamPayload {
 type StreamListener = (stream: MediaStream | null) => void;
 type FrameListener = (frameUrl: string | null) => void;
 type StatusListener = (status: DroneCameraStreamStatus, message: string) => void;
+type MetricsListener = (metrics: CameraStreamMetrics) => void;
 
 const BROADCAST_CHANNEL_NAME = 'DRONE_CORE_CAMERA_STREAM_CHANNEL';
 const RELAY_TOKEN_DEFAULT = 'saeindia_secret_token_2026';
@@ -57,12 +67,18 @@ class DroneCameraStreamService {
   private streamListeners: Set<StreamListener> = new Set();
   private frameListeners: Set<FrameListener> = new Set();
   private statusListeners: Set<StatusListener> = new Set();
+  private metricsListeners: Set<MetricsListener> = new Set();
 
   // State
   private currentStatus: DroneCameraStreamStatus = 'WAITING_FOR_CAMERA';
   private statusMessage: string = 'Waiting for Drone Core Camera';
   private latestRemoteStream: MediaStream | null = null;
   private latestFrameUrl: string | null = null;
+
+  // Real-time Frame Metrics
+  private frameCount: number = 0;
+  private frameTimestamps: number[] = [];
+  private calculatedFps: number = 0;
 
   // Publisher State (Drone Core)
   private isPublishing: boolean = false;
@@ -480,11 +496,27 @@ class DroneCameraStreamService {
 
     // 1. Frame Data Arrival
     if (msg.type === 'CAMERA_FRAME_DATA' && msg.frame) {
-      this.lastFrameTimestamp = Date.now();
+      const now = Date.now();
+      this.lastFrameTimestamp = now;
       this.hadLiveConnection = true;
       this.latestFrameUrl = msg.frame;
+      this.frameCount++;
+
+      // Rolling FPS calculation
+      this.frameTimestamps.push(now);
+      if (this.frameTimestamps.length > 20) {
+        this.frameTimestamps.shift();
+      }
+      if (this.frameTimestamps.length >= 2) {
+        const spanMs = now - this.frameTimestamps[0];
+        if (spanMs > 0) {
+          this.calculatedFps = Math.round(((this.frameTimestamps.length - 1) * 1000) / spanMs);
+        }
+      }
+
       this.updateStatus('LIVE_FEED_CONNECTED', 'Live Feed Connected');
       this.notifyFrame(msg.frame);
+      this.notifyMetrics();
       return;
     }
 
@@ -626,6 +658,7 @@ class DroneCameraStreamService {
       this.currentStatus = newStatus;
       this.statusMessage = message;
       this.notifyStatus(newStatus, message);
+      this.notifyMetrics();
     }
   }
 
@@ -661,6 +694,30 @@ class DroneCameraStreamService {
 
   private notifyFrame(frameUrl: string | null) {
     this.frameListeners.forEach((fn) => fn(frameUrl));
+  }
+
+  public subscribeMetrics(fn: MetricsListener) {
+    this.metricsListeners.add(fn);
+    fn(this.getMetrics());
+    return () => this.metricsListeners.delete(fn);
+  }
+
+  private notifyMetrics() {
+    const m = this.getMetrics();
+    this.metricsListeners.forEach((fn) => fn(m));
+  }
+
+  public getMetrics(): CameraStreamMetrics {
+    const now = Date.now();
+    const isLive = this.lastFrameTimestamp > 0 && (now - this.lastFrameTimestamp) < 3500;
+    return {
+      fps: isLive ? this.calculatedFps : 0,
+      lastFrameTimestamp: this.lastFrameTimestamp,
+      frameCount: this.frameCount,
+      isLive,
+      status: this.currentStatus,
+      statusMessage: this.statusMessage
+    };
   }
 
   public getStatus(): { status: DroneCameraStreamStatus; message: string } {

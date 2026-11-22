@@ -157,12 +157,12 @@ export const PreflightValidationModal: React.FC<PreflightValidationModalProps> =
     true // advisory on bench
   );
 
-  // STEP 9: Check ESP communication if the ESP bridge is required
-  const espCommPassed = Boolean(
+  // STEP 9: Check Raspberry Pi 4 Companion Computer communication
+  const companionCommPassed = Boolean(
     isSimulated ||
     (connState.isStarted && connState.wifiStatus === 'VERIFIED') ||
-    telemetry.rawConnectionState.connectionType === 'ESP32_WEBSOCKET' ||
-    telemetry.isConnected
+    telemetry.isConnected ||
+    telemetry.rawConnectionState.isConnected
   );
 
   // STEP 10: Check whether the complete planned route is inside the geofence
@@ -284,15 +284,15 @@ export const PreflightValidationModal: React.FC<PreflightValidationModalProps> =
       icon: <Cpu className="w-4 h-4" />
     },
     {
-      id: 'step9_esp_communication',
+      id: 'step9_companion_link',
       stepNumber: 9,
-      label: 'STEP 9: ESP Communication Bridge',
-      detail: espCommPassed
-        ? 'ESP32-S3 Wi-Fi relay verified with brownout mitigation active (15dBm TX)'
-        : 'ESP32-S3 communication link offline',
-      passed: espCommPassed,
+      label: 'STEP 9: Companion Computer Link',
+      detail: companionCommPassed
+        ? 'Raspberry Pi 4 Model B companion telemetry link active (TELEM2 @ 57600 baud)'
+        : 'Companion computer link offline or pending handshake',
+      passed: companionCommPassed,
       isCritical: true,
-      icon: <Wifi className="w-4 h-4" />
+      icon: <Cpu className="w-4 h-4" />
     },
     {
       id: 'step10_geofence_route',

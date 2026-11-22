@@ -67,12 +67,12 @@ export const UnifiedDroneCoreView: React.FC<UnifiedDroneCoreViewProps> = ({
   // Active View Tab for Mobile/Tablet layout: Prioritize HEATMAP over optical-stream (Requirement 4)
   const [activeTab, setActiveTab] = useState<'HEATMAP' | 'STREAM' | 'INTELLIGENCE' | 'CONTROLS'>('HEATMAP');
 
-  // Real-Time Dynamic Heatmap Engine Metrics
+  // Real-Time Optical Ground Reconnaissance Matrix Metrics
   const [heatmapStats, setHeatmapStats] = useState({
     fps: 11,
-    coverage: 84.5,
-    hotspots: 0,
-    peakIntensity: 0,
+    sharpness: 72,
+    boxCandidates: 0,
+    qrDetections: 0,
   });
 
   // Automated Photo Capture & QR Analysis Engine (Requirement 5)
@@ -192,9 +192,13 @@ export const UnifiedDroneCoreView: React.FC<UnifiedDroneCoreViewProps> = ({
   // Torch Toggle
   const toggleTorch = async () => {
     const next = !torchActive;
-    await phoneDeviceService.setTorch(next);
-    setTorchActive(next);
-    showNotice(next ? 'Torch ON' : 'Torch OFF');
+    const res = await phoneDeviceService.setTorch(next);
+    if (res.success) {
+      setTorchActive(next);
+      showNotice(next ? 'Torch ON' : 'Torch OFF');
+    } else {
+      showNotice(res.message);
+    }
   };
 
   // Cycle Rotation
@@ -293,39 +297,26 @@ export const UnifiedDroneCoreView: React.FC<UnifiedDroneCoreViewProps> = ({
       const cellW = cWidth / gridCols;
       const cellH = cHeight / gridRows;
 
+      // Render tactical optical grid (honest surface inspection without decorative thermal bubbles)
       for (let y = 0; y < gridRows; y++) {
         for (let x = 0; x < gridCols; x++) {
           const val = heatMatrix[y][x];
-          const cx = (x + 0.5) * cellW;
-          const cy = (y + 0.5) * cellH;
-          const radius = Math.max(cellW, cellH) * 1.35;
+          const px = x * cellW;
+          const py = y * cellH;
 
-          const grad = ctx.createRadialGradient(cx, cy, radius * 0.1, cx, cy, radius);
-
-          if (val > 0.75) {
-            grad.addColorStop(0, `rgba(255, 30, 30, ${Math.min(0.9, val)})`);
-            grad.addColorStop(0.5, 'rgba(255, 140, 0, 0.6)');
-            grad.addColorStop(1, 'rgba(255, 200, 0, 0)');
-          } else if (val > 0.5) {
-            grad.addColorStop(0, `rgba(255, 180, 0, ${Math.min(0.8, val)})`);
-            grad.addColorStop(0.5, 'rgba(16, 185, 129, 0.5)');
-            grad.addColorStop(1, 'rgba(6, 182, 212, 0)');
-          } else if (val > 0.25) {
-            grad.addColorStop(0, `rgba(16, 185, 129, ${Math.min(0.65, val)})`);
-            grad.addColorStop(0.6, 'rgba(6, 182, 212, 0.4)');
-            grad.addColorStop(1, 'rgba(15, 23, 42, 0)');
+          // Draw base cell tint reflecting optical contrast/confidence
+          if (val > 0.65) {
+            ctx.fillStyle = 'rgba(245, 158, 11, 0.22)'; // Amber for box target candidate
+          } else if (val > 0.40) {
+            ctx.fillStyle = 'rgba(6, 182, 212, 0.12)';  // Subtle cyan for inspected terrain
           } else {
-            grad.addColorStop(0, 'rgba(14, 116, 144, 0.35)');
-            grad.addColorStop(1, 'rgba(10, 15, 26, 0)');
+            ctx.fillStyle = 'rgba(15, 23, 42, 0.25)';   // Dark slate base
           }
-
-          ctx.fillStyle = grad;
-          ctx.beginPath();
-          ctx.arc(cx, cy, radius, 0, Math.PI * 2);
-          ctx.fill();
+          ctx.fillRect(px, py, cellW, cellH);
         }
       }
 
+      // Draw subtle gridlines
       ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
       ctx.lineWidth = 1;
       for (let x = 0; x <= gridCols; x++) {
@@ -341,27 +332,29 @@ export const UnifiedDroneCoreView: React.FC<UnifiedDroneCoreViewProps> = ({
         ctx.stroke();
       }
 
+      // Highlight target candidate cells with crisp aerospace bounding boxes
       for (let y = 0; y < gridRows; y++) {
         for (let x = 0; x < gridCols; x++) {
-          if (heatMatrix[y][x] > 0.7) {
+          if (heatMatrix[y][x] > 0.70) {
             const cx = (x + 0.5) * cellW;
             const cy = (y + 0.5) * cellH;
-            ctx.strokeStyle = '#EF4444';
-            ctx.lineWidth = 2;
+            ctx.strokeStyle = '#F59E0B'; // Amber bounding box
+            ctx.lineWidth = 1.5;
             ctx.strokeRect(cx - cellW * 0.45, cy - cellH * 0.45, cellW * 0.9, cellH * 0.9);
-            ctx.fillStyle = '#EF4444';
-            ctx.font = 'bold 9px monospace';
-            ctx.fillText('HOT', cx - cellW * 0.35, cy - cellH * 0.5);
+            ctx.fillStyle = '#F59E0B';
+            ctx.font = 'bold 8.5px monospace';
+            ctx.fillText('CANDIDATE', cx - cellW * 0.40, cy - cellH * 0.48);
           }
         }
       }
 
       if (frameCount % 10 === 0) {
+        const meanSharpness = Math.round((totalIntensity / (gridCols * gridRows)) * 100);
         setHeatmapStats({
           fps: Math.round(1000 / Math.max(deltaMs, 1)),
-          coverage: Math.min(100, Math.round((totalIntensity / (gridCols * gridRows)) * 140)),
-          hotspots: activeHotspots,
-          peakIntensity: Math.round(maxVal * 100),
+          sharpness: Math.min(100, Math.max(20, meanSharpness)),
+          boxCandidates: activeHotspots,
+          qrDetections: capturedImages.length,
         });
       }
     };
@@ -607,17 +600,17 @@ export const UnifiedDroneCoreView: React.FC<UnifiedDroneCoreViewProps> = ({
                 </span>
               </div>
 
-              {/* Dynamic Heatmap Status HUD */}
-              <div className="absolute top-2 left-2 flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-black/80 backdrop-blur-md border border-amber-500/60 text-[10px] font-mono font-bold z-10 text-amber-300">
-                <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
-                <span>REAL-TIME DYNAMIC HEATMAP ({heatmapStats.fps} FPS)</span>
+              {/* Optical Ground Reconnaissance HUD */}
+              <div className="absolute top-2 left-2 flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-black/80 backdrop-blur-md border border-cyan-500/60 text-[10px] font-mono font-bold z-10 text-cyan-300">
+                <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping" />
+                <span>OPTICAL RECON MATRIX ({heatmapStats.fps} FPS)</span>
               </div>
 
-              {/* Real-time Heatmap Metrics Overlay */}
+              {/* Real-time Optical Recon Metrics Overlay */}
               <div className="absolute bottom-2 left-2 right-2 flex items-center justify-between text-[10px] font-mono bg-black/80 backdrop-blur-md border border-slate-800 p-1.5 rounded-lg text-slate-300 z-10">
-                <span className="text-amber-300 font-bold">COVERAGE: {heatmapStats.coverage}%</span>
-                <span>HOTSPOTS: {heatmapStats.hotspots}</span>
-                <span>PEAK INTENSITY: {heatmapStats.peakIntensity}%</span>
+                <span className="text-cyan-300 font-bold">SHARPNESS: {heatmapStats.sharpness}</span>
+                <span>BOX CANDIDATES: {heatmapStats.boxCandidates}</span>
+                <span className="text-emerald-400 font-bold">CONFIRMED QR: {capturedImages.length}</span>
                 <span>ALT: {(telemetry.altitude || 0).toFixed(1)}m</span>
               </div>
             </div>
