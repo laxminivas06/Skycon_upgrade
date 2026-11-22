@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Compass,
   ShieldCheck,
@@ -126,6 +126,8 @@ export const FlightModeSelector: React.FC<FlightModeSelectorProps> = ({
   const [isChangingMode, setIsChangingMode] = useState<FlightModeName | null>(null);
   const [modeFeedback, setModeFeedback] = useState<{ mode: FlightModeName; success: boolean; msg: string } | null>(null);
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const [dropdownCoords, setDropdownCoords] = useState<{ top?: number; bottom?: number; left: number }>({ left: 0 });
 
   useEffect(() => {
     const unsubTelem = mavlinkService.subscribeTelemetry((t) => setTelemetry(t));
@@ -136,11 +138,43 @@ export const FlightModeSelector: React.FC<FlightModeSelectorProps> = ({
     };
   }, []);
 
+  const updateDropdownPosition = () => {
+    if (buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      if (direction === 'up') {
+        setDropdownCoords({
+          bottom: Math.max(8, window.innerHeight - rect.top + 6),
+          left: Math.max(8, Math.min(rect.left, window.innerWidth - 272))
+        });
+      } else {
+        setDropdownCoords({
+          top: Math.max(8, rect.bottom + 6),
+          left: Math.max(8, Math.min(rect.left, window.innerWidth - 272))
+        });
+      }
+    }
+  };
+
+  useEffect(() => {
+    if (dropdownOpen) {
+      updateDropdownPosition();
+      const onReposition = () => updateDropdownPosition();
+      window.addEventListener('resize', onReposition);
+      window.addEventListener('scroll', onReposition, true);
+      return () => {
+        window.removeEventListener('resize', onReposition);
+        window.removeEventListener('scroll', onReposition, true);
+      };
+    }
+  }, [dropdownOpen, direction]);
+
   const isLinkActive = Boolean(
     connState.isConnected ||
     connState.isUsbConnected ||
     connState.isRealHardware ||
-    connState.connectionType === 'SIMULATED'
+    connState.connectionType === 'SIMULATED' ||
+    telemetry.pixhawkConnected ||
+    (telemetry.flightMode && telemetry.flightMode !== 'DISCONNECTED' && telemetry.flightMode !== 'WAITING FOR TELEMETRY')
   );
 
   const hasFlightMode = Boolean(
@@ -204,8 +238,12 @@ export const FlightModeSelector: React.FC<FlightModeSelectorProps> = ({
     return (
       <div className={`relative inline-block text-left ${className}`}>
         <button
+          ref={buttonRef}
           type="button"
-          onClick={() => setDropdownOpen(!dropdownOpen)}
+          onClick={() => {
+            if (!dropdownOpen) updateDropdownPosition();
+            setDropdownOpen(!dropdownOpen);
+          }}
           className={`flex items-center gap-1.5 px-2.5 py-1 rounded-[8px] border text-[11px] font-mono font-bold transition shadow-sm cursor-pointer select-none ${
             isChangingMode
               ? 'bg-amber-600/90 border-amber-400 text-white animate-pulse'
@@ -221,17 +259,53 @@ export const FlightModeSelector: React.FC<FlightModeSelectorProps> = ({
           <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform ${dropdownOpen ? 'rotate-180' : ''}`} />
         </button>
 
+        {/* Floating Transient Toast for Mode Change Feedback */}
+        {modeFeedback && !dropdownOpen && (
+          <div
+            className={`fixed z-[9999] px-2.5 py-1 rounded-lg border text-[11px] font-mono font-bold shadow-2xl flex items-center gap-1.5 animate-in fade-in zoom-in-95 pointer-events-none ${
+              modeFeedback.success
+                ? 'bg-emerald-950/95 border-emerald-400 text-emerald-200 shadow-emerald-950/50'
+                : 'bg-rose-950/95 border-rose-500 text-rose-200 shadow-rose-950/50'
+            }`}
+            style={{
+              left: `${dropdownCoords.left}px`,
+              bottom: dropdownCoords.bottom !== undefined ? `${dropdownCoords.bottom}px` : undefined,
+              top: dropdownCoords.top !== undefined ? `${dropdownCoords.top}px` : undefined
+            }}
+          >
+            <span>{modeFeedback.success ? '✓' : '⚠️'}</span>
+            <span>{modeFeedback.msg}</span>
+          </div>
+        )}
+
         {dropdownOpen && (
           <>
             <div
-              className="fixed inset-0 z-40"
+              className="fixed inset-0 z-[9998]"
               onClick={() => setDropdownOpen(false)}
             />
-            <div className={`absolute ${direction === 'up' ? 'left-0 bottom-full mb-1.5' : 'right-0 mt-1.5'} w-64 bg-[#0d1117] border border-slate-700 rounded-xl shadow-2xl py-1.5 z-50 animate-in fade-in zoom-in-95`}>
+            <div
+              className="fixed z-[9999] w-64 bg-[#0d1117] border border-slate-700 rounded-xl shadow-2xl py-1.5 animate-in fade-in zoom-in-95"
+              style={{
+                left: `${dropdownCoords.left}px`,
+                bottom: dropdownCoords.bottom !== undefined ? `${dropdownCoords.bottom}px` : undefined,
+                top: dropdownCoords.top !== undefined ? `${dropdownCoords.top}px` : undefined
+              }}
+            >
               <div className="px-3 py-1.5 border-b border-slate-800 text-[10px] font-mono font-bold text-slate-400 flex items-center justify-between">
                 <span>SELECT FLIGHT MODE</span>
                 <span className="text-emerald-400 font-normal">Active: {currentModeStr}</span>
               </div>
+
+              {/* In-Dropdown Feedback Banner */}
+              {modeFeedback && (
+                <div className={`mx-2 my-1 px-2 py-1 rounded text-[10px] font-mono ${
+                  modeFeedback.success ? 'bg-emerald-950/90 text-emerald-300 border border-emerald-500/50' : 'bg-rose-950/90 text-rose-300 border border-rose-500/50'
+                }`}>
+                  {modeFeedback.msg}
+                </div>
+              )}
+
               <div className="max-h-72 overflow-y-auto divide-y divide-slate-800/40 py-1">
                 {ALL_FLIGHT_MODES.map((cfg) => {
                   const isActive = currentModeStr === cfg.mode;

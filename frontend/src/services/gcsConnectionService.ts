@@ -60,12 +60,18 @@ class GCSConnectionService {
   private initListeners() {
     // Listen to MAVLink telemetry updates to dynamically update MAVLink & GPS status
     this.telemetryUnsubscribe = mavlinkService.subscribeTelemetry((telem: DroneTelemetry) => {
+      if (telem.pixhawkConnected) {
+        this.state.isStarted = true;
+      }
       if (!this.state.isStarted && mavlinkService.getConnectionState().connectionType !== 'SIMULATED') return;
       this.evaluateTelemetry(telem);
     });
 
     // Listen to MAVLink connection state changes
     this.connectionUnsubscribe = mavlinkService.subscribeConnection((conn: PixhawkConnectionState) => {
+      if (conn.isConnected || conn.isReceivingTelemetry) {
+        this.state.isStarted = true;
+      }
       if (!this.state.isStarted && conn.connectionType !== 'SIMULATED') return;
       this.evaluateConnection(conn);
     });

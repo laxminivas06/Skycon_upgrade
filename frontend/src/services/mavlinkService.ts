@@ -518,8 +518,9 @@ class MAVLinkService {
             const res = await fetch('/api/telemetry');
             if (res.ok) {
               const data = await res.json();
-              if (data && data.telemetry) {
-                this.ingestCompanionTelemetry(data.telemetry);
+              const companionTelem = data?.telemetry || (data?.data && (data.data.telemetry || data.data)) || data;
+              if (companionTelem && (companionTelem.connected || companionTelem.armed !== undefined || companionTelem.flight_mode || companionTelem.lat !== undefined)) {
+                this.ingestCompanionTelemetry(companionTelem);
               }
             }
           } catch (e) {
@@ -547,17 +548,29 @@ class MAVLinkService {
   public ingestCompanionTelemetry(telem: any): void {
     if (!telem || typeof telem !== 'object') return;
     const now = Date.now();
-    this.connectionState.isConnected = true;
-    this.connectionState.isReceivingTelemetry = true;
+    const isActuallyConnected = Boolean(
+      telem.connected ||
+      telem.pixhawkConnected ||
+      telem.cloud_synced ||
+      (telem.flight_mode && telem.flight_mode !== 'DISCONNECTED' && telem.flight_mode !== 'UNKNOWN') ||
+      (telem.flightMode && telem.flightMode !== 'DISCONNECTED' && telem.flightMode !== 'UNKNOWN')
+    );
+
+    this.connectionState.isConnected = isActuallyConnected;
+    this.connectionState.isReceivingTelemetry = isActuallyConnected;
     this.connectionState.lastHeartbeat = now;
     this.connectionState.heartbeatHz = telem.heartbeat_rate_hz || 1.0;
-    this.connectionState.phase = 'PIXHAWK_CONNECTED';
-    this.connectionState.phaseMessage = `Pixhawk connected ✓ (${telem.flight_mode || 'GUIDED'})`;
-    this.connectionState.isRealHardware = true;
-    this.telemetry.pixhawkConnected = true;
+    this.connectionState.bytesReceived = Math.max(this.connectionState.bytesReceived || 0, 1024);
+    this.connectionState.phase = isActuallyConnected ? 'PIXHAWK_CONNECTED' : 'WAITING_FOR_MAVLINK';
+    const activeMode = telem.flight_mode || telem.flightMode || 'GUIDED';
+    this.connectionState.phaseMessage = isActuallyConnected
+      ? `Pixhawk connected ✓ (${activeMode})`
+      : 'Waiting for Pixhawk MAVLink heartbeat...';
+    this.connectionState.isRealHardware = isActuallyConnected;
+    this.telemetry.pixhawkConnected = isActuallyConnected;
 
-    if (telem.flight_mode) {
-      this.telemetry.flightMode = telem.flight_mode;
+    if (activeMode && activeMode !== 'UNKNOWN') {
+      this.telemetry.flightMode = activeMode;
     }
     if (telem.armed !== undefined) {
       this.telemetry.isArmed = Boolean(telem.armed);
@@ -3120,7 +3133,7 @@ class MAVLinkService {
     }
 
     // Direct HTTP REST fallback when WebSocket transport is not directly open
-    if (!this.isTransportConnected() && this.connectionState.isConnected) {
+    if (!this.isTransportConnected() && (this.connectionState.isConnected || this.telemetry.pixhawkConnected)) {
       try {
         const res = await fetch('/api/command/mode', {
           method: 'POST',
@@ -3129,7 +3142,8 @@ class MAVLinkService {
         });
         if (res.ok) {
           const data = await res.json();
-          if (data.success) {
+          const ok = Boolean(data.success || data.status === 'success' || data.data?.success);
+          if (ok) {
             this.telemetry.flightMode = modeName;
             this.connectionState.pendingFlightMode = undefined;
             this.notifyTelemetry();

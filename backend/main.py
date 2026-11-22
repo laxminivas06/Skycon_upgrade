@@ -75,6 +75,7 @@ def api_response(data: Any = None, error: Optional[str] = None, code: int = 200)
     """Standardized response envelope across all API endpoints."""
     payload = {
         "status": "success" if error is None else "error",
+        "success": error is None,
         "data": data,
         "error": error,
         "timestamp": time.time()
@@ -220,9 +221,30 @@ def drone_disarm():
 
 @app.route("/api/drone/mode", methods=["POST"])
 @app.route("/api/mavlink/mode", methods=["POST"])
+@app.route("/api/command/mode", methods=["POST"])
 def drone_mode():
     body = request.get_json(silent=True) or {}
-    mode = body.get("mode", "GUIDED").upper()
+    cmd = body.get("command", "")
+    mode = body.get("mode") or body.get("flight_mode")
+    if not mode and cmd.startswith("MODE_"):
+        mode = cmd.replace("MODE_", "")
+    if not mode:
+        mode = "GUIDED"
+    if isinstance(mode, str):
+        mode = mode.upper()
+
+    if not mavlink_mux.is_connected:
+        # Running as cloud relay on PythonAnywhere or standalone web instance
+        # Persist mode change in cloud_last_telemetry so GCS UI & synced telemetry update immediately
+        cloud_payload = json_store.load("cloud_last_telemetry", fallback={})
+        telem = cloud_payload.get("telemetry", {})
+        telem["flight_mode"] = mode
+        telem["flightMode"] = mode
+        cloud_payload["telemetry"] = telem
+        json_store.save("cloud_last_telemetry", cloud_payload)
+        json_store.log_event("FLIGHT_MODE_SWITCH_RELAY", {"mode": mode}, source="OPERATOR")
+        return api_response(data={"mode": mode, "success": True, "detail": {"status": "RELAY_UPDATED", "mode": mode}}, code=200)
+
     res = mavlink_mux.set_mode_verified(mode)
     success = res.get("confirmed", False) or res["status"] in ("STATE_CONFIRMED", "COMMAND_ACKNOWLEDGED")
     json_store.log_event("FLIGHT_MODE_SWITCH", {"mode": mode, "success": success, "detail": res}, source="OPERATOR")
@@ -322,15 +344,24 @@ def _get_effective_telemetry() -> Dict[str, Any]:
     telem = mavlink_mux.get_telemetry()
     if not telem.get("connected", False):
         cloud_payload = json_store.load("cloud_last_telemetry", fallback={})
-        if cloud_payload and "telemetry" in cloud_payload and isinstance(cloud_payload["telemetry"], dict):
-            return {**telem, **cloud_payload["telemetry"]}
+        if cloud_payload:
+            synced = cloud_payload.get("telemetry") if isinstance(cloud_payload.get("telemetry"), dict) else cloud_payload
+            if isinstance(synced, dict) and synced:
+                return {**telem, **synced, "cloud_synced": True}
     return telem
 
 
 @app.route("/api/telemetry", methods=["GET"])
 def telemetry_get_snapshot():
     telem = _get_effective_telemetry()
-    return api_response(data=telem, code=200)
+    payload = {
+        "status": "success",
+        "success": True,
+        "data": telem,
+        "telemetry": telem,
+        "timestamp": time.time()
+    }
+    return jsonify(payload), 200
 
 
 @app.route("/api/telemetry/history", methods=["GET"])

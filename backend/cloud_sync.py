@@ -44,7 +44,10 @@ class CloudSyncService:
         sync_interval_s: float = 2.0,
         max_spool_records: int = 500
     ):
-        self.cloud_url = cloud_url or os.environ.get("SKYCON_CLOUD_URL", "").rstrip("/")
+        raw_cloud = cloud_url or os.environ.get("SKYCON_CLOUD_URL", "https://teamskycon.pythonanywhere.com").rstrip("/")
+        # Prevent cloud server from attempting to sync to itself
+        is_cloud_server = bool(os.environ.get("PYTHONANYWHERE_DOMAIN") or os.environ.get("PYTHONANYWHERE_SITE"))
+        self.cloud_url = "" if is_cloud_server else raw_cloud
         self.api_key = api_key or os.environ.get("SKYCON_CLOUD_API_KEY", "saeindia_cloud_key_2026")
         self.sync_interval_s = sync_interval_s
         self.max_spool_records = max_spool_records
@@ -70,8 +73,8 @@ class CloudSyncService:
         with self._lock:
             if self._running:
                 return
-            if not self.cloud_url:
-                self.cloud_url = os.environ.get("SKYCON_CLOUD_URL", "").rstrip("/")
+            if not self.cloud_url and not (os.environ.get("PYTHONANYWHERE_DOMAIN") or os.environ.get("PYTHONANYWHERE_SITE")):
+                self.cloud_url = os.environ.get("SKYCON_CLOUD_URL", "https://teamskycon.pythonanywhere.com").rstrip("/")
             self._running = True
             self._thread = threading.Thread(target=self._sync_loop, daemon=True, name="SkyconCloudSync")
             self._thread.start()
@@ -216,12 +219,30 @@ class CloudSyncService:
                 },
                 method="POST"
             )
-            with urllib.request.urlopen(req, timeout=timeout_s) as resp:
+            # Support SSL context with fallback for systems with missing local root CA bundle
+            try:
+                import ssl
+                ctx = ssl.create_default_context()
+            except Exception:
+                ctx = None
+
+            try:
+                resp_ctx = urllib.request.urlopen(req, timeout=timeout_s, context=ctx)
+            except Exception as ssl_err:
+                try:
+                    import ssl
+                    unverified_ctx = ssl._create_unverified_context()
+                    resp_ctx = urllib.request.urlopen(req, timeout=timeout_s, context=unverified_ctx)
+                except Exception:
+                    raise ssl_err
+
+            with resp_ctx as resp:
                 status_code = resp.getcode()
                 latency_ms = (time.time() - t0) * 1000.0
                 return (200 <= status_code < 300), latency_ms
-        except Exception:
+        except Exception as e:
             latency_ms = (time.time() - t0) * 1000.0
+            logger.debug(f"CloudSync dispatch error to {url}: {e}")
             return False, latency_ms
 
 

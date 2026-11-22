@@ -781,9 +781,9 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
           />
 
           {/* Bottom Bar Below Mission Window: Mode Selector & RC ON (Left-Aligned, Space Utilized, No downward shift) */}
-          <div className="shrink-0 z-20 bg-[#0A0E14] border-t border-[var(--uav-card-border)] px-3 py-1.5 flex items-center justify-between gap-2 overflow-x-auto min-h-[44px]">
+          <div className="shrink-0 z-30 bg-[#0A0E14] border-t border-[var(--uav-card-border)] px-3 py-1.5 flex items-center justify-between gap-2 overflow-visible min-h-[44px]">
             {/* Left-Aligned Controls: Mode Selector, RC ON, Reset, Emergency Overrides */}
-            <div className="flex items-center gap-2 justify-start shrink-0 flex-nowrap">
+            <div className="flex items-center gap-2 justify-start shrink-0 flex-nowrap overflow-visible">
               {/* Flight Mode Selector (direction="up" so opening never shifts controls downward) */}
               <FlightModeSelector
                 variant="dropdown"

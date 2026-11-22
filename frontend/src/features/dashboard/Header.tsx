@@ -117,7 +117,7 @@ export const Header: React.FC<HeaderProps> = ({
   const getMavlinkBadgeConfig = () => {
     const isActuallyConnected = Boolean(
       telemetry.isConnected &&
-      (telemetry.isTelemetryAvailable || connState.mavlinkStatus === 'ACTIVE' || telemetry.rawConnectionState.bytesReceived > 0)
+      (telemetry.isTelemetryAvailable || connState.mavlinkStatus === 'ACTIVE' || telemetry.rawConnectionState.bytesReceived > 0 || telemetry.rawTelemetry.pixhawkConnected)
     );
     if (isActuallyConnected) {
       return {
