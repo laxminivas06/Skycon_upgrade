@@ -311,6 +311,7 @@ class MissionEngine:
     def get_status(self) -> Dict[str, Any]:
         """Returns comprehensive mission status."""
         with self._lock:
+            detected_codes = [self.aerial_qr_code] if self.aerial_qr_code else []
             return {
                 "state": self.state,
                 "addcStage": self.addc_stage,
@@ -325,14 +326,32 @@ class MissionEngine:
                 "missionId": self.active_mission_id,
                 "elapsedSeconds": self.get_elapsed_seconds(),
                 "remainingSeconds": self.get_remaining_seconds(),
+                "remaining_time_s": self.get_remaining_seconds(),
                 "targetDurationSeconds": self.target_duration_s,
                 "currentPhase": self.current_phase,
                 "currentWaypoint": self.current_waypoint_idx,
                 "totalWaypoints": len(self.waypoints),
                 "decodedQR": self.decoded_qr,
+                "detected_codes": detected_codes,
                 "homeLocation": self.home_location,
                 "geofence": self.geofence
             }
+
+    def get_state(self) -> Dict[str, Any]:
+        """Alias for get_status() to maintain full compatibility across API routes."""
+        return self.get_status()
+
+    def reset(self):
+        """Alias for reset_mission() to maintain compatibility with legacy routes."""
+        return self.reset_mission()
+
+    def configure_geofence(self, fence_config: Dict[str, Any]) -> Dict[str, Any]:
+        """Updates and persists geofence configuration."""
+        with self._lock:
+            if isinstance(fence_config, dict):
+                self.geofence.update(fence_config)
+                json_store.save("geofence", self.geofence)
+            return {"success": True, "geofence": self.geofence}
 
     # -------------------------------------------------------------------------
     # Mission Lifecycle Operations

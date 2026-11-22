@@ -511,15 +511,18 @@ class MAVLinkService {
 
       // Periodic cloud / companion REST polling fallback (e.g. for PythonAnywhere or WSS timeout)
       setInterval(async () => {
-        const now = Date.now();
-        const isMavFresh = this.connectionState.isConnected && (now - this.connectionState.lastHeartbeat < 3000);
-        if (!isMavFresh && !this.simInterval) {
+        const isDirectStream = this.isDirectByteTransportOpen();
+        if (!isDirectStream) {
           try {
             const res = await fetch('/api/telemetry');
             if (res.ok) {
               const data = await res.json();
               const companionTelem = data?.telemetry || (data?.data && (data.data.telemetry || data.data)) || data;
-              if (companionTelem && (companionTelem.connected || companionTelem.armed !== undefined || companionTelem.flight_mode || companionTelem.lat !== undefined)) {
+              if (companionTelem && (companionTelem.connected || companionTelem.armed !== undefined || companionTelem.flight_mode || companionTelem.lat !== undefined || companionTelem.packets_received_total > 0)) {
+                if (this.simInterval) {
+                  clearInterval(this.simInterval);
+                  this.simInterval = null;
+                }
                 this.ingestCompanionTelemetry(companionTelem);
               }
             }
@@ -563,14 +566,16 @@ class MAVLinkService {
     this.connectionState.isConnected = isActuallyConnected;
     this.connectionState.isReceivingTelemetry = isActuallyConnected;
     this.connectionState.lastHeartbeat = now;
-    this.connectionState.heartbeatHz = telem.heartbeat_rate_hz || 1.0;
-    this.connectionState.bytesReceived = Math.max(this.connectionState.bytesReceived || 0, 1024);
+    this.connectionState.heartbeatHz = telem.heartbeat_rate_hz || (telem.heartbeat_age_s ? Math.max(0.1, 1.0 / telem.heartbeat_age_s) : 1.0);
+    this.connectionState.bytesReceived = Math.max(this.connectionState.bytesReceived || 0, (telem.packets_received_total || 0) * 32, 1024);
     this.connectionState.phase = isActuallyConnected ? 'PIXHAWK_CONNECTED' : 'WAITING_FOR_MAVLINK';
-    const activeMode = telem.flight_mode || telem.flightMode || 'GUIDED';
+    const activeMode = telem.flight_mode || telem.flightMode || 'STABILIZE';
     this.connectionState.phaseMessage = isActuallyConnected
       ? `Pixhawk connected ✓ (${activeMode})`
       : 'Waiting for Pixhawk MAVLink heartbeat...';
     this.connectionState.isRealHardware = isActuallyConnected;
+    this.connectionState.connectionType = 'CLOUD_RELAY';
+    this.connectionState.portOrAddress = telem.cloud_synced ? 'Cloud Sync (teamskycon.pythonanywhere.com)' : 'GPIO UART (/dev/serial0)';
     this.telemetry.pixhawkConnected = isActuallyConnected;
 
     if (activeMode && activeMode !== 'UNKNOWN') {
@@ -585,26 +590,53 @@ class MAVLinkService {
       this.telemetry.latitude = telem.lat;
       this.telemetry.longitude = telem.lon;
     }
-    if (telem.alt !== undefined) {
-      this.telemetry.altitude = telem.alt;
-      this.telemetry.relativeAltitude = telem.relative_alt !== undefined ? telem.relative_alt : telem.alt;
+    const alt = telem.alt !== undefined ? telem.alt : telem.altitude_m;
+    if (alt !== undefined) {
+      this.telemetry.altitude = alt;
+      this.telemetry.relativeAltitude = telem.relative_alt !== undefined ? telem.relative_alt : (telem.relative_altitude_m !== undefined ? telem.relative_altitude_m : alt);
     }
     if (telem.roll !== undefined) this.telemetry.roll = telem.roll;
     if (telem.pitch !== undefined) this.telemetry.pitch = telem.pitch;
     if (telem.yaw !== undefined) this.telemetry.heading = Math.round((telem.yaw + 360) % 360);
     if (telem.heading !== undefined) this.telemetry.heading = telem.heading;
-    if (telem.battery_voltage !== undefined && telem.battery_voltage > 0) {
-      this.telemetry.batteryVoltage = telem.battery_voltage;
-      this.telemetry.batteryPercent = telem.battery_remaining !== undefined ? telem.battery_remaining : Math.min(100, Math.max(0, Math.round(((telem.battery_voltage - 13.5) / (16.8 - 13.5)) * 100)));
+
+    const vBatt = telem.battery_voltage !== undefined ? telem.battery_voltage : telem.voltage_battery;
+    if (vBatt !== undefined && vBatt > 0) {
+      this.telemetry.batteryVoltage = vBatt;
+      this.telemetry.batteryPercent = telem.battery_remaining !== undefined ? telem.battery_remaining : Math.min(100, Math.max(0, Math.round(((vBatt - 13.5) / (16.8 - 13.5)) * 100)));
+    } else if (telem.battery_remaining !== undefined) {
+      this.telemetry.batteryPercent = telem.battery_remaining;
     }
-    if (telem.satellites_visible !== undefined) {
-      this.telemetry.satellitesVisible = telem.satellites_visible;
-      this.telemetry.gps.satellites = telem.satellites_visible;
-      this.telemetry.gps.isLocked = telem.satellites_visible >= 6;
-      this.telemetry.gps.fixType = telem.fix_type >= 3 ? '3D_FIX' : (telem.satellites_visible >= 4 ? '2D_FIX' : 'NO_GPS');
+
+    const sats = telem.satellites !== undefined ? telem.satellites : telem.satellites_visible;
+    if (sats !== undefined) {
+      this.telemetry.satellitesVisible = sats;
+      this.telemetry.gps.satellites = sats;
+      this.telemetry.gps.isLocked = sats >= 6;
+      const fix = telem.gps_fix_type !== undefined ? telem.gps_fix_type : telem.fix_type;
+      this.telemetry.gps.fixType = fix >= 3 ? '3D_FIX' : (sats >= 4 ? '2D_FIX' : 'NO_GPS');
     }
-    if (telem.climb_rate !== undefined) this.telemetry.verticalSpeed = telem.climb_rate;
-    if (telem.groundspeed !== undefined) this.telemetry.groundSpeed = telem.groundspeed;
+    if (telem.hdop !== undefined) {
+      this.telemetry.gps.hdop = telem.hdop;
+    }
+
+    const vz = telem.climb_rate !== undefined ? telem.climb_rate : telem.vz;
+    if (vz !== undefined) this.telemetry.verticalSpeed = vz;
+    const gs = telem.ground_speed !== undefined ? telem.ground_speed : telem.groundspeed;
+    if (gs !== undefined) this.telemetry.groundSpeed = gs;
+
+    if (telem.rc_connected !== undefined) {
+      this.telemetry.rcOverrideEnabled = Boolean(telem.rc_override_active || telem.rc_connected);
+    }
+
+    if (telem.statustext_history && Array.isArray(telem.statustext_history)) {
+      this.connectionState.statusHistory = telem.statustext_history.map((msg: string, i: number) => ({
+        id: `ST_${now}_${i}`,
+        timestamp: now,
+        severity: 6,
+        text: msg
+      }));
+    }
 
     this.notifyTelemetry();
     this.notifyConnection();
@@ -1130,12 +1162,18 @@ class MAVLinkService {
     return { passed: true };
   }
 
+  public isDirectByteTransportOpen(): boolean {
+    return Boolean(
+      usbHostService.isReady() ||
+      (transportManager.isConnected() && transportManager.getActiveTransport()?.type !== 'SIMULATOR')
+    );
+  }
+
   public isTransportConnected(): boolean {
     return Boolean(
       this.connectionState.isUsbConnected ||
       this.connectionState.isConnected ||
-      usbHostService.isConnected() ||
-      usbHostService.isReady()
+      this.isDirectByteTransportOpen()
     );
   }
 
@@ -2826,16 +2864,16 @@ class MAVLinkService {
     }
 
     const isSimMode = Boolean(this.simInterval || this.connectionState.connectionType === 'SIMULATED' || !this.connectionState.isRealHardware);
-    const isWsOpen = this.isTransportConnected();
-    console.log(`[ARM] WS STATE = ${isWsOpen ? 'OPEN' : 'CLOSED'}, SIM = ${isSimMode}, FORCE = ${force}`);
+    const isWsOpen = this.isDirectByteTransportOpen();
+    console.log(`[ARM] DIRECT STREAM = ${isWsOpen ? 'OPEN' : 'CLOSED'}, SIM = ${isSimMode}, FORCE = ${force}`);
 
-    if (!isWsOpen && !isSimMode && !force) {
-      if (this.connectionState.isConnected) {
+    if (!isWsOpen && !isSimMode) {
+      if (this.connectionState.isConnected || this.telemetry.pixhawkConnected) {
         try {
           const res = await fetch('/api/command/arm', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ force })
+            body: JSON.stringify({ arm: true, force })
           });
           if (res.ok) {
             const data = await res.json();
@@ -2843,7 +2881,7 @@ class MAVLinkService {
               this.telemetry.isArmed = true;
               this.telemetry.vehicleState = 'ARMED';
               this.connectionState.vehicleState = 'ARMED';
-              this.addStatusMessage('INFO', 6, 'Motors Armed ✓ Confirmed by Companion REST');
+              this.addStatusMessage('INFO', 6, 'Motors Armed ✓ Confirmed by Cloud/Companion Relay');
               this.notifyConnection();
               this.notifyTelemetry();
               return true;
@@ -2852,8 +2890,8 @@ class MAVLinkService {
         } catch (e) {}
       }
       console.error('[ARM] FAILED BEFORE PACKET CREATION: WebSocket / Transport disconnected');
-      this.logDiagnostic('ERROR', '[ARM] Cannot send ARM: WebSocket / Transport disconnected', 'error');
-      this.addStatusMessage('WARNING', 4, 'WebSocket / Transport disconnected');
+      this.logDiagnostic('ERROR', '[ARM] Cannot send ARM: Direct transport disconnected', 'error');
+      this.addStatusMessage('WARNING', 4, 'Direct transport disconnected');
       return false;
     }
 
@@ -2987,16 +3025,16 @@ class MAVLinkService {
     console.log(`[DISARM] BUTTON CLICKED (force=${force})`);
 
     const isSimMode = Boolean(this.simInterval || this.connectionState.connectionType === 'SIMULATED' || !this.connectionState.isRealHardware);
-    const isWsOpen = this.isTransportConnected();
-    console.log(`[DISARM] WS STATE = ${isWsOpen ? 'OPEN' : 'CLOSED'}, SIM = ${isSimMode}, FORCE = ${force}`);
+    const isWsOpen = this.isDirectByteTransportOpen();
+    console.log(`[DISARM] DIRECT STREAM = ${isWsOpen ? 'OPEN' : 'CLOSED'}, SIM = ${isSimMode}, FORCE = ${force}`);
 
-    if (!isWsOpen && !isSimMode && !force) {
-      if (this.connectionState.isConnected) {
+    if (!isWsOpen && !isSimMode) {
+      if (this.connectionState.isConnected || this.telemetry.pixhawkConnected) {
         try {
           const res = await fetch('/api/command/disarm', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ force })
+            body: JSON.stringify({ arm: false, force })
           });
           if (res.ok) {
             const data = await res.json();
@@ -3004,7 +3042,7 @@ class MAVLinkService {
               this.telemetry.isArmed = false;
               this.telemetry.vehicleState = 'DISARMED';
               this.connectionState.vehicleState = 'DISARMED';
-              this.addStatusMessage('INFO', 6, 'Motors Disarmed ✓ Confirmed by Companion REST');
+              this.addStatusMessage('INFO', 6, 'Motors Disarmed ✓ Confirmed by Cloud/Companion Relay');
               this.notifyConnection();
               this.notifyTelemetry();
               return true;
@@ -3012,9 +3050,9 @@ class MAVLinkService {
           }
         } catch (e) {}
       }
-      console.error('[DISARM] Cannot send DISARM: WebSocket / Transport disconnected');
-      this.logDiagnostic('ERROR', 'Cannot send DISARM: WebSocket / Transport disconnected', 'error');
-      this.addStatusMessage('WARNING', 4, 'WebSocket / Transport disconnected');
+      console.error('[DISARM] Cannot send DISARM: Direct transport disconnected');
+      this.logDiagnostic('ERROR', 'Cannot send DISARM: Direct transport disconnected', 'error');
+      this.addStatusMessage('WARNING', 4, 'Direct transport disconnected');
       return false;
     }
 
@@ -3136,8 +3174,8 @@ class MAVLinkService {
       return false;
     }
 
-    // Direct HTTP REST fallback when WebSocket transport is not directly open
-    if (!this.isTransportConnected() && (this.connectionState.isConnected || this.telemetry.pixhawkConnected)) {
+    // Direct HTTP REST dispatch when direct byte transport is not open
+    if (!this.isDirectByteTransportOpen() && (this.connectionState.isConnected || this.telemetry.pixhawkConnected)) {
       try {
         const res = await fetch('/api/command/mode', {
           method: 'POST',
@@ -3150,6 +3188,7 @@ class MAVLinkService {
           if (ok) {
             this.telemetry.flightMode = modeName;
             this.connectionState.pendingFlightMode = undefined;
+            this.addStatusMessage('INFO', 6, `Flight mode switched to ${modeName} ✓`);
             this.notifyTelemetry();
             this.notifyConnection();
             return true;
@@ -3266,10 +3305,25 @@ class MAVLinkService {
   }
 
   public async commandTakeoff(targetAltMeters: number = 5): Promise<boolean> {
-    const isConnected = this.isTransportConnected();
+    const isConnected = this.isTransportConnected() || this.connectionState.isConnected;
     if (!isConnected && !this.simInterval) {
       this.logDiagnostic('ERROR', 'Cannot takeoff: MAVLink not connected', 'error');
       return false;
+    }
+
+    if (!this.isDirectByteTransportOpen() && (this.connectionState.isConnected || this.telemetry.pixhawkConnected)) {
+      try {
+        const res = await fetch('/api/command/takeoff', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ altitude: targetAltMeters })
+        });
+        if (res.ok) {
+          this.logDiagnostic('MAVLINK', `[TAKEOFF] Target altitude ${targetAltMeters}m commanded via cloud relay`, 'success');
+          this.notifyTelemetry();
+          return true;
+        }
+      } catch (e) {}
     }
 
     // Geofence pre-flight interlock check

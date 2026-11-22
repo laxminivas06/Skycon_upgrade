@@ -32,6 +32,7 @@ export type FlightControllerConnection =
   | 'TCP_CLIENT' 
   | 'BLUETOOTH' 
   | 'IOS_ACCESSORY' 
+  | 'CLOUD_RELAY'
   | 'SIMULATED';
 
 export type ConnectionPhase =

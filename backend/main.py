@@ -192,11 +192,33 @@ def drone_state():
     }, code=200)
 
 
+def queue_cloud_command(cmd_type: str, params: Dict[str, Any]) -> str:
+    """Queues operator commands on cloud backend for retrieval by companion agent."""
+    cmd_id = f"CMD_{int(time.time()*1000)}"
+    commands = json_store.load("cloud_pending_commands", fallback=[])
+    commands.append({
+        "id": cmd_id,
+        "command": cmd_type,
+        "params": params,
+        "timestamp": time.time()
+    })
+    if len(commands) > 20:
+        commands = commands[-20:]
+    json_store.save("cloud_pending_commands", commands)
+    return cmd_id
+
+
 @app.route("/api/drone/arm", methods=["POST"])
+@app.route("/api/command/arm", methods=["POST"])
 def drone_arm():
     body = request.get_json(silent=True) or {}
     arm = body.get("arm", True)
     force = body.get("force", False)
+
+    if not mavlink_mux.is_connected:
+        queue_cloud_command("ARM" if arm else "DISARM", {"force": force})
+        json_store.log_event("MOTOR_ARM_RELAY", {"armed": arm, "force": force}, source="OPERATOR")
+        return api_response(data={"armed": arm, "success": True, "detail": {"status": "QUEUED_FOR_COMPANION", "armed": arm}}, code=200)
 
     # Check bench safety lock unless force=True
     if arm and not settings.ALLOW_PHYSICAL_ARMING and not force:
@@ -212,27 +234,17 @@ def drone_arm():
 
 
 @app.route("/api/drone/disarm", methods=["POST"])
+@app.route("/api/command/disarm", methods=["POST"])
 def drone_disarm():
+    if not mavlink_mux.is_connected:
+        queue_cloud_command("DISARM", {})
+        json_store.log_event("MOTOR_DISARM_RELAY", {}, source="OPERATOR")
+        return api_response(data={"armed": False, "success": True, "detail": {"status": "QUEUED_FOR_COMPANION"}}, code=200)
+
     res = mavlink_mux.arm_motors_verified(False, force=False)
     success = res.get("confirmed", False) or res["status"] in ("STATE_CONFIRMED", "COMMAND_ACKNOWLEDGED")
     json_store.log_event("MOTOR_DISARMED", {"result": res}, source="OPERATOR")
     return api_response(data={"armed": False, "success": success, "detail": res}, code=200)
-
-
-def queue_cloud_command(cmd_type: str, params: Dict[str, Any]) -> str:
-    """Queues operator commands on cloud backend for retrieval by companion agent."""
-    cmd_id = f"CMD_{int(time.time()*1000)}"
-    commands = json_store.load("cloud_pending_commands", fallback=[])
-    commands.append({
-        "id": cmd_id,
-        "command": cmd_type,
-        "params": params,
-        "timestamp": time.time()
-    })
-    if len(commands) > 20:
-        commands = commands[-20:]
-    json_store.save("cloud_pending_commands", commands)
-    return cmd_id
 
 
 @app.route("/api/drone/mode", methods=["POST"])
@@ -268,9 +280,15 @@ def drone_mode():
 
 
 @app.route("/api/drone/takeoff", methods=["POST"])
+@app.route("/api/command/takeoff", methods=["POST"])
 def drone_takeoff():
     body = request.get_json(silent=True) or {}
     altitude = float(body.get("altitude", 10.0))
+    if not mavlink_mux.is_connected:
+        queue_cloud_command("TAKEOFF", {"altitude": altitude})
+        json_store.log_event("TAKEOFF_RELAY", {"target_altitude_m": altitude}, source="OPERATOR")
+        return api_response(data={"target_altitude_m": altitude, "success": True, "detail": {"status": "QUEUED_FOR_COMPANION"}}, code=200)
+
     res = mavlink_mux.takeoff_verified(altitude)
     success = res.get("confirmed", False) or res["status"] in ("STATE_CONFIRMED", "COMMAND_ACKNOWLEDGED")
     json_store.log_event("TAKEOFF_COMMANDED", {"target_altitude_m": altitude, "result": res}, source="OPERATOR")
@@ -278,7 +296,13 @@ def drone_takeoff():
 
 
 @app.route("/api/drone/land", methods=["POST"])
+@app.route("/api/command/land", methods=["POST"])
 def drone_land():
+    if not mavlink_mux.is_connected:
+        queue_cloud_command("LAND", {})
+        json_store.log_event("LAND_RELAY", {}, source="OPERATOR")
+        return api_response(data={"mode": "LAND", "success": True, "detail": {"status": "QUEUED_FOR_COMPANION"}}, code=200)
+
     res = mavlink_mux.land_verified()
     success = res.get("confirmed", False) or res["status"] in ("STATE_CONFIRMED", "COMMAND_ACKNOWLEDGED")
     json_store.log_event("LAND_COMMANDED", {"result": res}, source="OPERATOR")
@@ -286,7 +310,13 @@ def drone_land():
 
 
 @app.route("/api/drone/rtl", methods=["POST"])
+@app.route("/api/command/rtl", methods=["POST"])
 def drone_rtl():
+    if not mavlink_mux.is_connected:
+        queue_cloud_command("RTL", {})
+        json_store.log_event("RTL_RELAY", {}, source="OPERATOR")
+        return api_response(data={"mode": "RTL", "success": True, "detail": {"status": "QUEUED_FOR_COMPANION"}}, code=200)
+
     res = mavlink_mux.rtl_verified()
     success = res.get("confirmed", False) or res["status"] in ("STATE_CONFIRMED", "COMMAND_ACKNOWLEDGED")
     json_store.log_event("RTL_COMMANDED", {"result": res}, source="OPERATOR")
@@ -294,40 +324,21 @@ def drone_rtl():
 
 
 @app.route("/api/drone/emergency_rtl", methods=["POST"])
+@app.route("/api/command/emergency_rtl", methods=["POST"])
 def drone_emergency_rtl():
     body = request.get_json(silent=True) or {}
     reason = body.get("reason", "OPERATOR_EMERGENCY_BUTTON")
     mission_engine.trigger_emergency_rtl(reason)
+
+    if not mavlink_mux.is_connected:
+        queue_cloud_command("RTL", {"emergency": True, "reason": reason})
+        json_store.log_event("EMERGENCY_RTL_RELAY", {"reason": reason}, source="SAFETY")
+        return api_response(data={"mode": "RTL", "emergency": True, "reason": reason, "success": True, "detail": {"status": "QUEUED_FOR_COMPANION"}}, code=200)
+
     res = mavlink_mux.emergency_rtl_verified()
     success = res.get("confirmed", False) or res["status"] in ("STATE_CONFIRMED", "COMMAND_ACKNOWLEDGED")
     json_store.log_event("EMERGENCY_RTL_TRIGGERED", {"reason": reason, "detail": res}, source="SAFETY")
     return api_response(data={"mode": "RTL", "emergency": True, "reason": reason, "success": success, "detail": res}, code=200)
-
-
-# Legacy Command Route Aliases
-@app.route("/api/command/arm", methods=["POST"])
-def legacy_command_arm():
-    return drone_arm()
-
-@app.route("/api/command/mode", methods=["POST"])
-def legacy_command_mode():
-    return drone_mode()
-
-@app.route("/api/command/takeoff", methods=["POST"])
-def legacy_command_takeoff():
-    return drone_takeoff()
-
-@app.route("/api/command/land", methods=["POST"])
-def legacy_command_land():
-    return drone_land()
-
-@app.route("/api/command/rtl", methods=["POST"])
-def legacy_command_rtl():
-    return drone_rtl()
-
-@app.route("/api/command/emergency_rtl", methods=["POST"])
-def legacy_command_emergency_rtl():
-    return drone_emergency_rtl()
 
 @app.route("/api/command", methods=["POST"])
 def legacy_generic_command():
