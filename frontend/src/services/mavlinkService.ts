@@ -552,6 +552,10 @@ class MAVLinkService {
       telem.connected ||
       telem.pixhawkConnected ||
       telem.cloud_synced ||
+      telem.connection_state === 'TELEMETRY_ACTIVE' ||
+      telem.connection_state === 'HEARTBEAT_RECEIVED' ||
+      telem.connection_state === 'CONNECTED' ||
+      (telem.heartbeat_age_s !== undefined && telem.heartbeat_age_s < 8.0) ||
       (telem.flight_mode && telem.flight_mode !== 'DISCONNECTED' && telem.flight_mode !== 'UNKNOWN') ||
       (telem.flightMode && telem.flightMode !== 'DISCONNECTED' && telem.flightMode !== 'UNKNOWN')
     );

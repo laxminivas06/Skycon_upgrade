@@ -322,9 +322,13 @@ def get_system_health():
 @app.get("/api/telemetry/snapshot")
 def get_telemetry():
     """Returns latest telemetry snapshot."""
+    telem = mavlink_mux.get_telemetry()
     return {
         "success": True,
-        "telemetry": mavlink_mux.get_telemetry()
+        "status": "success",
+        "data": telem,
+        "telemetry": telem,
+        "timestamp": time.time()
     }
 
 

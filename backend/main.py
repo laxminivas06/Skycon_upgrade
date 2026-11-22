@@ -347,7 +347,10 @@ def _get_effective_telemetry() -> Dict[str, Any]:
         if cloud_payload:
             synced = cloud_payload.get("telemetry") if isinstance(cloud_payload.get("telemetry"), dict) else cloud_payload
             if isinstance(synced, dict) and synced:
-                return {**telem, **synced, "cloud_synced": True}
+                hb_age = synced.get("heartbeat_age_s", 999.0)
+                conn_st = synced.get("connection_state", "")
+                is_live = bool(synced.get("connected") or hb_age < 8.0 or conn_st in ("TELEMETRY_ACTIVE", "HEARTBEAT_RECEIVED", "CONNECTED"))
+                return {**telem, **synced, "connected": is_live, "pixhawkConnected": is_live, "cloud_synced": True}
     return telem
 
 

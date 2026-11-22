@@ -369,6 +369,12 @@ class MavlinkMultiplexer:
                 elif self.last_heartbeat_time > 0:
                     self.connection_state = ConnectionState.HEARTBEAT_RECEIVED
 
+            is_live = bool(self.is_connected and (self.is_simulation or hb_age <= 5.0))
+            telem["connected"] = is_live
+            telem["pixhawkConnected"] = is_live
+            self.telemetry["connected"] = is_live
+            self.telemetry["pixhawkConnected"] = is_live
+
             telem["connection_state"] = self.connection_state.value
             telem["altitude_m"] = telem.get("relative_alt", 0.0)
             telem["relative_altitude_m"] = telem.get("relative_alt", 0.0)
@@ -478,6 +484,8 @@ class MavlinkMultiplexer:
                             self.is_connected = True
                             self.is_simulation = False
                             self.connection_state = ConnectionState.CONNECTED
+                            self.telemetry["connected"] = True
+                            self.telemetry["pixhawkConnected"] = True
                             connected = True
                             logger.info(f"Confirmed Pixhawk MAVLink link on {port} @ {baud} baud")
                             break
@@ -632,12 +640,15 @@ class MavlinkMultiplexer:
                 if len(payload) >= 9:
                     custom_mode, type_, autopilot, base_mode, system_status, mav_version = struct.unpack('<IBBBBB', payload[:9])
                     self.last_heartbeat_time = now
+                    self.is_connected = True
+                    self.telemetry["connected"] = True
+                    self.telemetry["pixhawkConnected"] = True
                     self.telemetry["custom_mode"] = custom_mode
                     self.telemetry["flight_mode"] = COPTER_MODES.get(custom_mode, f"UNKNOWN_{custom_mode}")
                     self.telemetry["armed"] = bool(base_mode & 0x80)
                     self.telemetry["system_status"] = f"STATUS_{system_status}"
-                    if not self.is_simulation and self.connection_state in (ConnectionState.CONNECTED, ConnectionState.CONNECTING):
-                        self.connection_state = ConnectionState.HEARTBEAT_RECEIVED
+                    if not self.is_simulation:
+                        self.connection_state = ConnectionState.TELEMETRY_ACTIVE if self.last_telemetry_time > 0 else ConnectionState.HEARTBEAT_RECEIVED
 
             # -----------------------------------------------------------------
             # SYS_STATUS (msg_id 1)
