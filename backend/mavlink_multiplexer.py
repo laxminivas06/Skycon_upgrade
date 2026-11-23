@@ -857,8 +857,9 @@ class MavlinkMultiplexer:
             # MISSION_ACK (msg_id 47)
             # -----------------------------------------------------------------
             elif msg_id == 47:
-                if len(payload) >= 3:
-                    target_sys, target_comp, ack_type = struct.unpack('<BBB', payload[:3])
+                if len(payload) >= 2:
+                    target_sys, target_comp = struct.unpack('<BB', payload[:2])
+                    ack_type = payload[2] if len(payload) >= 3 else 0
                     self._mission_ack_result = ack_type
                     self._mission_ack_event.set()
 

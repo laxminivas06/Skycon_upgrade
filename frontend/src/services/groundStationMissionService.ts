@@ -1628,7 +1628,22 @@ export class GroundStationMissionService {
         }
       }
 
-      // Step 3: Direct Guided Shape Execution (Directly GUIDED mode - Never AUTO or LOITER)
+      // Step 3: Autonomous Execution
+      // If mission is uploaded to Pixhawk EEPROM, engage AUTO mode so the flight controller navigates natively
+      if (this.currentMission.isUploaded) {
+        console.log(`[GCS Mission] Mission verified in Pixhawk EEPROM storage. Engaging AUTO flight mode...`);
+        const autoOk = await mavlinkService.setFlightMode('AUTO');
+        if (autoOk) {
+          audioService.playBeep(988, 200);
+          return {
+            success: true,
+            message: `AUTONOMOUS ${this.currentMission.missionType} MISSION COMMENCED in AUTO flight mode! Pixhawk autopilot is navigating uploaded waypoints.`
+          };
+        }
+        console.warn('[GCS Mission] Could not engage AUTO mode; falling back to GUIDED waypoint sequencer...');
+      }
+
+      // Fallback: Direct Guided Shape Execution
       console.log(`[GCS Mission] Commencing shape navigation directly in GUIDED mode at ${alt}m altitude...`);
       await mavlinkService.setFlightMode('GUIDED');
       this.runGuidedWaypointSequencer(this.currentMission.waypoints, alt, speed);
@@ -1636,7 +1651,7 @@ export class GroundStationMissionService {
 
       return {
         success: true,
-        message: `AUTONOMOUS ${this.currentMission.missionType} MISSION COMMENCED directly in GUIDED flight mode at ${alt}m altitude! Motors spinning & executing circle.`
+        message: `AUTONOMOUS ${this.currentMission.missionType} MISSION COMMENCED in GUIDED flight mode at ${alt}m altitude! Motors spinning & executing flight pattern.`
       };
     } catch (err: any) {
       return {
@@ -1699,15 +1714,16 @@ export class GroundStationMissionService {
 
       await mavlinkService.flyToPosition(wp.lat, wp.lng, targetAlt, speed);
 
-      // Monitor distance to waypoint (tightened 2.0m radius prevents corner-cutting during spiral search)
+      // Monitor distance to waypoint with realistic GPS tolerance (2.2m - 3.5m)
       const startWpTime = Date.now();
-      while (this.guidedSequencerActive && Date.now() - startWpTime < 15000) {
+      const targetAcceptRadius = Math.max(2.2, Math.min(3.5, speed * 1.2));
+      while (this.guidedSequencerActive && Date.now() - startWpTime < 8000) {
         const cur = mavlinkService.getTelemetry();
         const dy = (cur.latitude - wp.lat) * 111320;
         const dx = (cur.longitude - wp.lng) * 111320 * Math.cos((wp.lat * Math.PI) / 180);
         const dist = Math.hypot(dx, dy);
-        if (dist <= 2.0) break;
-        await new Promise((r) => setTimeout(r, 600));
+        if (dist <= targetAcceptRadius) break;
+        await new Promise((r) => setTimeout(r, 400));
       }
     }
 

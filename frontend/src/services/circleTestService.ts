@@ -540,7 +540,7 @@ class CircleTestService {
     this.climbWatchdog = setTimeout(() => {
       if (this.state.step === 'TAKEOFF_CLIMB') {
         const cur = mavlinkService.getTelemetry();
-        if (cur.altitude >= Math.max(2.0, alt * 0.65)) {
+        if (cur.altitude >= Math.max(1.5, alt * 0.60)) {
           console.warn(`[CIRCLE_TEST] Climb watchdog timer expired, but aircraft is airborne at ${cur.altitude.toFixed(1)}m. Commencing orbit.`);
           this.startCircularOrbit();
         } else {
@@ -568,8 +568,8 @@ class CircleTestService {
         const targetAlt = this.config.targetAltitudeMeters;
         const margin = Math.max(1.0, this.config.altitudeTolerance || 1.0);
         const altReached = telem.altitude >= (targetAlt - margin);
-        // Barometer level-off check: reached at least 70% of target altitude and vertical speed leveled off
-        const climbLeveledOff = telem.altitude >= Math.max(1.8, targetAlt * 0.70) && Math.abs(telem.verticalSpeed) < 0.25;
+        // Barometer level-off check: reached at least 65% of target altitude and vertical speed leveled off
+        const climbLeveledOff = telem.altitude >= Math.max(1.5, targetAlt * 0.65) && Math.abs(telem.verticalSpeed) < 0.25;
 
         if (altReached || climbLeveledOff) {
           if (this.climbWatchdog) clearTimeout(this.climbWatchdog);
@@ -624,9 +624,13 @@ class CircleTestService {
 
     // Calculate arc distance between consecutive circle waypoints: (2 * PI * R) / totalWaypoints
     const arcLengthMeters = (2 * Math.PI * radius) / totalWaypoints;
-    const estimatedTimePerWpSec = Math.max(3.0, arcLengthMeters / speed);
-    // Give drone ample time (at least 25 seconds per waypoint) to navigate to each arc point
-    const maxTimeoutPerWpMs = Math.max(25000, Math.round((estimatedTimePerWpSec * 3 + 10) * 1000));
+    const estimatedTimePerWpSec = Math.max(2.0, arcLengthMeters / speed);
+    // Scaled waypoint timeout: 5 to 10 seconds per waypoint (prevents 25s deadlocks on single arc points)
+    const maxTimeoutPerWpMs = Math.max(5000, Math.min(10000, Math.round((estimatedTimePerWpSec * 2 + 3) * 1000)));
+
+    // Send native ArduPilot MAV_CMD_DO_ORBIT (425) for smooth continuous flight
+    const orbitRadiusSign = this.config.direction === 'CCW' ? -radius : radius;
+    mavlinkService.commandOrbit(orbitRadiusSign, speed, this.centerRef.lat, this.centerRef.lon, alt);
 
     if (this.waypointsTicker) clearInterval(this.waypointsTicker);
 
@@ -655,8 +659,8 @@ class CircleTestService {
       );
 
       const elapsedOnWpMs = Date.now() - this.currentWpStartTime;
-      // Dynamically scale acceptance radius based on arc length so points are not skipped prematurely
-      const dynamicAcceptanceRadius = Math.max(1.2, Math.min(2.8, arcLengthMeters * 0.65));
+      // GPS acceptance radius: 2.2m to 3.8m accommodates real-world Pixhawk non-RTK GPS accuracy
+      const dynamicAcceptanceRadius = Math.max(2.2, Math.min(3.8, arcLengthMeters * 0.95));
       const waypointReached = dist <= dynamicAcceptanceRadius || elapsedOnWpMs >= maxTimeoutPerWpMs;
 
       // Periodically refresh position target to Pixhawk position controller every 2.5 seconds

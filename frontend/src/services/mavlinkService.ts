@@ -3556,10 +3556,25 @@ class MAVLinkService {
       // param2: velocity (m/s)
       // param3: yaw behavior (1 = face forward along path)
       // param4: 0
-      // param5: lat
-      // param6: lon
-      // param7: alt
-      return await this.sendMavlinkCommandLong(425 /* MAV_CMD_DO_ORBIT */, radiusMeters, velocityMps, 1.0, 0, lat, lon, alt);
+      // x: lat * 1e7
+      // y: lon * 1e7
+      // z: alt (relative)
+      const latE7 = Math.round(lat * 1e7);
+      const lonE7 = Math.round(lon * 1e7);
+      await this.sendMavlinkCommandInt(
+        425 /* MAV_CMD_DO_ORBIT */,
+        radiusMeters,
+        velocityMps,
+        1.0 /* face forward */,
+        0,
+        latE7,
+        lonE7,
+        alt,
+        6 /* MAV_FRAME_GLOBAL_RELATIVE_ALT_INT */
+      );
+      // Fallback via COMMAND_LONG for legacy ArduPilot builds
+      await this.sendMavlinkCommandLong(425 /* MAV_CMD_DO_ORBIT */, radiusMeters, velocityMps, 1.0, 0, lat, lon, alt);
+      return true;
     } else {
       this.telemetry.flightMode = 'GUIDED';
       this.notifyTelemetry();
@@ -3580,7 +3595,7 @@ class MAVLinkService {
       // 1. Send modern COMMAND_INT (75) with MAV_CMD_DO_REPOSITION (192) - full int32 precision for lat/lon
       const latE7 = Math.round(lat * 1e7);
       const lonE7 = Math.round(lon * 1e7);
-      await this.sendMavlinkCommandInt(
+      const ok = await this.sendMavlinkCommandInt(
         192 /* MAV_CMD_DO_REPOSITION */,
         groundSpeedMps,
         1.0 /* MAV_DO_REPOSITION_FLAGS_CHANGE_MODE */,
@@ -3591,10 +3606,7 @@ class MAVLinkService {
         alt,
         6 /* MAV_FRAME_GLOBAL_RELATIVE_ALT_INT */
       );
-
-      // 2. Also send COMMAND_LONG (192) as fallback for older Pixhawk firmwares
-      await this.sendMavlinkCommandLong(192 /* MAV_CMD_DO_REPOSITION */, groundSpeedMps, 1.0, 0, 0, lat, lon, alt);
-      return true;
+      return ok;
     } else {
       return true;
     }
@@ -3610,8 +3622,8 @@ class MAVLinkService {
     this.addStatusMessage('NOTICE', 5, `Updating Target Altitude to ${targetAltMeters}m...`);
 
     if (this.connectionState.isRealHardware || isConnected) {
-      // MAV_CMD_DO_CHANGE_ALTITUDE (186): param1 = Target altitude, param2 = Frame (0 = global/default)
-      await this.sendMavlinkCommandLong(186 /* MAV_CMD_DO_CHANGE_ALTITUDE */, targetAltMeters, 0, 0, 0, 0, 0, 0);
+      // MAV_CMD_DO_CHANGE_ALTITUDE (186): param1 = Target altitude, param2 = Frame (3 = MAV_FRAME_GLOBAL_RELATIVE_ALT)
+      await this.sendMavlinkCommandLong(186 /* MAV_CMD_DO_CHANGE_ALTITUDE */, targetAltMeters, 3 /* MAV_FRAME_GLOBAL_RELATIVE_ALT */, 0, 0, 0, 0, 0);
       this.notifyTelemetry();
       return true;
     } else {
@@ -3682,11 +3694,8 @@ class MAVLinkService {
         6 /* MAV_FRAME_GLOBAL_RELATIVE_ALT_INT */
       );
 
-      // 3. Fallback COMMAND_LONG frame (192)
-      await this.sendMavlinkCommandLong(192 /* MAV_CMD_DO_REPOSITION */, verticalSpeedMps, 1.0, 0, 0, targetLat, targetLon, clampedAlt);
-
-      // 4. Send MAV_CMD_DO_CHANGE_ALTITUDE (186)
-      await this.sendMavlinkCommandLong(186 /* MAV_CMD_DO_CHANGE_ALTITUDE */, clampedAlt, 0, 0, 0, 0, 0, 0);
+      // 3. Send MAV_CMD_DO_CHANGE_ALTITUDE (186) with relative altitude frame (3)
+      await this.sendMavlinkCommandLong(186 /* MAV_CMD_DO_CHANGE_ALTITUDE */, clampedAlt, 3 /* MAV_FRAME_GLOBAL_RELATIVE_ALT */, 0, 0, 0, 0, 0);
 
       this.notifyTelemetry();
       return true;
@@ -4143,7 +4152,9 @@ class MAVLinkService {
       if (it.lat < -90 || it.lat > 90 || it.lon < -180 || it.lon > 180) {
         return { success: false, message: `Invalid waypoint at index ${i}: Latitude (${it.lat}) or Longitude (${it.lon}) out of WGS-84 bounds.` };
       }
-      if (missionType === 0 && (it.alt < 1.0 || it.alt > 120.0)) {
+      // Seq 0 is Home (alt 0), Land (cmd 21, alt 0), RTL (cmd 20, alt 0) and Loiter (cmd 19) are valid with 0 altitude
+      const isZeroAltAllowed = i === 0 || it.command === 20 || it.command === 21 || it.command === 19;
+      if (missionType === 0 && !isZeroAltAllowed && (it.alt < 1.0 || it.alt > 120.0)) {
         return { success: false, message: `Invalid waypoint at index ${i}: Altitude (${it.alt}m) outside safe limits [1.0m, 120.0m].` };
       }
     }
@@ -4292,10 +4303,13 @@ class MAVLinkService {
                   // Coordinate & altitude verification:
                   // 1. Seq 0: ArduPilot stores the Home position with absolute AMSL altitude (not relative alt). Skip alt check for Seq 0.
                   // 2. RTL (cmd 20): ArduPilot returns to home and may report (0, 0) coordinates.
-                  // 3. Navigation waypoints (i > 0 and cmd !== 20): Enforce strict coordinates (< 0.0005 deg) and altitude (< 2.0m).
-                  if (i > 0 && sent.command !== 20) {
-                    const latDiff = Math.abs(sent.lat - recv.lat);
-                    const lonDiff = Math.abs(sent.lon - recv.lon);
+                  // 3. LAND (cmd 21): Lands at current/specified location and altitude is 0.
+                  // 4. TAKEOFF (cmd 22): ArduPilot may store (0, 0) horizontal coordinates when takeoff is in-place vertically.
+                  // 5. Navigation waypoints (cmd 16): Enforce strict coordinates (< 0.0005 deg) and altitude (< 2.0m).
+                  if (i > 0 && sent.command !== 20 && sent.command !== 21) {
+                    const isTakeoffZeroCoords = sent.command === 22 && Math.abs(recv.lat) < 0.001 && Math.abs(recv.lon) < 0.001;
+                    const latDiff = isTakeoffZeroCoords ? 0 : Math.abs(sent.lat - recv.lat);
+                    const lonDiff = isTakeoffZeroCoords ? 0 : Math.abs(sent.lon - recv.lon);
                     const altDiff = Math.abs(sent.alt - recv.alt);
                     if (latDiff > 0.0005 || lonDiff > 0.0005 || altDiff > 2.0) {
                       const mismatchErr = `Readback waypoint data mismatch at #${i}: coords (${recv.lat.toFixed(6)}, ${recv.lon.toFixed(6)}, ${recv.alt}m) do not match expected (${sent.lat.toFixed(6)}, ${sent.lon.toFixed(6)}, ${sent.alt}m).`;

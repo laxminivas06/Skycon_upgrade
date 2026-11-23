@@ -499,13 +499,54 @@ class CustomRouteService {
     }
 
     try {
-      // 1. Set mission cruising altitude on FC
-      await mavlinkService.setTargetAltitude(this.missionAltitude);
+      // 1. Build standard MAVLink mission sequence for Pixhawk EEPROM
+      const home = mavlinkService.getHomePoint();
+      const telem = mavlinkService.getTelemetry();
+      const homeLat = home.isSet && Math.abs(home.latitude) > 0.001
+        ? home.latitude
+        : (Math.abs(telem.latitude) > 0.001 ? telem.latitude : this.currentMission.waypoints[0].lat);
+      const homeLon = home.isSet && Math.abs(home.longitude) > 0.001
+        ? home.longitude
+        : (Math.abs(telem.longitude) > 0.001 ? telem.longitude : this.currentMission.waypoints[0].lng);
 
-      // 2. Transmit first waypoint target in GUIDED mode
-      const w1 = this.currentMission.waypoints[1] || this.currentMission.waypoints[0];
-      if (w1) {
-        await mavlinkService.flyToPosition(w1.lat, w1.lng, w1.altitude, w1.speed);
+      const items: Array<any> = [
+        { seq: 0, lat: homeLat, lon: homeLon, alt: 0, command: 16 /* Home */, frame: 0, autocontinue: 1, current: 0 },
+        { seq: 1, lat: homeLat, lon: homeLon, alt: this.missionAltitude, command: 22 /* Takeoff */, frame: 6, autocontinue: 1, current: 0 }
+      ];
+
+      for (let idx = 0; idx < this.currentMission.waypoints.length; idx++) {
+        const wp = this.currentMission.waypoints[idx];
+        // If first waypoint is at home, skip duplicate
+        if (idx === 0 && Math.abs(wp.lat - homeLat) < 0.0001 && Math.abs(wp.lng - homeLon) < 0.0001) {
+          continue;
+        }
+        items.push({
+          seq: items.length,
+          lat: wp.lat,
+          lon: wp.lng,
+          alt: wp.altitude || this.missionAltitude,
+          command: 16 /* Waypoint */,
+          frame: 6,
+          param2: 1.5,
+          autocontinue: 1,
+          current: 0
+        });
+      }
+
+      items.push({
+        seq: items.length,
+        lat: homeLat,
+        lon: homeLon,
+        alt: 0,
+        command: 20 /* Return to Launch */,
+        frame: 0,
+        autocontinue: 1,
+        current: 0
+      });
+
+      const res = await mavlinkService.uploadMissionWaypoints(items);
+      if (!res.success) {
+        return { success: false, message: `Upload failed: ${res.message}` };
       }
 
       this.currentMission.isUploaded = true;

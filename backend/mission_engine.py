@@ -404,7 +404,16 @@ class MissionEngine:
             self.transition_to("ARMED", "Mission started by operator")
             mavlink_mux.arm()
             mavlink_mux.set_mode("GUIDED")
-            takeoff_alt = self.waypoints[0].get("alt", 10.0) if self.waypoints else 10.0
+            takeoff_alt = 10.0
+            if self.waypoints:
+                for wp in self.waypoints:
+                    cmd = wp.get("command", 16)
+                    alt_val = float(wp.get("alt", wp.get("altitude_m", 0.0)))
+                    if cmd == 22 and alt_val > 0:
+                        takeoff_alt = alt_val
+                        break
+                    elif alt_val > 0 and takeoff_alt == 10.0:
+                        takeoff_alt = alt_val
             mavlink_mux.takeoff(takeoff_alt)
             self.transition_to("TAKING_OFF", f"Climbing to {takeoff_alt}m")
             return {"success": True, "state": self.state, "deadline": self.deadline}

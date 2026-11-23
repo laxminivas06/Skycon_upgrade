@@ -1,0 +1,36 @@
+{
+  "hotspots": [
+    {
+      "label": "MAVLinkService",
+      "risk": 0.748,
+      "type": "CLASS"
+    },
+    {
+      "label": "GroundStationMissionService",
+      "risk": 0.243,
+      "type": "CLASS"
+    },
+    {
+      "label": "TargetDetectionEngine",
+      "risk": 0.235,
+      "type": "CLASS"
+    },
+    {
+      "label": "MissionEngine",
+      "risk": 0.233,
+      "type": "CLASS"
+    },
+    {
+      "label": "\ud83d\udef8 SKYCON \u2014 Autonomous Drone Rescue & Mission System (ADDC 2026)",
+      "risk": 0.222,
+      "type": "UNKNOWN"
+    }
+  ],
+  "blast_radius": {
+    "Graph Report - .  (2026-10-26)": 146,
+    "now": 137,
+    "MAVLinkService": 108,
+    "CoveragePlanner": 107,
+    "api_response()": 89
+  }
+}

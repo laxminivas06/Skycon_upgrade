@@ -185,7 +185,10 @@ class RouteValidator:
                 min_alt_seen = alt
 
             # 1. Coordinate Validity
-            if math.isnan(lat) or math.isnan(lon) or (abs(lat) < 0.001 and abs(lon) < 0.001):
+            cmd_val = wp.get("command", 16)
+            act_val = str(wp.get("action", "")).upper()
+            is_zero_allowed = cmd_val in (20, 21) or act_val in ("RTL", "LAND")
+            if not is_zero_allowed and (math.isnan(lat) or math.isnan(lon) or (abs(lat) < 0.001 and abs(lon) < 0.001)):
                 issues.append(ValidationIssue(
                     severity="ERROR",
                     waypoint_index=idx,
