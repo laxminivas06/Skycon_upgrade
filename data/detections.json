@@ -1,8 +1,8 @@
 {
   "_schema_version": "2.0",
   "_collection": "detections",
-  "_updated_at": "2026-11-22T10:42:25.339674+00:00",
-  "_checksum_sha256": "0f7fb15b6e34671a9613241e3f37e4ab985665a46947bb56540f5bf655ae7366",
+  "_updated_at": "2026-11-23T02:25:07.237972+00:00",
+  "_checksum_sha256": "12fefa1542143c8ca8a51c0207e7df702e4bcf7dd4dab2111c4e6b2795227c60",
   "_data": [
     {
       "payload": "42",
@@ -1222,6 +1222,148 @@
     },
     {
       "twoDigitCode": "07"
+    },
+    {
+      "twoDigitCode": "56",
+      "confidence": 0.99,
+      "droneStateAtCapture": {
+        "lat": 13.0827,
+        "lon": 80.2707,
+        "alt": 10.0
+      }
+    },
+    {
+      "twoDigitCode": "73",
+      "confidence": 0.99,
+      "droneStateAtCapture": {
+        "lat": 13.0828,
+        "lon": 80.2708,
+        "alt": 10.0
+      }
+    },
+    {
+      "twoDigitCode": "42",
+      "lat": 13.0827,
+      "lon": 80.2707,
+      "verified": true
+    },
+    {
+      "observation_id": "QR_OBS_001",
+      "code": "42",
+      "lat": 13.0827,
+      "lon": 80.2707,
+      "timestamp": "2026-11-23T02:15:38.839668+00:00",
+      "verified": true,
+      "checksum_sha256": "743d4808900c5c2e6f6f2e55aeec40d975412e67e7bd02584a3bd4db031f42c4"
+    },
+    {
+      "twoDigitCode": "42",
+      "lat": 13.0827,
+      "lon": 80.2707
+    },
+    {
+      "twoDigitCode": "07"
+    },
+    {
+      "twoDigitCode": "42",
+      "confidence": 0.98,
+      "boxId": "BOX_TARGET_01",
+      "droneStateAtCapture": {
+        "lat": 13.0,
+        "lon": 80.0,
+        "alt": 10.0
+      }
+    },
+    {
+      "payload": "42",
+      "droneStateAtCapture": {
+        "lat": 13.0827,
+        "lon": 80.2707,
+        "alt": 10.0
+      },
+      "twoDigitCode": "42",
+      "verified": true
+    },
+    {
+      "payload": "42",
+      "droneStateAtCapture": {
+        "lat": 13.0827,
+        "lon": 80.2707,
+        "alt": 10.0
+      },
+      "twoDigitCode": "42",
+      "verified": true
+    },
+    {
+      "twoDigitCode": "56",
+      "confidence": 0.99,
+      "droneStateAtCapture": {
+        "lat": 13.0827,
+        "lon": 80.2707,
+        "alt": 10.0
+      }
+    },
+    {
+      "twoDigitCode": "73",
+      "confidence": 0.99,
+      "droneStateAtCapture": {
+        "lat": 13.0828,
+        "lon": 80.2708,
+        "alt": 10.0
+      }
+    },
+    {
+      "twoDigitCode": "42",
+      "lat": 13.0827,
+      "lon": 80.2707,
+      "verified": true
+    },
+    {
+      "observation_id": "QR_OBS_001",
+      "code": "42",
+      "lat": 13.0827,
+      "lon": 80.2707,
+      "timestamp": "2026-11-23T02:25:01.290756+00:00",
+      "verified": true,
+      "checksum_sha256": "743d4808900c5c2e6f6f2e55aeec40d975412e67e7bd02584a3bd4db031f42c4"
+    },
+    {
+      "twoDigitCode": "42",
+      "lat": 13.0827,
+      "lon": 80.2707
+    },
+    {
+      "twoDigitCode": "07"
+    },
+    {
+      "twoDigitCode": "42",
+      "confidence": 0.98,
+      "boxId": "BOX_TARGET_01",
+      "droneStateAtCapture": {
+        "lat": 13.0,
+        "lon": 80.0,
+        "alt": 10.0
+      }
+    },
+    {
+      "payload": "42",
+      "droneStateAtCapture": {
+        "lat": 13.0827,
+        "lon": 80.2707,
+        "alt": 10.0
+      },
+      "twoDigitCode": "42",
+      "verified": true
+    },
+    {
+      "payload": "42",
+      "droneStateAtCapture": {
+        "lat": 13.0827,
+        "lon": 80.2707,
+        "alt": 10.0
+      },
+      "twoDigitCode": "42",
+      "verified": true
     },
     {
       "twoDigitCode": "56",
