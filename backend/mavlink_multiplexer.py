@@ -1002,44 +1002,67 @@ class MavlinkMultiplexer:
 
         # Live serial upload sequence
         self._mission_ack_event.clear()
+        self._mission_req_event.clear()
         self._mission_ack_result = -1
 
         # 1. Clear all previous missions
         clear_pkt = self.build_mission_clear_all_packet()
         self.send_packet(clear_pkt)
-        time.sleep(0.05)
+        time.sleep(0.08)
 
-        # 2. Send MISSION_COUNT
+        # 2. Send MISSION_COUNT with retry handshake
         count_pkt = self.build_mission_count_packet(len(waypoints))
-        self.send_packet(count_pkt)
+        req_started = False
+        for attempt in range(4):
+            self.send_packet(count_pkt)
+            if self._mission_req_event.wait(timeout=1.2):
+                req_started = True
+                break
+            time.sleep(0.1)
 
-        # 3. Handle item requests
-        for idx, wp in enumerate(waypoints):
-            req_ok = self._mission_req_event.wait(timeout=max(0.5, timeout_s / len(waypoints)))
+        if not req_started:
+            logger.warning("[MAVLINK MUX] Autopilot did not respond to MISSION_COUNT after 4 attempts.")
+            return False, "MISSION_COUNT_TIMEOUT", -1
+
+        # 3. Handle item requests by requested sequence (MAVLink Mission Protocol)
+        total_wps = len(waypoints)
+        items_sent = set()
+        loop_start = time.time()
+
+        while len(items_sent) < total_wps and (time.time() - loop_start < timeout_s):
+            req_seq = getattr(self, "_last_mission_req_seq", 0)
+            if req_seq < total_wps:
+                wp = waypoints[req_seq]
+                item_pkt = self.build_mission_item_int_packet(
+                    seq=req_seq,
+                    command=wp.get("command", 16),
+                    frame=wp.get("frame", 6),
+                    p1=wp.get("param1", 0.0),
+                    p2=wp.get("param2", 1.5),
+                    p3=wp.get("param3", 0.0),
+                    p4=wp.get("param4", 0.0),
+                    lat=wp.get("lat", wp.get("latitude", 0.0)),
+                    lon=wp.get("lon", wp.get("lng", wp.get("longitude", 0.0))),
+                    alt=wp.get("alt", wp.get("altitude_m", 10.0)),
+                    current=1 if req_seq == 0 else 0,
+                    autocontinue=1
+                )
+                self.send_packet(item_pkt)
+                items_sent.add(req_seq)
+
             self._mission_req_event.clear()
-            # Construct and transmit MISSION_ITEM_INT
-            item_pkt = self.build_mission_item_int_packet(
-                seq=idx,
-                command=wp.get("command", 16),
-                frame=wp.get("frame", 6),
-                p1=wp.get("param1", 0.0),
-                p2=wp.get("param2", 1.5),
-                p3=wp.get("param3", 0.0),
-                p4=wp.get("param4", 0.0),
-                lat=wp.get("lat", wp.get("latitude", 0.0)),
-                lon=wp.get("lon", wp.get("lng", wp.get("longitude", 0.0))),
-                alt=wp.get("alt", wp.get("altitude_m", 10.0)),
-                current=1 if idx == 0 else 0,
-                autocontinue=1
-            )
-            self.send_packet(item_pkt)
+            if len(items_sent) >= total_wps:
+                break
+            self._mission_req_event.wait(timeout=1.5)
 
         # 4. Await MISSION_ACK
-        got_ack = self._mission_ack_event.wait(timeout=2.0)
+        got_ack = self._mission_ack_event.wait(timeout=2.5)
         if got_ack and self._mission_ack_result == 0:
+            logger.info(f"[MAVLINK MUX] Mission upload verified: {total_wps} items confirmed with MAV_MISSION_ACCEPTED.")
             return True, "MAV_MISSION_ACCEPTED", 0
         elif got_ack:
             res_str = MAV_MISSION_RESULT.get(self._mission_ack_result, f"ERROR_{self._mission_ack_result}")
+            logger.warning(f"[MAVLINK MUX] Mission upload rejected: {res_str}")
             return False, res_str, self._mission_ack_result
         return False, "MISSION_ACK_TIMEOUT", -1
 

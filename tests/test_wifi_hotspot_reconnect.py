@@ -74,7 +74,7 @@ class TestMobileHotspotAndReconnection(unittest.TestCase):
     # -------------------------------------------------------------------------
     def test_03_and_04_cloud_heartbeat_and_gcs_online_status(self):
         """[SIMULATION ONLY] Scenario 3 & 4: Outbound cloud heartbeat dispatch and GCS telemetry display."""
-        with patch.object(self.cloud, "_dispatch_post", return_value=(True, 42.5)):
+        with patch.object(self.cloud, "_dispatch_post", return_value=(True, 42.5, {})):
             res = self.cloud.trigger_sync_now()
             self.assertTrue(res["success"])
             self.assertTrue(self.cloud.is_online)
@@ -133,7 +133,7 @@ class TestMobileHotspotAndReconnection(unittest.TestCase):
         self.assertIn("state", initial_status)
 
         # Cloud sync safely spools records to disk without blocking or throwing exceptions
-        with patch.object(self.cloud, "_dispatch_post", return_value=(False, 0.0)):
+        with patch.object(self.cloud, "_dispatch_post", return_value=(False, 0.0, None)):
             res = self.cloud._perform_sync_cycle()
             self.assertFalse(res)
             self.assertFalse(self.cloud.is_online)
@@ -180,7 +180,7 @@ class TestMobileHotspotAndReconnection(unittest.TestCase):
         self.assertEqual(len(json_store.load("offline_sync_spool")), 3)
 
         # Reconnect and trigger sync
-        with patch.object(self.cloud, "_dispatch_post", return_value=(True, 35.0)):
+        with patch.object(self.cloud, "_dispatch_post", return_value=(True, 35.0, {})):
             success = self.cloud._perform_sync_cycle()
             self.assertTrue(success)
             self.assertTrue(self.cloud.is_online)

@@ -402,16 +402,34 @@ export const MapPanel: React.FC<MapPanelProps> = ({
       if (isPlacingCircleRef.current) {
         const currentHome = mavlinkService.getHomePoint();
         const currentRadius = groundStationMissionService.getCircleRadius();
+        const targetAlt = groundStationMissionService.getCurrentMission()?.altitude || 5.0;
+
+        // Requirement 2 & 3: Validate selected boundary against configured geofence
+        const validation = geofenceService.validateSearchBoundary({
+          type: 'CIRCLE',
+          circleCenter: { lat, lng },
+          circleRadiusMeters: currentRadius,
+          altitude: targetAlt
+        });
+
+        // Requirement 4: Do not automatically change the user's selected boundary
         groundStationMissionService.generateCircleMission(
           { lat, lng },
           currentRadius,
           currentHome,
-          25,
+          targetAlt,
           4.0,
           'CW'
         );
-        audioService.playBeep(980, 80);
-        showTemporaryNotice(`${currentRadius}m Circle Orbit placed at (${lat.toFixed(5)}, ${lng.toFixed(5)}) ✓ Ready to upload.`);
+
+        if (!validation.isValid) {
+          audioService.playBeep(350, 200);
+          showTemporaryNotice(`❌ Geofence Validation Error: ${validation.reason}`);
+        } else {
+          audioService.playBeep(980, 80);
+          showTemporaryNotice(`${currentRadius}m Circle Search Boundary placed at (${lat.toFixed(5)}, ${lng.toFixed(5)}) ✓ Bounded within geofence. Ready for Autonomous Mission.`);
+        }
+
         setIsPlacingCircle(false);
         groundStationMissionService.setDrawingTool('select');
         return;
@@ -421,19 +439,37 @@ export const MapPanel: React.FC<MapPanelProps> = ({
       if (isPlacingConcentricRef.current) {
         const currentHome = mavlinkService.getHomePoint();
         const baseRadius = groundStationMissionService.getCircleRadius();
+        const targetAlt = groundStationMissionService.getCurrentMission()?.altitude || 5.0;
         const r1 = Math.max(3, Math.round(baseRadius * 0.4));
         const r2 = Math.max(r1 + 3, Math.round(baseRadius * 0.8));
         const r3 = Math.max(r2 + 3, baseRadius);
+
+        // Validate outer concentric circle against configured geofence
+        const validation = geofenceService.validateSearchBoundary({
+          type: 'CIRCLE',
+          circleCenter: { lat, lng },
+          circleRadiusMeters: r3,
+          altitude: targetAlt
+        });
+
+        // Generate concentric circles with user's selected dimensions
         groundStationMissionService.generateConcentricCircleMission(
           { lat, lng },
           [r1, r2, r3],
           currentHome,
-          20,
+          targetAlt,
           4.0,
           'CW'
         );
-        audioService.playBeep(980, 80);
-        showTemporaryNotice(`3-Ring Concentric Circles (${r1}m, ${r2}m, ${r3}m) placed ✓ Ready to upload.`);
+
+        if (!validation.isValid) {
+          audioService.playBeep(350, 200);
+          showTemporaryNotice(`❌ Geofence Validation Error: ${validation.reason}`);
+        } else {
+          audioService.playBeep(980, 80);
+          showTemporaryNotice(`3-Ring Concentric Circles (${r1}m, ${r2}m, ${r3}m) placed ✓ Bounded within geofence. Ready for Autonomous Mission.`);
+        }
+
         setIsPlacingConcentric(false);
         groundStationMissionService.setDrawingTool('select');
         return;

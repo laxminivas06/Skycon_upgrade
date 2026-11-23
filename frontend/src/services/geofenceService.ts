@@ -927,6 +927,133 @@ class GeofenceService {
     return minDist;
   }
 
+  /**
+   * Validates a complete search boundary (Circle, Rectangle, Polygon) against active geofence.
+   * Requirement 2 & 3: The entire search area must remain strictly within the geofence.
+   * Requirement 4: Does NOT automatically change or clip the user's selected boundary.
+   */
+  public validateSearchBoundary(boundary: {
+    type: 'CIRCLE' | 'RECTANGLE' | 'POLYGON' | 'SQUARE';
+    circleCenter?: LatLngPoint | null;
+    circleRadiusMeters?: number;
+    coordinates?: LatLngPoint[];
+    altitude?: number;
+  }): { isValid: boolean; reason?: string; maxBreachDistanceMeters?: number } {
+    if (!this.config.enabled) {
+      return { isValid: true };
+    }
+
+    const maxAlt = this.config.maxAltitudeMeters || 25.0;
+    if (boundary.altitude !== undefined && boundary.altitude > maxAlt) {
+      return {
+        isValid: false,
+        reason: `Search altitude (${boundary.altitude.toFixed(1)}m) exceeds geofence ceiling (${maxAlt.toFixed(1)}m).`,
+        maxBreachDistanceMeters: boundary.altitude - maxAlt
+      };
+    }
+
+    // 1. Circle Boundary Validation
+    if (boundary.type === 'CIRCLE') {
+      const center = boundary.circleCenter;
+      const radius = boundary.circleRadiusMeters || 15.0;
+
+      if (!center || (Math.abs(center.lat) < 0.0001 && Math.abs(center.lng) < 0.0001)) {
+        return { isValid: false, reason: 'Invalid or missing circle center coordinates.' };
+      }
+
+      if (this.config.shape === 'CIRCLE') {
+        const anchor = this.getEffectiveAnchor() || { lat: center.lat, lng: center.lng };
+        const distToAnchor = computeHaversine(anchor.lat, anchor.lng, center.lat, center.lng);
+        const fenceRadius = this.config.radiusMeters || 50.0;
+        const totalExtent = distToAnchor + radius;
+
+        if (totalExtent > fenceRadius) {
+          const excess = totalExtent - fenceRadius;
+          return {
+            isValid: false,
+            reason: `Search circle exceeds circular geofence boundary by ${excess.toFixed(1)}m (Center is ${distToAnchor.toFixed(1)}m from fence center; radius ${radius}m reaches ${totalExtent.toFixed(1)}m vs fence ${fenceRadius}m).`,
+            maxBreachDistanceMeters: excess
+          };
+        }
+        return { isValid: true };
+      } else {
+        // Geofence is ARENA_RECTANGLE or CUSTOM_POLYGON
+        const vertices = this.getBoundaryVertices();
+        if (vertices.length < 3) return { isValid: true };
+
+        // Test center containment
+        if (!isPointInsideGeofence(center.lat, center.lng, vertices)) {
+          return {
+            isValid: false,
+            reason: 'Search circle center lies outside the active geofence polygon.'
+          };
+        }
+
+        // Test 36 points along perimeter (every 10 degrees)
+        let maxBreach = 0;
+        const R = 6371e3;
+        for (let i = 0; i < 36; i++) {
+          const bearingRad = (i * 10 * Math.PI) / 180;
+          const dLat = ((radius * Math.cos(bearingRad)) / R) * (180 / Math.PI);
+          const dLng = ((radius * Math.sin(bearingRad)) / (R * Math.cos((center.lat * Math.PI) / 180))) * (180 / Math.PI);
+          const perimeterPt = { lat: center.lat + dLat, lng: center.lng + dLng };
+
+          if (!isPointInsideGeofence(perimeterPt.lat, perimeterPt.lng, vertices)) {
+            const distToPerim = this.getDistanceToPerimeter(perimeterPt.lat, perimeterPt.lng, vertices);
+            if (distToPerim > maxBreach) maxBreach = distToPerim;
+          }
+        }
+
+        if (maxBreach > 0.05) {
+          return {
+            isValid: false,
+            reason: `Search circle exceeds geofence boundary by ~${maxBreach.toFixed(1)}m. Entire search area must remain within geofence.`,
+            maxBreachDistanceMeters: maxBreach
+          };
+        }
+        return { isValid: true };
+      }
+    }
+
+    // 2. Polygon or Rectangle Boundary Validation
+    const coords = boundary.coordinates || [];
+    if (coords.length >= 3) {
+      const vertices = this.getBoundaryVertices();
+      if (this.config.shape === 'CIRCLE') {
+        const anchor = this.getEffectiveAnchor();
+        const fenceRadius = this.config.radiusMeters || 50.0;
+        if (anchor) {
+          for (let i = 0; i < coords.length; i++) {
+            const pt = coords[i];
+            const d = computeHaversine(anchor.lat, anchor.lng, pt.lat, pt.lng);
+            if (d > fenceRadius) {
+              const excess = d - fenceRadius;
+              return {
+                isValid: false,
+                reason: `Search boundary vertex #${i + 1} exceeds circular geofence by ${excess.toFixed(1)}m.`,
+                maxBreachDistanceMeters: excess
+              };
+            }
+          }
+        }
+      } else if (vertices.length >= 3) {
+        for (let i = 0; i < coords.length; i++) {
+          const pt = coords[i];
+          if (!isPointInsideGeofence(pt.lat, pt.lng, vertices)) {
+            const dist = this.getDistanceToPerimeter(pt.lat, pt.lng, vertices);
+            return {
+              isValid: false,
+              reason: `Search boundary vertex #${i + 1} lies outside the active geofence polygon (by ~${dist.toFixed(1)}m).`,
+              maxBreachDistanceMeters: dist
+            };
+          }
+        }
+      }
+    }
+
+    return { isValid: true };
+  }
+
   public getState(): GeofenceState {
     this.state.geofenceStatus = this.computeLockStatus();
     return { ...this.state };

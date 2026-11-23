@@ -4047,6 +4047,52 @@ class MAVLinkService {
 
     this.clearMissionUploadTimers();
 
+    // If connected via Cloud Relay / Companion computer, route upload through companion API
+    if (!this.isDirectByteTransportOpen() && this.connectionState.connectionType === 'CLOUD_RELAY') {
+      try {
+        onProgress?.('Forwarding mission to companion computer for Pixhawk upload...', 0, items.length);
+        const res = await fetchWithFallback('/api/mission/upload-to-pixhawk', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            waypoints: items.map((it) => ({
+              command: it.command || 16,
+              frame: it.frame || 6,
+              param1: it.param1 || 0,
+              param2: it.param2 || 1.5,
+              param3: it.param3 || 0,
+              param4: it.param4 || 0,
+              lat: it.lat,
+              lon: it.lon,
+              alt: it.alt
+            }))
+          })
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data?.data?.success || data?.success) {
+            return {
+              success: true,
+              message: `Mission uploaded to Pixhawk via Raspberry Pi 4 UART (${items.length} waypoints) ✓`,
+              upload_id
+            };
+          } else {
+            return {
+              success: false,
+              message: data?.error || data?.data?.result || 'Companion reported flight controller upload rejection',
+              upload_id
+            };
+          }
+        }
+      } catch (err: any) {
+        return {
+          success: false,
+          message: `Companion relay upload failed: ${err?.message || 'Check link'}`,
+          upload_id
+        };
+      }
+    }
+
     if (this.connectionState.isRealHardware) {
       onProgress?.('Initiating mission upload to Pixhawk...', 0, items.length);
       this.logDiagnostic('MAVLINK', `[MISSION UPLOAD] Initiating upload of ${items.length} waypoints (upload_id=${upload_id})...`, 'info');

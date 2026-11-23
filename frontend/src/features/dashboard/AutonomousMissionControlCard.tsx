@@ -196,6 +196,8 @@ export const AutonomousMissionControlCard: React.FC<AutonomousMissionControlCard
   // =========================================================================
   // MANUAL BOUNDARY CONFIRMATION HANDLER
   // =========================================================================
+  const [boundaryValidationError, setBoundaryValidationError] = useState<string | null>(null);
+
   const handleConfirmBoundary = () => {
     const center = getSearchCenter();
     const home: HomePoint = mavlinkService.getHomePoint().isSet
@@ -204,6 +206,24 @@ export const AutonomousMissionControlCard: React.FC<AutonomousMissionControlCard
 
     const rad = boundaryType === 'CIRCLE' ? circleRadius : Math.max(rectWidth, rectHeight) / 2.0;
     const dims = { width: rectWidth, height: rectHeight };
+
+    // Requirement 2 & 3: Validate selected boundary against configured geofence
+    const validation = geofenceService.validateSearchBoundary({
+      type: boundaryType === 'CIRCLE' ? 'CIRCLE' : (boundaryType === 'POLYGON' ? 'POLYGON' : 'RECTANGLE'),
+      circleCenter: center,
+      circleRadiusMeters: boundaryType === 'CIRCLE' ? circleRadius : undefined,
+      altitude: altitude
+    });
+
+    if (!validation.isValid) {
+      audioService.playBeep(350, 250);
+      setBoundaryValidationError(validation.reason || 'Selected search boundary exceeds geofence limits');
+      setBoundaryConfirmedNotice(`❌ Geofence Violation: ${validation.reason}`);
+      setIsBoundaryConfirmed(false);
+      return;
+    }
+
+    setBoundaryValidationError(null);
 
     // Register search boundary area
     groundStationMissionService.generateAutonomousSearchMission(
@@ -236,7 +256,7 @@ export const AutonomousMissionControlCard: React.FC<AutonomousMissionControlCard
     });
 
     setIsBoundaryConfirmed(true);
-    setBoundaryConfirmedNotice(`✓ Search Boundary Confirmed: ${boundaryArea} m² (${boundaryType})`);
+    setBoundaryConfirmedNotice(`✓ Search Boundary Confirmed: ${boundaryArea} m² (${boundaryType}) bounded within geofence`);
     audioService.playBeep(920, 80);
     setTimeout(() => setBoundaryConfirmedNotice(null), 4000);
   };
@@ -685,7 +705,9 @@ export const AutonomousMissionControlCard: React.FC<AutonomousMissionControlCard
               <span>{isBoundaryConfirmed ? '✓ BOUNDARY CONFIRMED' : 'CONFIRM SEARCH BOUNDARY'}</span>
             </button>
             {boundaryConfirmedNotice && (
-              <div className="text-[10px] font-mono text-emerald-300 text-center animate-fade-in">
+              <div className={`text-[10px] font-mono text-center animate-fade-in p-1.5 rounded ${
+                boundaryConfirmedNotice.includes('❌') ? 'text-rose-300 bg-rose-950/80 border border-rose-500/50' : 'text-emerald-300 bg-emerald-950/40 border border-emerald-500/30'
+              }`}>
                 {boundaryConfirmedNotice}
               </div>
             )}

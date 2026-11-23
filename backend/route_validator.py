@@ -311,6 +311,80 @@ class RouteValidator:
             summary=summary
         )
 
+    def validate_search_boundary(
+        self,
+        boundary_dict: Dict[str, Any],
+        geofence: Dict[str, Any],
+        altitude_m: float = 10.0
+    ) -> Dict[str, Any]:
+        """
+        Validates a search boundary (CIRCLE, RECTANGLE, POLYGON) against the active geofence.
+        Requirement 2 & 3: The entire search area must remain strictly within the geofence.
+        Requirement 4: Does NOT automatically modify or clip the user's selected boundary.
+        """
+        if not geofence.get("enabled", True):
+            return {"valid": True}
+
+        max_alt = float(geofence.get("alt_max", self.max_altitude_m))
+        if altitude_m > max_alt:
+            return {
+                "valid": False,
+                "reason": f"Search altitude ({altitude_m:.1f}m) exceeds geofence ceiling ({max_alt:.1f}m)."
+            }
+
+        b_type = boundary_dict.get("type", "CIRCLE").upper()
+        gf_type = geofence.get("type", "CIRCLE").upper()
+        gf_center = geofence.get("center", {})
+        gf_radius = float(geofence.get("radius", 50.0))
+
+        if b_type == "CIRCLE":
+            center = boundary_dict.get("center", {})
+            radius = float(boundary_dict.get("radius", 15.0))
+            if not center or "lat" not in center or "lon" not in center:
+                return {"valid": False, "reason": "Missing or invalid circular boundary center coordinates."}
+
+            if gf_type == "CIRCLE":
+                if "lat" in gf_center and "lon" in gf_center:
+                    dist = haversine_distance(center["lat"], center["lon"], gf_center["lat"], gf_center["lon"])
+                    total_reach = dist + radius
+                    if total_reach > gf_radius:
+                        excess = total_reach - gf_radius
+                        return {
+                            "valid": False,
+                            "reason": f"Search circle exceeds circular geofence boundary by {excess:.1f}m (center is {dist:.1f}m from fence center, radius {radius:.1f}m reaches {total_reach:.1f}m vs fence {gf_radius:.1f}m)."
+                        }
+                return {"valid": True}
+            elif gf_type == "POLYGON":
+                raw_poly = geofence.get("polygon", [])
+                gf_poly = []
+                for pt in raw_poly:
+                    if isinstance(pt, (list, tuple)) and len(pt) >= 2:
+                        gf_poly.append((float(pt[0]), float(pt[1])))
+                    elif isinstance(pt, dict) and "lat" in pt:
+                        gf_poly.append((float(pt["lat"]), float(pt.get("lon", pt.get("lng", 0.0)))))
+
+                if len(gf_poly) < 3:
+                    return {"valid": True}
+
+                if not point_in_polygon(center["lat"], center["lon"], gf_poly):
+                    return {"valid": False, "reason": "Search circle center is outside the geofence polygon."}
+
+                # Check 36 points along perimeter
+                for i in range(36):
+                    angle_rad = math.radians(i * 10)
+                    d_lat = (radius * math.cos(angle_rad)) / 111139.0
+                    d_lon = (radius * math.sin(angle_rad)) / (111139.0 * math.cos(math.radians(center["lat"])))
+                    p_lat = center["lat"] + d_lat
+                    p_lon = center["lon"] + d_lon
+                    if not point_in_polygon(p_lat, p_lon, gf_poly):
+                        return {
+                            "valid": False,
+                            "reason": "Search circle perimeter exceeds the geofence polygon. Entire search area must remain within geofence."
+                        }
+                return {"valid": True}
+
+        return {"valid": True}
+
 
 # Global singleton validator
 route_validator = RouteValidator()

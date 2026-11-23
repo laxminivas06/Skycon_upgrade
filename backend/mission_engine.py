@@ -370,6 +370,16 @@ class MissionEngine:
                 center = config.get("center", self.home_location)
                 radius = float(config.get("radius", 15.0))
                 altitude = float(config.get("altitude", 10.0))
+
+                # Validate circle boundary directly before generating waypoints
+                boundary_check = route_validator.validate_search_boundary({
+                    "type": "CIRCLE",
+                    "center": center,
+                    "radius": radius
+                }, self.geofence, altitude)
+                if not boundary_check.get("valid", True):
+                    return {"success": False, "error": f"Search boundary violates geofence: {boundary_check.get('reason')}"}
+
                 self.waypoints = self.plan_circular_scan(center["lat"], center["lon"], radius, altitude)
 
             # Validate waypoints against geofence

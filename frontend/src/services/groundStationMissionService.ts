@@ -1456,12 +1456,33 @@ export class GroundStationMissionService {
         };
       }
 
-      // Geofence pre-arm check
+      // Geofence pre-arm check: Validate both boundary containment and drone location
       if (!forceBypass) {
         try {
           const { geofenceService } = await import('./geofenceService');
-          const telem = mavlinkService.getTelemetry();
           if (geofenceService.getState().enabled) {
+            // Requirement 2 & 3: Validate that the entire search area is bounded within geofence
+            if (this.currentMission.geometry) {
+              const bCheck = geofenceService.validateSearchBoundary({
+                type: this.currentMission.geometry.type === 'circle' ? 'CIRCLE' : 'RECTANGLE',
+                circleCenter: this.currentMission.geometry.circleCenter,
+                circleRadiusMeters: this.currentMission.geometry.circleRadiusMeters,
+                coordinates: this.currentMission.geometry.coordinates,
+                altitude: this.currentMission.altitude
+              });
+              if (!bCheck.isValid) {
+                const bMsg = `❌ Search boundary violates geofence: ${bCheck.reason}`;
+                systemAlertService.pushAlert({
+                  title: 'GEOFENCE BOUNDARY VIOLATION',
+                  message: bMsg,
+                  severity: 'CRITICAL',
+                  source: 'GEOFENCE'
+                });
+                return { success: false, message: bMsg };
+              }
+            }
+
+            const telem = mavlinkService.getTelemetry();
             const check = geofenceService.canArmVehicle(telem.latitude, telem.longitude);
             if (!check.canArm) {
               const msg = check.reason || 'Your current position is outside the selected search boundary. Move the drone inside the boundary before starting the mission.';
@@ -1571,16 +1592,22 @@ export class GroundStationMissionService {
     if (this.guidedSequencerActive) return;
     this.guidedSequencerActive = true;
 
-    // Telemetry-Gated Verification: Actively verify aircraft reaches target altitude before starting spiral navigation
+    // Telemetry-Gated Verification: Actively verify aircraft reaches target altitude before starting navigation
     console.log(`[GCS Mission] Verifying aircraft climb to ${alt}m before engaging waypoints...`);
     const climbStartTime = Date.now();
-    while (this.guidedSequencerActive && Date.now() - climbStartTime < 12000) {
+    let prevCheckAlt = mavlinkService.getTelemetry().altitude || 0;
+
+    while (this.guidedSequencerActive && Date.now() - climbStartTime < 25000) {
       const curAlt = mavlinkService.getTelemetry().altitude || 0;
-      if (curAlt >= (alt - 0.5)) {
+      const climbDelta = Math.abs(curAlt - prevCheckAlt);
+      prevCheckAlt = curAlt;
+
+      // ±1.0m tolerance or leveled-off climb rate per GEMINI.md to prevent altitude deadlocks
+      if (curAlt >= (alt - 1.0) || (curAlt >= 2.0 && curAlt >= (alt * 0.75) && climbDelta < 0.2)) {
         console.log(`[GCS Mission] Target altitude confirmed (${curAlt.toFixed(1)}m / ${alt}m). Beginning waypoint navigation.`);
         break;
       }
-      await new Promise((r) => setTimeout(r, 350));
+      await new Promise((r) => setTimeout(r, 400));
     }
 
     for (let i = 0; i < waypoints.length; i++) {
@@ -1594,6 +1621,12 @@ export class GroundStationMissionService {
       } else if (wp.action === 'LAND') {
         await mavlinkService.commandLand();
         break;
+      }
+
+      // Requirement 7: Validate coordinates are compatible and not NaN / (0, 0)
+      if (isNaN(wp.lat) || isNaN(wp.lng) || (Math.abs(wp.lat) < 0.001 && Math.abs(wp.lng) < 0.001)) {
+        console.warn(`[GCS Mission] Skipping invalid/null waypoint #${i + 1} (${wp.lat}, ${wp.lng})`);
+        continue;
       }
 
       await mavlinkService.flyToPosition(wp.lat, wp.lng, targetAlt, speed);

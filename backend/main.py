@@ -1050,6 +1050,14 @@ def flask_generate_plan():
         else:
             center = body.get("center", mission_engine.home_location)
             radius = float(body.get("radius", 15.0))
+            boundary_check = route_validator.validate_search_boundary({
+                "type": "CIRCLE",
+                "center": center,
+                "radius": radius
+            }, mission_engine.geofence, alt)
+            if not boundary_check.get("valid", True):
+                return api_response(error=f"Search boundary exceeds geofence: {boundary_check.get('reason')}", code=400)
+
             plan = flask_coverage_planner.plan_circular_coverage(
                 center["lat"], center["lon"], radius, alt, speed, overlap, strategy
             )
