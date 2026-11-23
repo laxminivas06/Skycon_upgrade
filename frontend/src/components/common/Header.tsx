@@ -179,9 +179,9 @@ export const Header: React.FC<HeaderProps> = ({
         <div
           onClick={() => mavlinkService.requestMavlinkDataStreams()}
           className={`px-2 py-0.5 border rounded flex items-center gap-1.5 cursor-pointer transition ${
-            telemetry.batteryVoltage <= 0
+            telemetry.batteryVoltage <= 0 || telemetry.batteryPercent < 0
               ? 'bg-[#1b1c1e] border-[#343537] text-slate-500'
-              : telemetry.batteryVoltage < 10.5
+              : telemetry.batteryVoltage < 10.5 || telemetry.batteryPercent < 15
               ? 'bg-rose-950/70 border-rose-500/70 text-rose-300 animate-pulse'
               : telemetry.batteryPercent < 25
               ? 'bg-amber-950/60 border-amber-500/60 text-amber-300'
@@ -190,21 +190,21 @@ export const Header: React.FC<HeaderProps> = ({
           title="Battery Monitor (Click to probe data stream)"
         >
           <span className={`material-symbols-outlined text-[15px] ${
-            telemetry.batteryVoltage <= 0 ? 'text-slate-500' :
-            telemetry.batteryVoltage < 10.5 ? 'text-rose-400' :
+            telemetry.batteryVoltage <= 0 || telemetry.batteryPercent < 0 ? 'text-slate-500' :
+            telemetry.batteryVoltage < 10.5 || telemetry.batteryPercent < 15 ? 'text-rose-400' :
             telemetry.batteryPercent < 25 ? 'text-amber-400' : 'text-[#57df85]'
           }`}>
-            {telemetry.batteryVoltage <= 0 ? 'battery_unknown' : telemetry.batteryVoltage < 10.5 ? 'battery_alert' : 'battery_charging_full'}
+            {telemetry.batteryVoltage <= 0 || telemetry.batteryPercent < 0 ? 'battery_unknown' : telemetry.batteryVoltage < 10.5 ? 'battery_alert' : 'battery_charging_full'}
           </span>
           <span className={`font-bold ${
-            telemetry.batteryVoltage <= 0 ? 'text-slate-500' :
-            telemetry.batteryVoltage < 10.5 ? 'text-rose-400' :
+            telemetry.batteryVoltage <= 0 || telemetry.batteryPercent < 0 ? 'text-slate-500' :
+            telemetry.batteryVoltage < 10.5 || telemetry.batteryPercent < 15 ? 'text-rose-400' :
             telemetry.batteryPercent < 25 ? 'text-amber-400' : 'text-[#57df85]'
           }`}>
-            {telemetry.batteryVoltage > 0 ? `${telemetry.batteryPercent}%` : '--%'}
+            {telemetry.batteryPercent !== undefined && telemetry.batteryPercent >= 0 ? `${telemetry.batteryPercent}%` : '--'}
           </span>
           <span className="text-slate-400 text-[10px] hidden sm:inline">
-            {telemetry.batteryVoltage > 0 ? `${telemetry.batteryVoltage.toFixed(1)}V` : 'UNAVAILABLE'}
+            {telemetry.batteryVoltage > 0 ? `${telemetry.batteryVoltage.toFixed(1)}V` : '--'}
           </span>
         </div>
 

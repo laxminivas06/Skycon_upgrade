@@ -269,6 +269,74 @@ export class GroundStationMissionService {
     return () => this.circleRadiusSubscribers.delete(fn);
   }
 
+  // --- Configurable Shared Mission Parameters ---
+  private defaultAltitudeMeters: number = (() => {
+    try {
+      const stored = localStorage.getItem('skycon_mission_altitude');
+      return stored ? Math.max(1, Math.min(120, parseFloat(stored))) : 30;
+    } catch {
+      return 30;
+    }
+  })();
+  private defaultSpeedMps: number = (() => {
+    try {
+      const stored = localStorage.getItem('skycon_mission_speed');
+      return stored ? Math.max(0.5, Math.min(20, parseFloat(stored))) : 5.0;
+    } catch {
+      return 5.0;
+    }
+  })();
+  private altitudeSubscribers: Set<(alt: number) => void> = new Set();
+  private speedSubscribers: Set<(speed: number) => void> = new Set();
+
+  public getDefaultAltitude(): number {
+    return this.defaultAltitudeMeters;
+  }
+
+  public setDefaultAltitude(alt: number, syncMission: boolean = true): void {
+    const clamped = Math.max(1, Math.min(120, Math.round(alt * 10) / 10));
+    this.defaultAltitudeMeters = clamped;
+    try {
+      localStorage.setItem('skycon_mission_altitude', String(clamped));
+    } catch {}
+
+    if (syncMission) {
+      this.updateMissionAltitude(clamped);
+    }
+    this.altitudeSubscribers.forEach((fn) => fn(clamped));
+  }
+
+  public subscribeDefaultAltitude(fn: (alt: number) => void): () => void {
+    this.altitudeSubscribers.add(fn);
+    fn(this.defaultAltitudeMeters);
+    return () => this.altitudeSubscribers.delete(fn);
+  }
+
+  public getDefaultSpeed(): number {
+    return this.defaultSpeedMps;
+  }
+
+  public setDefaultSpeed(speed: number): void {
+    const clamped = Math.max(0.5, Math.min(20, Math.round(speed * 10) / 10));
+    this.defaultSpeedMps = clamped;
+    try {
+      localStorage.setItem('skycon_mission_speed', String(clamped));
+    } catch {}
+    if (this.currentMission) {
+      this.currentMission.speed = clamped;
+      this.currentMission.waypoints.forEach((wp) => {
+        wp.speed = clamped;
+      });
+    }
+    this.speedSubscribers.forEach((fn) => fn(clamped));
+  }
+
+  public subscribeDefaultSpeed(fn: (speed: number) => void): () => void {
+    this.speedSubscribers.add(fn);
+    fn(this.defaultSpeedMps);
+    return () => this.speedSubscribers.delete(fn);
+  }
+
   /**
    * Generates mission for ordered WAYPOINTS.
    */

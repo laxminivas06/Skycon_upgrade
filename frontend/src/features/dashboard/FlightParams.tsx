@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowUp, ArrowDown, MoveVertical } from 'lucide-react';
+import { ArrowUp, ArrowDown, MoveVertical, Save, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
 import { Card } from '../../ui/Card';
 import { Segmented } from '../../ui/Segmented';
 import { NumberField } from '../../ui/NumberField';
@@ -15,10 +15,10 @@ interface FlightParamsProps {
 export const FlightParams: React.FC<FlightParamsProps> = ({ className = '' }) => {
   const [tab, setTab] = useState<'Basic' | 'Vertical' | 'Advanced' | 'RTL' | 'Failsafe'>('Basic');
 
-  // Basic Params
-  const [altitude, setAltitude] = useState<number>(30);
+  // Basic Params - Synchronized with groundStationMissionService
+  const [altitude, setAltitude] = useState<number>(() => groundStationMissionService.getDefaultAltitude());
   const [yaw, setYaw] = useState<number>(0);
-  const [speed, setSpeed] = useState<number>(5.0);
+  const [speed, setSpeed] = useState<number>(() => groundStationMissionService.getDefaultSpeed());
   const [faceWaypoint, setFaceWaypoint] = useState<boolean>(true);
   const [autoContinue, setAutoContinue] = useState<boolean>(true);
 
@@ -27,8 +27,19 @@ export const FlightParams: React.FC<FlightParamsProps> = ({ className = '' }) =>
     groundStationMissionService.getCircleRadius()
   );
 
+  // Save & FC Sync State
+  const [isSaving, setIsSaving] = useState<boolean>(false);
+  const [saveStatus, setSaveStatus] = useState<{ type: 'success' | 'warning' | 'error'; message: string } | null>(null);
+
   useEffect(() => {
-    return groundStationMissionService.subscribeCircleRadius((r) => setCircleRadius(r));
+    const unsubAlt = groundStationMissionService.subscribeDefaultAltitude((a) => setAltitude(a));
+    const unsubSpeed = groundStationMissionService.subscribeDefaultSpeed((s) => setSpeed(s));
+    const unsubRadius = groundStationMissionService.subscribeCircleRadius((r) => setCircleRadius(r));
+    return () => {
+      unsubAlt();
+      unsubSpeed();
+      unsubRadius();
+    };
   }, []);
 
   const [isExecutingVertical, setIsExecutingVertical] = useState<boolean>(false);
@@ -53,7 +64,83 @@ export const FlightParams: React.FC<FlightParamsProps> = ({ className = '' }) =>
   const handleAltitudeChange = (val: number) => {
     setAltitude(val);
     mavlinkService.setTargetAltitude(val);
-    audioService.playBeep(750, 40);
+  };
+
+  const handleSaveParameters = async (syncToPixhawk: boolean = true) => {
+    // 1. Validation
+    if (isNaN(altitude) || altitude < 1 || altitude > 120) {
+      setSaveStatus({ type: 'error', message: 'Altitude must be between 1m and 120m.' });
+      audioService.playBeep(350, 100);
+      return;
+    }
+    if (isNaN(speed) || speed < 0.5 || speed > 15) {
+      setSaveStatus({ type: 'error', message: 'Cruise speed must be between 0.5 and 15 m/s.' });
+      audioService.playBeep(350, 100);
+      return;
+    }
+    if (isNaN(circleRadius) || circleRadius < 3 || circleRadius > 150) {
+      setSaveStatus({ type: 'error', message: 'Orbit radius must be between 3m and 150m.' });
+      audioService.playBeep(350, 100);
+      return;
+    }
+
+    setIsSaving(true);
+    setSaveStatus(null);
+    audioService.playBeep(880, 50);
+
+    // 2. Commit to Shared Mission Configuration (Waypoint Manager reads this automatically)
+    groundStationMissionService.setDefaultAltitude(altitude, true);
+    groundStationMissionService.setDefaultSpeed(speed);
+    groundStationMissionService.setCircleRadius(circleRadius);
+    mavlinkService.setTargetAltitude(altitude);
+
+    // 3. Save local persistent preferences
+    try {
+      localStorage.setItem('skycon_climb_rate', String(climbRate));
+      localStorage.setItem('skycon_descent_rate', String(descentRate));
+      localStorage.setItem('skycon_rtl_alt', String(rtlAltitude));
+    } catch {}
+
+    // 4. If connected to Pixhawk, write parameters via MAVLink PARAM_SET protocol
+    const telem = mavlinkService.getTelemetry();
+    const isFcConnected = mavlinkService.getConnectionState().isConnected || mavlinkService.getConnectionState().isUsbConnected;
+
+    if (syncToPixhawk && isFcConnected) {
+      try {
+        const speedRes = await mavlinkService.setPixhawkParameter('WPNAV_SPEED', Math.round(speed * 100));
+        const rtlRes = await mavlinkService.setPixhawkParameter('RTL_ALT', Math.round(rtlAltitude * 100));
+        const radiusRes = await mavlinkService.setPixhawkParameter('CIRCLE_RADIUS', Math.round(circleRadius * 100));
+
+        if (speedRes.success && rtlRes.success) {
+          setSaveStatus({
+            type: 'success',
+            message: `Saved locally & verified on Pixhawk (WPNAV_SPEED=${speedRes.confirmedValue ?? Math.round(speed * 100)}, RTL_ALT=${rtlRes.confirmedValue ?? Math.round(rtlAltitude * 100)}) ✓`
+          });
+          audioService.playBeep(1100, 80);
+        } else {
+          setSaveStatus({
+            type: 'warning',
+            message: `Saved locally. Pixhawk param write partial: ${speedRes.message || rtlRes.message}`
+          });
+        }
+      } catch (err: any) {
+        setSaveStatus({
+          type: 'warning',
+          message: `Saved locally. Pixhawk param sync failed: ${err.message}`
+        });
+      }
+    } else {
+      setSaveStatus({
+        type: 'success',
+        message: `Saved locally for Waypoint Manager & Search Missions (${altitude}m alt, ${speed}m/s) ✓`
+      });
+      audioService.playBeep(980, 60);
+    }
+
+    setIsSaving(false);
+    setTimeout(() => {
+      setSaveStatus((prev) => (prev?.type === 'success' ? null : prev));
+    }, 4500);
   };
 
   const handleExecuteVerticalAlt = async (targetAlt: number) => {
@@ -81,8 +168,20 @@ export const FlightParams: React.FC<FlightParamsProps> = ({ className = '' }) =>
     <Card
       title="FLIGHT PARAMETERS"
       collapsible
-      className={`h-[205px] w-full shrink-0 select-none ${className}`}
-      contentClassName="p-2 flex flex-col justify-between overflow-hidden"
+      action={
+        <button
+          type="button"
+          onClick={() => handleSaveParameters(true)}
+          disabled={isSaving}
+          className="px-2 py-0.5 rounded bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-mono text-[10px] font-bold flex items-center gap-1 cursor-pointer transition shadow active:scale-95"
+          title="Save parameters locally and sync to Pixhawk FC"
+        >
+          {isSaving ? <Loader2 className="w-2.5 h-2.5 animate-spin" /> : <Save className="w-2.5 h-2.5" />}
+          <span>Save</span>
+        </button>
+      }
+      className={`min-h-[230px] w-full shrink-0 select-none ${className}`}
+      contentClassName="p-2 flex flex-col justify-between overflow-hidden gap-1.5"
     >
       {/* Top Tabs */}
       <div>
@@ -152,7 +251,7 @@ export const FlightParams: React.FC<FlightParamsProps> = ({ className = '' }) =>
                     setSpeed(v);
                     audioService.playBeep(700, 30);
                   }}
-                  min={1}
+                  min={0.5}
                   max={15}
                   step={0.5}
                 />
@@ -374,6 +473,50 @@ export const FlightParams: React.FC<FlightParamsProps> = ({ className = '' }) =>
           </div>
         </div>
       )}
+
+      {/* Save Action & Status Bar */}
+      <div className="pt-1.5 border-t border-[var(--uav-card-border)] flex flex-col gap-1">
+        <div className="flex items-center justify-between gap-2">
+          <button
+            type="button"
+            onClick={() => handleSaveParameters(true)}
+            disabled={isSaving}
+            className="flex-1 py-1 px-2.5 rounded bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-mono text-[10.5px] font-bold flex items-center justify-center gap-1.5 cursor-pointer shadow transition active:scale-95"
+            title="Save changes to shared mission configuration & sync to Pixhawk"
+          >
+            {isSaving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
+            <span>{isSaving ? 'Writing to Pixhawk...' : 'SAVE & SYNC TO FC'}</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => handleSaveParameters(false)}
+            disabled={isSaving}
+            className="py-1 px-2.5 rounded bg-[#161B22] hover:bg-[#21262D] border border-[var(--uav-card-border)] text-[var(--uav-text)] font-mono text-[10.5px] font-semibold transition cursor-pointer"
+            title="Save only to local GCS mission configuration without writing to Pixhawk"
+          >
+            Save Local
+          </button>
+        </div>
+
+        {saveStatus && (
+          <div
+            className={`text-[9.5px] font-mono px-2 py-0.5 rounded flex items-center gap-1 truncate ${
+              saveStatus.type === 'success'
+                ? 'bg-emerald-950/70 border border-emerald-500/50 text-emerald-300'
+                : saveStatus.type === 'warning'
+                ? 'bg-amber-950/70 border border-amber-500/50 text-amber-300'
+                : 'bg-rose-950/70 border border-rose-500/50 text-rose-300'
+            }`}
+          >
+            {saveStatus.type === 'success' ? (
+              <CheckCircle2 className="w-3 h-3 shrink-0 text-emerald-400" />
+            ) : (
+              <AlertCircle className="w-3 h-3 shrink-0 text-amber-400" />
+            )}
+            <span className="truncate">{saveStatus.message}</span>
+          </div>
+        )}
+      </div>
     </Card>
   );
 };

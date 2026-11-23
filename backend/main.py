@@ -489,21 +489,43 @@ def mavlink_modes_dict():
 
 @app.route("/api/mavlink/parameters", methods=["GET"])
 def mavlink_parameters():
+    params = {
+        "SERIAL1_PROTOCOL": 2,
+        "SERIAL1_BAUD": mavlink_mux.baud,
+        "SERIAL2_PROTOCOL": 2,
+        "SERIAL2_BAUD": 57,
+        "ARMING_CHECK": 1,
+        "FS_THR_ENABLE": 1,
+        "RTL_ALT": 1500,
+        "WPNAV_SPEED": 500,
+        "FENCE_ENABLE": 1,
+        "BATT_MONITOR": 4
+    }
+    # Overlay dynamically read/set parameters
+    with mavlink_mux._lock:
+        params.update(mavlink_mux._parameters)
     return api_response(data={
-        "parameters": {
-            "SERIAL1_PROTOCOL": 2,
-            "SERIAL1_BAUD": mavlink_mux.baud,
-            "SERIAL2_PROTOCOL": 2,
-            "SERIAL2_BAUD": 57,
-            "ARMING_CHECK": 1,
-            "FS_THR_ENABLE": 1,
-            "RTL_ALT": 1500,
-            "WPNAV_SPEED": 500,
-            "FENCE_ENABLE": 1,
-            "BATT_MONITOR": 4
-        },
-        "count": 10
+        "parameters": params,
+        "count": len(params)
     }, code=200)
+
+
+@app.route("/api/mavlink/parameter/set", methods=["POST"])
+def mavlink_set_parameter():
+    data = request.get_json(silent=True) or {}
+    param_id = str(data.get("param_id", "")).strip()
+    if not param_id:
+        return api_response(error="param_id is required", code=400)
+    try:
+        val = float(data.get("value", 0.0))
+    except (ValueError, TypeError):
+        return api_response(error="value must be numeric", code=400)
+    param_type = int(data.get("param_type", 9))
+
+    success, msg, confirmed = mavlink_mux.set_parameter(param_id, val, param_type=param_type, timeout_s=3.5)
+    if not success:
+        return api_response(error=f"Failed to set parameter {param_id}: {msg}", data={"param_id": param_id, "attempted_value": val}, code=504)
+    return api_response(data={"success": True, "param_id": param_id, "value": confirmed, "message": msg}, code=200)
 
 
 @app.route("/api/mavlink/prearm", methods=["GET"])

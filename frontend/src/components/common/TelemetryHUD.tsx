@@ -52,7 +52,7 @@ export const TelemetryHUD: React.FC<TelemetryHUDProps> = ({
         </div>
         <div className="flex items-baseline space-x-1 my-1">
           <span className="text-2xl sm:text-3xl font-extrabold text-white">
-            {telemetry.altitude.toFixed(1)}
+            {(telemetry.relativeAltitude !== undefined ? telemetry.relativeAltitude : telemetry.altitude).toFixed(1)}
           </span>
           <span className="text-xs text-sky-400 font-bold">m</span>
         </div>
@@ -96,16 +96,18 @@ export const TelemetryHUD: React.FC<TelemetryHUDProps> = ({
         </div>
         <div className="flex items-baseline space-x-1 my-1">
           <span className={`text-2xl sm:text-3xl font-extrabold ${
-            telemetry.batteryPercent > 30 ? 'text-white' : 'text-rose-400 animate-pulse'
+            telemetry.batteryPercent >= 0 ? (telemetry.batteryPercent > 30 ? 'text-white' : 'text-rose-400 animate-pulse') : 'text-slate-500'
           }`}>
-            {telemetry.batteryPercent}%
+            {telemetry.batteryPercent !== undefined && telemetry.batteryPercent >= 0 ? `${telemetry.batteryPercent}%` : '--'}
           </span>
-          <span className="text-xs text-amber-400 font-bold">{telemetry.batteryVoltage}V</span>
+          <span className="text-xs text-amber-400 font-bold">
+            {telemetry.batteryVoltage > 0 ? `${telemetry.batteryVoltage.toFixed(1)}V` : '--'}
+          </span>
         </div>
         <div className="text-[10px] text-slate-500 flex justify-between">
-          <span>Current: {telemetry.batteryCurrent}A</span>
-          <span className={telemetry.batteryPercent > 20 ? 'text-emerald-400' : 'text-rose-400'}>
-            {telemetry.batteryPercent > 20 ? 'HEALTHY ✓' : 'CRITICAL !'}
+          <span>Current: {telemetry.batteryCurrent && telemetry.batteryCurrent > 0 ? `${telemetry.batteryCurrent}A` : '--'}</span>
+          <span className={telemetry.batteryPercent >= 0 ? (telemetry.batteryPercent > 20 ? 'text-emerald-400' : 'text-rose-400') : 'text-slate-500'}>
+            {telemetry.batteryPercent >= 0 ? (telemetry.batteryPercent > 20 ? 'HEALTHY ✓' : 'CRITICAL !') : 'UNAVAILABLE'}
           </span>
         </div>
       </div>

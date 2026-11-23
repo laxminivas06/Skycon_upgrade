@@ -148,6 +148,7 @@ CRC_EXTRA: Dict[int, int] = {
     74: 20,    # VFR_HUD
     76: 152,   # COMMAND_LONG
     77: 143,   # COMMAND_ACK
+    147: 154,  # BATTERY_STATUS
     253: 83    # STATUSTEXT
 }
 
@@ -230,7 +231,7 @@ class MavlinkMultiplexer:
             # Battery
             "voltage_battery": 0.0,
             "current_battery": 0.0,
-            "battery_remaining": 0,
+            "battery_remaining": -1,
             "battery_consumed_mah": 0.0,
 
             # GPS
@@ -290,6 +291,8 @@ class MavlinkMultiplexer:
         self._command_queue: queue.Queue = queue.Queue(maxsize=100)
         self._pending_acks: Dict[int, threading.Event] = {}
         self._ack_results: Dict[int, Dict[str, Any]] = {}
+        self._parameters: Dict[str, float] = {}
+        self._pending_params: Dict[str, threading.Event] = {}
 
         # Bounded Telemetry History (max 500 snapshots)
         self._telemetry_history: List[Dict[str, Any]] = []
@@ -667,11 +670,25 @@ class MavlinkMultiplexer:
             # -----------------------------------------------------------------
             elif msg_id == 1:
                 if len(payload) >= 21:
-                    onboard_ctrl, onboard_sensors, onboard_health, load, vbat, ibat, rem = struct.unpack('<IIIHHhB', payload[:21])
-                    self.telemetry["voltage_battery"] = round(vbat / 1000.0, 2)
+                    onboard_ctrl, onboard_sensors, onboard_health, load, vbat, ibat, rem = struct.unpack('<IIIHHhb', payload[:21])
+                    self.telemetry["voltage_battery"] = round(vbat / 1000.0, 2) if vbat > 0 else 0.0
                     self.telemetry["current_battery"] = round(ibat / 100.0, 2) if ibat >= 0 else 0.0
-                    self.telemetry["battery_remaining"] = rem
+                    self.telemetry["battery_remaining"] = rem if (0 <= rem <= 100) else -1
                     self.last_telemetry_time = now
+
+            # -----------------------------------------------------------------
+            # PARAM_VALUE (msg_id 22)
+            # -----------------------------------------------------------------
+            elif msg_id == 22:
+                if len(payload) >= 25:
+                    param_val, param_cnt, param_idx = struct.unpack('<fHH', payload[:8])
+                    param_id_bytes = payload[8:24].split(b'\x00')[0]
+                    param_id = param_id_bytes.decode('ascii', errors='ignore').strip()
+                    with self._lock:
+                        self._parameters[param_id] = param_val
+                    logger.info(f"Received PARAM_VALUE from FC: {param_id} = {param_val}")
+                    if param_id in self._pending_params:
+                        self._pending_params[param_id].set()
 
             # -----------------------------------------------------------------
             # GPS_RAW_INT (msg_id 24)
@@ -748,6 +765,58 @@ class MavlinkMultiplexer:
                         for cb in self._override_callbacks:
                             try: cb(dict(self.telemetry))
                             except Exception: pass
+
+            # -----------------------------------------------------------------
+            # VFR_HUD (msg_id 74)
+            # -----------------------------------------------------------------
+            elif msg_id == 74:
+                if len(payload) >= 12:
+                    airspeed, groundspeed, alt = struct.unpack('<fff', payload[:12])
+                    climb = struct.unpack('<f', payload[12:16])[0] if len(payload) >= 16 else 0.0
+                    heading = struct.unpack('<h', payload[16:18])[0] if len(payload) >= 18 else 0
+                    self.telemetry["airspeed"] = round(airspeed, 2)
+                    self.telemetry["ground_speed"] = round(groundspeed, 2)
+                    self.telemetry["climb_rate"] = round(climb, 2)
+                    self.telemetry["alt_msl"] = round(alt, 2)
+                    if heading >= 0:
+                        self.telemetry["heading"] = heading
+                    self.last_telemetry_time = now
+
+            # -----------------------------------------------------------------
+            # BATTERY_STATUS (msg_id 147)
+            # -----------------------------------------------------------------
+            elif msg_id == 147:
+                if len(payload) >= 35:
+                    curr_consumed, energy_consumed, temp = struct.unpack('<iih', payload[:10])
+                    voltages = struct.unpack('<10H', payload[10:30])
+                    current_batt, batt_id, batt_type, batt_rem = struct.unpack('<hBBb', payload[30:35])
+                    
+                    pack_v = 0.0
+                    if voltages[0] > 5000:
+                        pack_v = round(voltages[0] / 1000.0, 2)
+                    else:
+                        valid_cells = [v for v in voltages if 0 < v < 6000]
+                        if valid_cells:
+                            pack_v = round(sum(valid_cells) / 1000.0, 2)
+                    
+                    if pack_v > 0:
+                        self.telemetry["voltage_battery"] = pack_v
+                    if current_batt >= 0:
+                        self.telemetry["current_battery"] = round(current_batt / 100.0, 2)
+                    if curr_consumed >= 0:
+                        self.telemetry["battery_consumed_mah"] = curr_consumed
+                    if 0 <= batt_rem <= 100:
+                        self.telemetry["battery_remaining"] = batt_rem
+                    elif pack_v > 0:
+                        cells = 3
+                        if pack_v > 20.0: cells = 6
+                        elif pack_v > 13.2: cells = 4
+                        cell_v = pack_v / cells
+                        derived_pct = int(max(0, min(100, (cell_v - 3.27) / (4.20 - 3.27) * 100)))
+                        self.telemetry["battery_remaining"] = derived_pct
+                    else:
+                        self.telemetry["battery_remaining"] = -1
+                    self.last_telemetry_time = now
 
             # -----------------------------------------------------------------
             # COMMAND_ACK (msg_id 77)
@@ -885,6 +954,48 @@ class MavlinkMultiplexer:
         res_code = res_dict.get("result", -1)
         res_name = res_dict.get("result_name", "UNKNOWN")
         return (res_code == 0), res_name, res_code
+
+    def build_param_set_packet(self, param_id: str, value: float, param_type: int = 9) -> bytes:
+        """Encodes MAVLink v2 PARAM_SET (msg_id 23) frame."""
+        self.seq = (self.seq + 1) % 256
+        param_id_bytes = param_id.encode('ascii')[:16].ljust(16, b'\x00')
+        payload = struct.pack('<fBB16sB', float(value), self.target_system, self.target_component, param_id_bytes, param_type)
+        header = struct.pack('<BBBBBBBBBB', 0xFD, len(payload), 0, 0, self.seq, self.system_id, self.component_id, 23 & 0xFF, (23 >> 8) & 0xFF, (23 >> 16) & 0xFF)
+        crc = calculate_mavlink_crc(header[1:] + payload, CRC_EXTRA.get(23, 168))
+        return header + payload + struct.pack('<H', crc)
+
+    def set_parameter(self, param_id: str, value: float, param_type: int = 9, timeout_s: float = 3.0) -> Tuple[bool, str, float]:
+        """
+        Sends PARAM_SET to Pixhawk and awaits verified PARAM_VALUE readback.
+        """
+        param_id_clean = param_id.strip()
+        if self.is_simulation or self._serial_conn is None:
+            with self._lock:
+                self._parameters[param_id_clean] = float(value)
+            return True, "PARAM_ACCEPTED_SIMULATION", float(value)
+
+        param_event = threading.Event()
+        with self._lock:
+            self._pending_params[param_id_clean] = param_event
+
+        packet = self.build_param_set_packet(param_id_clean, value, param_type)
+        self.send_packet(packet)
+
+        # Await confirmed PARAM_VALUE readback
+        got_value = param_event.wait(timeout=timeout_s)
+        with self._lock:
+            self._pending_params.pop(param_id_clean, None)
+            confirmed_val = self._parameters.get(param_id_clean, float(value))
+
+        if not got_value:
+            return False, "PARAM_SET_TIMEOUT", float(value)
+
+        return True, "PARAM_ACCEPTED", confirmed_val
+
+    def get_parameter(self, param_id: str) -> Optional[float]:
+        """Returns cached parameter value read from Pixhawk."""
+        with self._lock:
+            return self._parameters.get(param_id.strip())
 
     # -------------------------------------------------------------------------
     # Telemetry Stream Control & Autopilot Heartbeat

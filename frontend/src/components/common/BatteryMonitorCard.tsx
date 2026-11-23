@@ -61,7 +61,7 @@ export const BatteryMonitorCard: React.FC<BatteryMonitorCardProps> = ({
         </div>
         <div className="text-right">
           <span className="text-xs font-black">
-            {hasSignal ? `${batteryVoltage.toFixed(1)}V (${batteryPercent}%)` : 'NO SIGNAL'}
+            {hasSignal ? `${batteryVoltage.toFixed(1)}V (${batteryPercent >= 0 ? `${batteryPercent}%` : '--'})` : 'NO SIGNAL'}
           </span>
         </div>
       </div>
@@ -137,9 +137,9 @@ export const BatteryMonitorCard: React.FC<BatteryMonitorCardProps> = ({
         <div className="bg-slate-950 p-2.5 rounded-xl border border-slate-800">
           <div className="text-[9px] uppercase font-bold text-slate-400">PERCENT</div>
           <div className={`text-base sm:text-lg font-black mt-0.5 ${
-            !hasSignal ? 'text-slate-500' : isCritical ? 'text-rose-400' : isLow ? 'text-amber-400' : 'text-emerald-400'
+            !hasSignal || batteryPercent < 0 ? 'text-slate-500' : isCritical ? 'text-rose-400' : isLow ? 'text-amber-400' : 'text-emerald-400'
           }`}>
-            {hasSignal ? `${batteryPercent} %` : '-- %'}
+            {hasSignal && batteryPercent >= 0 ? `${batteryPercent} %` : '--'}
           </div>
         </div>
       </div>

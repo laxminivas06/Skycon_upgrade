@@ -37,7 +37,6 @@ import { AutonomousMissionControlCard } from './AutonomousMissionControlCard';
 import { PreflightValidationModal } from './PreflightValidationModal';
 import { AIChatPanel } from './AIChatPanel';
 import { MapPanel } from './MapPanel';
-import { CameraFeed } from './CameraFeed';
 import { QrVisionTelemetryCard } from './QrVisionTelemetryCard';
 import { GeofencePanel } from './GeofencePanel';
 import { WaypointManager } from './WaypointManager';
@@ -86,7 +85,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
   };
   const [activeTab, setActiveTab] = useState<'Plan' | 'Fly' | 'Logs'>('Fly');
   const [activeNav, setActiveNav] = useState<string>('Dashboard');
-  const [mobileView, setMobileView] = useState<'telemetry' | 'map' | 'camera' | 'operations'>('map');
+  const [mobileView, setMobileView] = useState<'telemetry' | 'map' | 'operations'>('map');
   const [showPreflightModal, setShowPreflightModal] = useState<boolean>(false);
   const [showRtlModal, setShowRtlModal] = useState<boolean>(false);
   const [showPhoneMissionModal, setShowPhoneMissionModal] = useState<boolean>(false);
@@ -638,15 +637,6 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
           </button>
           <button
             type="button"
-            onClick={() => setMobileView('camera')}
-            className={`px-2.5 py-1 rounded transition cursor-pointer whitespace-nowrap ${
-              mobileView === 'camera' ? 'bg-[#10B981] text-emerald-950 font-bold' : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            📹 Camera
-          </button>
-          <button
-            type="button"
             onClick={() => setMobileView('operations')}
             className={`px-2.5 py-1 rounded transition cursor-pointer whitespace-nowrap ${
               mobileView === 'operations' ? 'bg-[#10B981] text-emerald-950 font-bold' : 'text-slate-400 hover:text-white'
@@ -869,23 +859,14 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
           </div>
         </section>
 
-        {/* 3. RIGHT PANEL: Camera & Operations (Adapts between MODE A and MODE B) */}
+        {/* 3. RIGHT PANEL: Operations & Mission Controls */}
         <aside
           className={`h-full min-h-0 overflow-y-auto overflow-x-hidden p-3 bg-[var(--uav-header)] border-l border-[var(--uav-card-border)] flex-col gap-3 scrollbar-thin scrollbar-thumb-slate-800 ${
-            mobileView === 'camera' || mobileView === 'operations' ? 'flex' : 'hidden lg:flex'
+            mobileView === 'operations' ? 'flex' : 'hidden lg:flex'
           }`}
         >
-          {/* A. Drone Camera Feed with Live QR Recognition */}
-          <div className={mobileView === 'operations' ? 'hidden lg:block w-full shrink-0' : 'w-full shrink-0'}>
-            <CameraFeed
-              telemetry={telemetry}
-              onOpenExpandedIntelligence={() => setShowPhoneMissionModal(true)}
-              className="w-full shrink-0"
-            />
-          </div>
-
-          {/* B. Operations Controls */}
-          <div className={mobileView === 'camera' ? 'hidden lg:flex lg:flex-col gap-3' : 'flex flex-col gap-3'}>
+          {/* Operations Controls */}
+          <div className="flex flex-col gap-3">
             {missionMode === 'MANUAL' ? (
               <>
                 {/* MODE A: Manual Mission Planning & Controls */}

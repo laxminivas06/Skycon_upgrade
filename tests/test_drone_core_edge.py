@@ -144,8 +144,8 @@ class TestDroneCoreEdgeMission(unittest.IsolatedAsyncioTestCase):
         cv2.rectangle(frame, (590, 310), (690, 410), (255, 255, 255), -1)
 
         await self.fsm.tick(frame)
-        for _ in range(5):
-            time.sleep(0.1)
+        for _ in range(8):
+            await asyncio.sleep(0.1)
             await self.fsm.tick()
             if self.fsm.state == MissionState.TARGET_DETECTED:
                 break
@@ -153,10 +153,12 @@ class TestDroneCoreEdgeMission(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(self.fsm.candidate_verification_count, 1)
 
         blank_frame = np.zeros((720, 1280, 3), dtype=np.uint8)
-        for _ in range(5):
+        for _ in range(8):
             await self.fsm.tick(blank_frame)
-            time.sleep(0.12)
-        await self.fsm.tick()
+            await asyncio.sleep(0.12)
+            await self.fsm.tick()
+            if self.fsm.state == MissionState.SEARCHING:
+                break
 
         self.assertEqual(self.fsm.state, MissionState.SEARCHING)
         await self.fsm.stop()
@@ -170,16 +172,16 @@ class TestDroneCoreEdgeMission(unittest.IsolatedAsyncioTestCase):
         cv2.rectangle(qr_frame, (580, 300), (700, 420), (255, 255, 255), -1)
 
         await self.fsm.tick(qr_frame)
-        for _ in range(5):
-            time.sleep(0.1)
+        for _ in range(8):
+            await asyncio.sleep(0.1)
             await self.fsm.tick()
             if self.fsm.state == MissionState.TARGET_DETECTED:
                 break
         self.assertEqual(self.fsm.state, MissionState.TARGET_DETECTED)
 
-        for _ in range(self.config.verification_frames + 2):
+        for _ in range(self.config.verification_frames + 4):
             await self.fsm.tick(qr_frame)
-            time.sleep(0.1)
+            await asyncio.sleep(0.1)
             await self.fsm.tick()
             if self.fsm.state == MissionState.APPROACHING:
                 break

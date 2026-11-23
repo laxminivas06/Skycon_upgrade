@@ -269,6 +269,8 @@ class MAVLinkService {
   private inFlightCommands: Map<number, InFlightCommandRequest> = new Map();
   private recentStatusTexts: Array<{ text: string; severity: number; timestamp: number }> = [];
   private commandAuditLog: Array<MAVLinkCommandAck> = [];
+  private parameters: Record<string, number> = {};
+  private pendingParamWaiters: Map<string, (val: number) => void> = new Map();
   private listeners: Set<TelemetryListener> = new Set();
   private packetListeners: Set<MAVLinkPacketListener> = new Set();
   private connectionListeners: Set<ConnectionStateListener> = new Set();
@@ -629,22 +631,52 @@ class MAVLinkService {
       this.telemetry.latitude = telem.lat;
       this.telemetry.longitude = telem.lon;
     }
-    const alt = telem.alt !== undefined ? telem.alt : telem.altitude_m;
-    if (alt !== undefined) {
-      this.telemetry.altitude = alt;
-      this.telemetry.relativeAltitude = telem.relative_alt !== undefined ? telem.relative_alt : (telem.relative_altitude_m !== undefined ? telem.relative_altitude_m : alt);
+
+    // Altitude: Prioritize relative altitude (AGL above home/launch pad).
+    // ArduPilot reports AMSL in telem.alt / alt_msl (e.g. 5.32m in Chennai) and relative AGL in telem.relative_alt.
+    const relAlt = telem.relative_alt !== undefined ? telem.relative_alt : (telem.relative_altitude_m !== undefined ? telem.relative_altitude_m : undefined);
+    const mslAlt = telem.alt !== undefined ? telem.alt : (telem.alt_msl !== undefined ? telem.alt_msl : (telem.altitude_m !== undefined ? telem.altitude_m : undefined));
+
+    if (relAlt !== undefined) {
+      this.telemetry.relativeAltitude = relAlt;
+      this.telemetry.altitude = relAlt;
+    } else if (mslAlt !== undefined) {
+      if (this.homePoint.isSet && this.homePoint.altitude > 0) {
+        const computedRel = +(mslAlt - this.homePoint.altitude).toFixed(2);
+        this.telemetry.relativeAltitude = computedRel;
+        this.telemetry.altitude = computedRel;
+      } else if (!this.telemetry.isArmed) {
+        if (this.groundElevationMsl === 0) this.groundElevationMsl = mslAlt;
+        const computedRel = +(mslAlt - this.groundElevationMsl).toFixed(2);
+        this.telemetry.relativeAltitude = computedRel;
+        this.telemetry.altitude = computedRel;
+      } else {
+        this.telemetry.altitude = mslAlt;
+        this.telemetry.relativeAltitude = mslAlt;
+      }
     }
+    if (mslAlt !== undefined) {
+      this.telemetry.altitudeMsl = mslAlt;
+    }
+
     if (telem.roll !== undefined) this.telemetry.roll = telem.roll;
     if (telem.pitch !== undefined) this.telemetry.pitch = telem.pitch;
     if (telem.yaw !== undefined) this.telemetry.heading = Math.round((telem.yaw + 360) % 360);
     if (telem.heading !== undefined) this.telemetry.heading = telem.heading;
 
+    // Battery: Extract actual remaining percentage, voltage, and avoid fake interpolations
     const vBatt = telem.battery_voltage !== undefined ? telem.battery_voltage : telem.voltage_battery;
+    const bRem = telem.battery_remaining !== undefined ? telem.battery_remaining : telem.batteryPercent;
+
     if (vBatt !== undefined && vBatt > 0) {
-      this.telemetry.batteryVoltage = vBatt;
-      this.telemetry.batteryPercent = telem.battery_remaining !== undefined ? telem.battery_remaining : Math.min(100, Math.max(0, Math.round(((vBatt - 13.5) / (16.8 - 13.5)) * 100)));
-    } else if (telem.battery_remaining !== undefined) {
-      this.telemetry.batteryPercent = telem.battery_remaining;
+      this.telemetry.batteryVoltage = +vBatt.toFixed(2);
+    }
+    if (bRem !== undefined && bRem >= 0 && bRem <= 100) {
+      this.telemetry.batteryPercent = Math.round(bRem);
+    } else if (this.telemetry.batteryVoltage && this.telemetry.batteryVoltage > 0) {
+      this.telemetry.batteryPercent = this.calculateLiPoPercentage(this.telemetry.batteryVoltage, this.telemetry.batteryCellCount);
+    } else {
+      this.telemetry.batteryPercent = -1;
     }
 
     const sats = telem.satellites !== undefined ? telem.satellites : telem.satellites_visible;
@@ -1682,10 +1714,12 @@ class MAVLinkService {
               this.telemetry.batteryCellCount = 3;
             }
 
-            if (batteryRemaining > 0 && batteryRemaining <= 100) {
+            if (batteryRemaining >= 0 && batteryRemaining <= 100) {
               this.telemetry.batteryPercent = batteryRemaining;
             } else if (voltageV > 0) {
               this.telemetry.batteryPercent = this.calculateLiPoPercentage(voltageV, this.telemetry.batteryCellCount);
+            } else {
+              this.telemetry.batteryPercent = -1;
             }
 
             if (voltageV < 10.5) {
@@ -1698,6 +1732,28 @@ class MAVLinkService {
             }
           }
           this.notifyTelemetry();
+        }
+        break;
+      }
+
+      // PARAM_VALUE (msgId = 22) - Readback from Pixhawk
+      case 22: {
+        if (payload.length >= 25) {
+          const paramVal = view.getFloat32(0, true);
+          let idStr = '';
+          for (let i = 8; i < 24; i++) {
+            const b = payload[i];
+            if (b === 0) break;
+            idStr += String.fromCharCode(b);
+          }
+          const cleanId = idStr.trim();
+          this.parameters[cleanId] = paramVal;
+          console.log(`[MAVLink PARAM_VALUE] Received: ${cleanId} = ${paramVal}`);
+          const waiter = this.pendingParamWaiters.get(cleanId);
+          if (waiter) {
+            waiter(paramVal);
+            this.pendingParamWaiters.delete(cleanId);
+          }
         }
         break;
       }
@@ -1861,15 +1917,16 @@ class MAVLinkService {
             }
           }
 
-          if (payload.length >= 36) {
-            const batteryRemaining = view.getInt8(35);
-            if (batteryRemaining > 0 && batteryRemaining <= 100) {
-              this.telemetry.batteryPercent = batteryRemaining;
-            } else if (this.telemetry.batteryVoltage > 0) {
-              this.telemetry.batteryPercent = this.calculateLiPoPercentage(this.telemetry.batteryVoltage, this.telemetry.batteryCellCount);
-            }
+          const rem34 = payload.length >= 35 ? view.getInt8(34) : -1;
+          const rem35 = payload.length >= 36 ? view.getInt8(35) : -1;
+          const validRem = (rem34 >= 0 && rem34 <= 100) ? rem34 : ((rem35 >= 0 && rem35 <= 100) ? rem35 : -1);
+
+          if (validRem >= 0) {
+            this.telemetry.batteryPercent = validRem;
           } else if (this.telemetry.batteryVoltage > 0) {
             this.telemetry.batteryPercent = this.calculateLiPoPercentage(this.telemetry.batteryVoltage, this.telemetry.batteryCellCount);
+          } else {
+            this.telemetry.batteryPercent = -1;
           }
 
           // Check for critical low battery threshold (< 10.5V for 3S)
@@ -3652,6 +3709,88 @@ class MAVLinkService {
     const currentAlt = this.telemetry.targetAltitude || this.telemetry.altitude || 5.0;
     const newAlt = Math.max(1, Math.min(120, currentAlt + deltaMeters));
     return this.commandVerticalAltitude(newAlt);
+  }
+
+  /**
+   * Writes a parameter to Pixhawk using MAVLink PARAM_SET (msg_id 23) and verifies PARAM_VALUE readback.
+   */
+  public async setPixhawkParameter(
+    paramId: string,
+    value: number,
+    timeoutMs: number = 3500
+  ): Promise<{ success: boolean; confirmedValue?: number; message: string }> {
+    const cleanId = paramId.trim();
+
+    // 1. If direct binary byte transport is active:
+    if (this.isDirectByteTransportOpen()) {
+      return new Promise<{ success: boolean; confirmedValue?: number; message: string }>((resolve) => {
+        const timer = setTimeout(() => {
+          this.pendingParamWaiters.delete(cleanId);
+          resolve({
+            success: false,
+            message: `Timeout waiting for PARAM_VALUE (${cleanId}) confirmation from Pixhawk`
+          });
+        }, timeoutMs);
+
+        this.pendingParamWaiters.set(cleanId, (confirmedVal: number) => {
+          clearTimeout(timer);
+          resolve({
+            success: true,
+            confirmedValue: confirmedVal,
+            message: `Parameter ${cleanId} verified on Pixhawk (${confirmedVal}) ✓`
+          });
+        });
+
+        // Build and send PARAM_SET (msg_id 23)
+        const payload = new Uint8Array(25);
+        const view = new DataView(payload.buffer);
+        view.setFloat32(0, value, true);
+        view.setUint8(4, this.connectionState.systemId || 1);
+        view.setUint8(5, this.connectionState.componentId || 1);
+        for (let i = 0; i < 16; i++) {
+          payload[6 + i] = i < cleanId.length ? cleanId.charCodeAt(i) : 0;
+        }
+        view.setUint8(22, 9); // MAV_PARAM_TYPE_REAL32 (9)
+        const packet = this.buildMavlinkFrame(23, payload);
+        usbHostService.sendBytes(packet).then((ok) => {
+          if (ok) this.connectionState.bytesSent += packet.length;
+        });
+      });
+    }
+
+    // 2. Otherwise via companion computer / cloud relay REST API:
+    try {
+      const resp = await fetch('/api/mavlink/parameter/set', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ param_id: cleanId, value })
+      });
+      const data = await resp.json();
+      if (resp.ok && data.data?.success) {
+        return {
+          success: true,
+          confirmedValue: data.data.value,
+          message: `Parameter ${cleanId} verified on Pixhawk (${data.data.value}) ✓`
+        };
+      }
+      return {
+        success: false,
+        message: data.error || `Failed to set parameter ${cleanId} on Pixhawk`
+      };
+    } catch (err: any) {
+      if (this.connectionState.connectionType === 'SIMULATED' || this.simInterval) {
+        this.parameters[cleanId] = value;
+        return {
+          success: true,
+          confirmedValue: value,
+          message: `SIMULATED: Parameter ${cleanId}=${value} saved ✓`
+        };
+      }
+      return {
+        success: false,
+        message: `Offline / REST endpoint unreachable: ${err.message}`
+      };
+    }
   }
 
   /**
