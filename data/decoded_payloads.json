@@ -382,5 +382,18 @@
     "verified": true,
     "status": "DECODED_AND_VERIFIED",
     "air_gapped": true
+  },
+  {
+    "payload": "42",
+    "checksum_sha256": "73475cb40a568e8da8a045ced110137e159f890ac4da883b6b17dc651b3a8049",
+    "timestamp_utc": "2026-11-23T04:38:12.121022+00:00",
+    "epoch_ms": 1795408692121,
+    "drone_latitude": 12.9715987,
+    "drone_longitude": 77.5945627,
+    "drone_altitude_m": 10.0,
+    "approach_distance_m": 0.0,
+    "verified": true,
+    "status": "DECODED_AND_VERIFIED",
+    "air_gapped": true
   }
 ]

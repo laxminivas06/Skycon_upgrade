@@ -1,11 +1,11 @@
 {
   "_schema_version": "2.0",
   "_collection": "validation_startup_probe",
-  "_updated_at": "2026-11-23T02:25:07.622194+00:00",
-  "_checksum_sha256": "585805dc0d9c1829500f695155064040a5ed99ba2eb97749db17bcd681cb5b11",
+  "_updated_at": "2026-11-23T04:38:30.472808+00:00",
+  "_checksum_sha256": "a2258a1cb8c32cfeec3eb816dd02939530dda6056e4cfb474670701dbdc71bc5",
   "_data": {
     "subsystem": "STARTUP_CHECK",
-    "timestamp": 1795400707.6221788,
+    "timestamp": 1795408710.472783,
     "status": "NOMINAL"
   }
 }
