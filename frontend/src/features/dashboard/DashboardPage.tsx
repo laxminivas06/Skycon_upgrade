@@ -261,7 +261,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
     );
   };
 
-  // Safe Mission Workflow Reset (Requirement 3)
+  // Safe Mission Workflow Reset (Requirement 3 & 4)
   const handleResetMissionWorkflow = async () => {
     try {
       localStorage.removeItem('sae_active_mission_data');
@@ -271,6 +271,9 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
       localStorage.removeItem('sae_pattern_confirmed');
       localStorage.removeItem('sae_fc_configured');
       localStorage.removeItem('sae_autonomy_lock');
+      localStorage.removeItem('sae_mission_altitude');
+      localStorage.removeItem('sae_circle_radius');
+      localStorage.removeItem('sae_search_algorithm');
     } catch {}
 
     updateActiveMissionData(null);
@@ -278,6 +281,10 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
 
     try {
       await groundStationMissionService.deleteMission();
+    } catch {}
+
+    try {
+      geofenceService.clearGeofence();
     } catch {}
 
     try {
@@ -306,7 +313,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
     } catch {}
 
     audioService.playBeep(440, 150);
-    showNotification('🔄 Mission workflow & timers reset safely. Ready for fresh preparation.');
+    showNotification('🔄 RESET ALL COMPLETE: Mission UI, geofence, and waypoints cleared safely. Ready for fresh setup.');
   };
 
   const handleToggleArm = async (force: boolean = false) => {
@@ -596,12 +603,14 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
         onLogout={onLogout}
         currentRole={currentRole}
         onArmClick={() => {
-          if (telemetry.isArmed) {
-            handleToggleArm((telemetry.altitudeMeters || 0) <= 1.0);
-          } else {
+          if (!telemetry.isArmed) {
             setShowPreflightModal(true);
           }
         }}
+        onDisarmClick={(force) => {
+          handleToggleArm(Boolean(force));
+        }}
+        onResetAll={handleResetMissionWorkflow}
         onToggleRC={handleToggleRC}
         rcOverrideEnabled={telemetry.rcOverrideEnabled}
         onOpenPhoneMission={() => setShowPhoneMissionModal(true)}

@@ -693,8 +693,6 @@ export const CameraFeed: React.FC<CameraFeedProps> = ({
                   <div className="flex items-center gap-2">
                     <span className="text-emerald-400 font-bold">{telemetry.flightMode}</span>
                     <span>•</span>
-                    <span>BAT {telemetry.batteryPercent}% ({(telemetry.batteryVoltage || 0).toFixed(1)}V)</span>
-                    <span>•</span>
                     <span>GPS: {telemetry.isGpsValid ? `${telemetry.satellites} Sats` : 'UNAVAILABLE'}</span>
                   </div>
 

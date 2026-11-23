@@ -6,9 +6,6 @@ import {
   ArrowUp, 
   ArrowDown, 
   Gauge, 
-  Battery, 
-  BatteryWarning, 
-  Zap, 
   AlertTriangle,
   Radio,
   Activity,
@@ -142,9 +139,6 @@ export const TelemetryPanel: React.FC<TelemetryPanelProps> = ({
   const heading = Math.round(telemetry.headingDeg || 0);
   const spd = isTelemActive ? Math.max(0, telemetry.speedMs || 0) : 0;
   const vSpd = isTelemActive ? (telemetry.verticalSpeedMs || 0) : 0;
-  const batteryPct = Math.max(0, Math.min(100, telemetry.batteryPercent ?? 0));
-  const batteryVolt = telemetry.batteryVoltage || 0;
-  const batteryCurrent = telemetry.rawTelemetry?.batteryCurrent || 0;
 
   // Arc Gauge Calculations (Circumference of r=32 is 201.06)
   const arcCircumference = 201;
@@ -156,13 +150,148 @@ export const TelemetryPanel: React.FC<TelemetryPanelProps> = ({
   const spdPercent = Math.min(1, spd / spdMax);
   const spdOffset = arcCircumference * (1 - spdPercent * 0.75);
 
-  // Battery health thresholds
-  const isBatteryLow = isTelemActive && batteryPct > 0 && (batteryPct < 25 || (batteryVolt > 0 && batteryVolt < 10.8));
-  const isBatteryCritical = isTelemActive && batteryPct > 0 && (batteryPct < 15 || (batteryVolt > 0 && batteryVolt < 10.2));
-  const isBatteryUnavailable = !isTelemActive || (batteryVolt <= 0 && batteryPct <= 0);
-
   return (
     <div className={`flex flex-col gap-3 w-full select-none ${className}`}>
+      
+      {/* ------------------------------------------------------------- */}
+      {/* A. MOTOR ARM / DISARM CONTROL CARD (Upper Dashboard Flight Control) */}
+      {/* ------------------------------------------------------------- */}
+      <Card
+        title="MOTOR ARM / DISARM"
+        action={
+          <span
+            className={`text-[9.5px] font-mono font-bold px-1.5 py-0.5 rounded tracking-wider ${
+              telemetry.isArmed
+                ? 'bg-rose-950/80 text-rose-300 border border-rose-500 animate-pulse'
+                : 'bg-emerald-950/60 text-emerald-300 border border-emerald-500/40'
+            }`}
+          >
+            {telemetry.isArmed ? '● ARMED (ACTIVE)' : '○ DISARMED (SAFE)'}
+          </span>
+        }
+        className="shrink-0 bg-[#0E131A] border-[var(--uav-card-border)] shadow-md"
+        contentClassName="p-3 flex flex-col gap-2.5"
+      >
+        {/* Dynamic Status Banner */}
+        <div
+          className={`p-2 rounded-lg border text-[11px] font-mono flex items-center justify-between gap-2 ${
+            telemetry.isArmed
+              ? 'bg-rose-950/40 border-rose-500/60 text-rose-200'
+              : 'bg-[#0f291e]/50 border-[#1b4d36] text-emerald-300'
+          }`}
+        >
+          <div className="flex items-center gap-1.5">
+            {telemetry.isArmed ? (
+              <ShieldAlert className="w-4 h-4 text-rose-400 shrink-0 animate-pulse" />
+            ) : (
+              <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
+            )}
+            <span className="font-semibold text-white">
+              {telemetry.isArmed ? 'MOTORS ARMED' : 'MOTORS DISARMED'}
+            </span>
+          </div>
+          <span className="text-[10px] text-slate-400">
+            {isTelemActive ? (telemetry.flightMode || 'DISARMED') : 'WAITING FOR TELEMETRY'}
+          </span>
+        </div>
+
+        {/* Arm / Disarm Action Buttons */}
+        <div className="grid grid-cols-2 gap-2">
+          {/* ARM BUTTON */}
+          <button
+            type="button"
+            onClick={handleArm}
+            disabled={telemetry.isArmed || isBusy}
+            title={
+              telemetry.isArmed
+                ? 'Flight controller already armed'
+                : 'Send MAVLink ARM command (MAV_CMD_COMPONENT_ARM_DISARM param1=1)'
+            }
+            className={`flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg font-bold text-[11px] font-sans tracking-wide uppercase transition shadow-md cursor-pointer ${
+              telemetry.isArmed
+                ? 'bg-slate-800/60 text-slate-500 cursor-not-allowed border border-slate-700/60'
+                : isArming
+                ? 'bg-amber-600 text-white cursor-wait'
+                : 'bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white shadow-emerald-950/50 border border-emerald-400/50'
+            }`}
+          >
+            {isArming ? (
+              <>
+                <Loader2 className="w-3.5 h-3.5 animate-spin text-white" />
+                <span>ARMING...</span>
+              </>
+            ) : (
+              <>
+                <Play className="w-3.5 h-3.5 fill-current" />
+                <span>ARM MOTORS</span>
+              </>
+            )}
+          </button>
+
+          {/* DISARM BUTTON */}
+          <button
+            type="button"
+            onClick={() => handleDisarm(forceArm)}
+            disabled={isBusy}
+            title={
+              isDisarming
+                ? 'Disarming vehicle motors...'
+                : forceArm
+                ? 'Send FORCE DISARM command (MAV_CMD_COMPONENT_ARM_DISARM param1=0 param2=21196)'
+                : 'Send MAVLink DISARM command (MAV_CMD_COMPONENT_ARM_DISARM param1=0)'
+            }
+            className={`flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg font-bold text-[11px] font-sans tracking-wide uppercase transition shadow-md cursor-pointer ${
+              isDisarming
+                ? 'bg-amber-600 text-white cursor-wait'
+                : forceArm
+                ? 'bg-rose-700 hover:bg-rose-600 active:bg-rose-800 text-white shadow-rose-950/60 border border-rose-400 ring-1 ring-rose-400'
+                : telemetry.isArmed
+                ? 'bg-rose-600 hover:bg-rose-500 active:bg-rose-700 text-white shadow-rose-950/50 border border-rose-400/50'
+                : 'bg-rose-950/40 hover:bg-rose-900/60 active:bg-rose-800/80 text-rose-300 border border-rose-800/60'
+            }`}
+          >
+            {isDisarming ? (
+              <>
+                <Loader2 className="w-3.5 h-3.5 animate-spin text-white" />
+                <span>DISARMING...</span>
+              </>
+            ) : (
+              <>
+                <Power className="w-3.5 h-3.5" />
+                <span>{forceArm ? 'FORCE DISARM' : 'DISARM'}</span>
+              </>
+            )}
+          </button>
+        </div>
+
+        {/* Bench / Field Force Arm/Disarm Bypass Option */}
+        <div className="flex items-center justify-between pt-1 border-t border-slate-800/80">
+          <label className="flex items-center gap-1.5 text-[10px] font-mono text-slate-400 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={forceArm}
+              onChange={(e) => setForceArm(e.target.checked)}
+              disabled={isBusy}
+              className="w-3 h-3 rounded bg-slate-900 border-slate-700 text-amber-500 focus:ring-0 cursor-pointer"
+            />
+            <span className={forceArm ? 'text-amber-300 font-bold' : ''}>
+              Force Bypass (Arm / Disarm)
+            </span>
+          </label>
+
+          <span className="text-[9px] font-mono text-slate-500">
+            {telemetry.isArmed ? 'PROPELLERS ACTIVE' : 'SAFE STANDBY'}
+          </span>
+        </div>
+
+        {/* Feedback / Alert Notice */}
+        {armFeedback && (
+          <div className="p-1.5 rounded bg-slate-900/90 border border-slate-700 text-[10px] font-mono text-slate-300 flex items-center gap-1.5">
+            <Activity className="w-3 h-3 text-amber-400 shrink-0" />
+            <span className="truncate">{armFeedback}</span>
+          </div>
+        )}
+      </Card>
       
       {/* ------------------------------------------------------------- */}
       {/* A. ALTITUDE TELEMETRY CARD (Strictly Altitude, Not Attitude)   */}
@@ -472,242 +601,6 @@ export const TelemetryPanel: React.FC<TelemetryPanelProps> = ({
             />
           </div>
         </div>
-      </Card>
-
-      {/* ------------------------------------------------------------- */}
-      {/* D. BATTERY TELEMETRY CARD (Percentage, Voltage, Low Warning)  */}
-      {/* ------------------------------------------------------------- */}
-      <Card
-        title="BATTERY"
-        action={
-          <div className="flex items-center gap-1">
-            <Battery className={`w-3.5 h-3.5 ${isBatteryLow ? 'text-rose-400' : 'text-emerald-400'}`} />
-            <span
-              className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded ${
-                isBatteryCritical
-                  ? 'bg-rose-950/80 text-rose-300 border border-rose-500 animate-pulse'
-                  : isBatteryLow
-                  ? 'bg-amber-950/80 text-amber-300 border border-amber-500'
-                  : 'bg-emerald-950/40 text-emerald-300 border border-emerald-500/30'
-              }`}
-            >
-              {isBatteryUnavailable ? 'UNAVAILABLE' : `${batteryPct}%`}
-            </span>
-          </div>
-        }
-        className={`shrink-0 bg-[#0E131A] border-[var(--uav-card-border)] shadow-md ${
-          isBatteryCritical ? 'ring-1 ring-rose-500' : ''
-        }`}
-        contentClassName="p-3 flex flex-col gap-2.5"
-      >
-        {isBatteryUnavailable ? (
-          <div className="p-2.5 bg-amber-950/40 border border-amber-500/50 rounded-lg text-amber-200 text-xs flex items-center gap-2">
-            <AlertTriangle className="w-4 h-4 shrink-0 text-amber-400" />
-            <span>Battery telemetry unavailable. Awaiting Pixhawk power module stream...</span>
-          </div>
-        ) : (
-          <>
-            <div className="flex items-center justify-between">
-              <div>
-                <span className="text-[10px] text-slate-400 font-mono block">REMAINING CAPACITY</span>
-                <div className="flex items-baseline gap-1.5">
-                  <span
-                    className={`text-3xl font-black font-orbitron leading-none ${
-                      isBatteryCritical
-                        ? 'text-rose-500 animate-pulse'
-                        : isBatteryLow
-                        ? 'text-amber-400'
-                        : 'text-white'
-                    }`}
-                  >
-                    {batteryPct}%
-                  </span>
-                  <span className="text-[12px] font-bold text-slate-400 font-mono">
-                    {batteryVolt.toFixed(1)}V
-                  </span>
-                </div>
-              </div>
-
-              {/* Pack Voltage & Current stats */}
-              <div className="flex flex-col items-end text-[10px] font-mono text-slate-400 gap-0.5">
-                <div className="flex items-center gap-1">
-                  <Zap className="w-3 h-3 text-amber-400" />
-                  <span className="font-bold text-slate-200">{batteryVolt.toFixed(2)} V</span>
-                </div>
-                {batteryCurrent > 0 && (
-                  <span className="text-slate-400">
-                    DRAW: <strong className="text-slate-200">{batteryCurrent.toFixed(1)}A</strong>
-                  </span>
-                )}
-                <span className="text-[9px] text-slate-500">
-                  3S LiPo (~3.7V/Cell)
-                </span>
-              </div>
-            </div>
-
-            {/* Battery Level Progress Bar */}
-            <div className="w-full bg-[#181F2A] h-2.5 rounded-full overflow-hidden p-0.5 border border-slate-800">
-              <div
-                className={`h-full rounded-full transition-all duration-500 ${
-                  isBatteryCritical
-                    ? 'bg-rose-500 animate-pulse'
-                    : isBatteryLow
-                    ? 'bg-amber-400'
-                    : 'bg-gradient-to-r from-emerald-500 to-teal-400'
-                }`}
-                style={{ width: `${Math.max(4, Math.min(100, batteryPct))}%` }}
-              />
-            </div>
-
-            {/* Low Battery Warning Banner */}
-            {isBatteryLow && (
-              <div className="bg-rose-950/70 border border-rose-500/70 px-2 py-1 rounded text-[10px] font-mono text-rose-200 flex items-center gap-1.5 animate-pulse">
-                <AlertTriangle className="w-3 h-3 text-rose-400 shrink-0" />
-                <span>LOW BATTERY: Return-to-Launch recommended</span>
-              </div>
-            )}
-          </>
-        )}
-      </Card>
-
-      {/* ------------------------------------------------------------- */}
-      {/* E. MOTOR ARM / DISARM CONTROL CARD (Dedicated Flight Control) */}
-      {/* ------------------------------------------------------------- */}
-      <Card
-        title="MOTOR ARM / DISARM"
-        action={
-          <span
-            className={`text-[9.5px] font-mono font-bold px-1.5 py-0.5 rounded tracking-wider ${
-              telemetry.isArmed
-                ? 'bg-rose-950/80 text-rose-300 border border-rose-500 animate-pulse'
-                : 'bg-emerald-950/60 text-emerald-300 border border-emerald-500/40'
-            }`}
-          >
-            {telemetry.isArmed ? '● ARMED (ACTIVE)' : '○ DISARMED (SAFE)'}
-          </span>
-        }
-        className="shrink-0 bg-[#0E131A] border-[var(--uav-card-border)] shadow-md"
-        contentClassName="p-3 flex flex-col gap-2.5"
-      >
-        {/* Dynamic Status Banner */}
-        <div
-          className={`p-2 rounded-lg border text-[11px] font-mono flex items-center justify-between gap-2 ${
-            telemetry.isArmed
-              ? 'bg-rose-950/40 border-rose-500/60 text-rose-200'
-              : 'bg-[#0f291e]/50 border-[#1b4d36] text-emerald-300'
-          }`}
-        >
-          <div className="flex items-center gap-1.5">
-            {telemetry.isArmed ? (
-              <ShieldAlert className="w-4 h-4 text-rose-400 shrink-0 animate-pulse" />
-            ) : (
-              <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
-            )}
-            <span className="font-semibold text-white">
-              {telemetry.isArmed ? 'MOTORS ARMED' : 'MOTORS DISARMED'}
-            </span>
-          </div>
-          <span className="text-[10px] text-slate-400">
-            {isTelemActive ? (telemetry.flightMode || 'DISARMED') : 'WAITING FOR TELEMETRY'}
-          </span>
-        </div>
-
-        {/* Arm / Disarm Action Buttons */}
-        <div className="grid grid-cols-2 gap-2">
-          {/* ARM BUTTON */}
-          <button
-            type="button"
-            onClick={handleArm}
-            disabled={telemetry.isArmed || isBusy}
-            title={
-              telemetry.isArmed
-                ? 'Flight controller already armed'
-                : 'Send MAVLink ARM command (MAV_CMD_COMPONENT_ARM_DISARM param1=1)'
-            }
-            className={`flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg font-bold text-[11px] font-sans tracking-wide uppercase transition shadow-md cursor-pointer ${
-              telemetry.isArmed
-                ? 'bg-slate-800/60 text-slate-500 cursor-not-allowed border border-slate-700/60'
-                : isArming
-                ? 'bg-amber-600 text-white cursor-wait'
-                : 'bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white shadow-emerald-950/50 border border-emerald-400/50'
-            }`}
-          >
-            {isArming ? (
-              <>
-                <Loader2 className="w-3.5 h-3.5 animate-spin text-white" />
-                <span>ARMING...</span>
-              </>
-            ) : (
-              <>
-                <Play className="w-3.5 h-3.5 fill-current" />
-                <span>ARM MOTORS</span>
-              </>
-            )}
-          </button>
-
-          {/* DISARM BUTTON */}
-          <button
-            type="button"
-            onClick={() => handleDisarm(forceArm)}
-            disabled={isBusy}
-            title={
-              isDisarming
-                ? 'Disarming vehicle motors...'
-                : forceArm
-                ? 'Send FORCE DISARM command (MAV_CMD_COMPONENT_ARM_DISARM param1=0 param2=21196)'
-                : 'Send MAVLink DISARM command (MAV_CMD_COMPONENT_ARM_DISARM param1=0)'
-            }
-            className={`flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg font-bold text-[11px] font-sans tracking-wide uppercase transition shadow-md cursor-pointer ${
-              isDisarming
-                ? 'bg-amber-600 text-white cursor-wait'
-                : forceArm
-                ? 'bg-rose-700 hover:bg-rose-600 active:bg-rose-800 text-white shadow-rose-950/60 border border-rose-400 ring-1 ring-rose-400'
-                : telemetry.isArmed
-                ? 'bg-rose-600 hover:bg-rose-500 active:bg-rose-700 text-white shadow-rose-950/50 border border-rose-400/50'
-                : 'bg-rose-950/40 hover:bg-rose-900/60 active:bg-rose-800/80 text-rose-300 border border-rose-800/60'
-            }`}
-          >
-            {isDisarming ? (
-              <>
-                <Loader2 className="w-3.5 h-3.5 animate-spin text-white" />
-                <span>DISARMING...</span>
-              </>
-            ) : (
-              <>
-                <Power className="w-3.5 h-3.5" />
-                <span>{forceArm ? 'FORCE DISARM' : 'DISARM'}</span>
-              </>
-            )}
-          </button>
-        </div>
-
-        {/* Bench / Field Force Arm/Disarm Bypass Option */}
-        <div className="flex items-center justify-between pt-1 border-t border-slate-800/80">
-          <label className="flex items-center gap-1.5 text-[10px] font-mono text-slate-400 cursor-pointer select-none">
-            <input
-              type="checkbox"
-              checked={forceArm}
-              onChange={(e) => setForceArm(e.target.checked)}
-              disabled={isBusy}
-              className="w-3 h-3 rounded bg-slate-900 border-slate-700 text-amber-500 focus:ring-0 cursor-pointer"
-            />
-            <span className={forceArm ? 'text-amber-300 font-bold' : ''}>
-              Force Bypass (Arm / Disarm)
-            </span>
-          </label>
-
-          <span className="text-[9px] font-mono text-slate-500">
-            {telemetry.isArmed ? 'PROPELLERS ACTIVE' : 'SAFE STANDBY'}
-          </span>
-        </div>
-
-        {/* Feedback / Alert Notice */}
-        {armFeedback && (
-          <div className="p-1.5 rounded bg-slate-900/90 border border-slate-700 text-[10px] font-mono text-slate-300 flex items-center gap-1.5">
-            <Activity className="w-3 h-3 text-amber-400 shrink-0" />
-            <span className="truncate">{armFeedback}</span>
-          </div>
-        )}
       </Card>
 
     </div>
