@@ -92,14 +92,44 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
   const [rtlConfirmPending, setRtlConfirmPending] = useState<boolean>(false);
   const [actionNotice, setActionNotice] = useState<string | null>(null);
 
-  // Synchronized active mission state (survives page refresh via backend /api/missions/active)
+  // Synchronized active mission state (survives page refresh via localStorage & backend /api/missions/active)
   const [activeMissionData, setActiveMissionData] = useState<{
     elapsedSeconds: number;
     remainingSeconds: number;
     status: string;
     deadline?: number;
+    startTime?: number;
     isExecuting: boolean;
-  } | null>(null);
+  } | null>(() => {
+    try {
+      const stored = localStorage.getItem('sae_active_mission_data');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed && parsed.startTime) {
+          const elapsed = Math.floor((Date.now() - parsed.startTime) / 1000);
+          const remaining = parsed.deadline ? Math.max(0, Math.floor((parsed.deadline - Date.now()) / 1000)) : 0;
+          return {
+            ...parsed,
+            elapsedSeconds: elapsed,
+            remainingSeconds: remaining,
+            isExecuting: parsed.status === 'EXECUTING' && remaining > 0,
+          };
+        }
+      }
+    } catch {}
+    return null;
+  });
+
+  const updateActiveMissionData = (data: any) => {
+    setActiveMissionData(data);
+    try {
+      if (data) {
+        localStorage.setItem('sae_active_mission_data', JSON.stringify(data));
+      } else {
+        localStorage.removeItem('sae_active_mission_data');
+      }
+    } catch {}
+  };
 
   const [rtlTimerRef] = useState(() => ({ current: null as ReturnType<typeof setTimeout> | null }));
   const userSelectedModeRef = useRef<boolean>(false);
@@ -234,6 +264,19 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
   // Safe Mission Workflow Reset (Requirement 3)
   const handleResetMissionWorkflow = async () => {
     try {
+      localStorage.removeItem('sae_active_mission_data');
+      localStorage.removeItem('sae_search_timer_active');
+      localStorage.removeItem('sae_search_timer_start');
+      localStorage.removeItem('sae_boundary_confirmed');
+      localStorage.removeItem('sae_pattern_confirmed');
+      localStorage.removeItem('sae_fc_configured');
+      localStorage.removeItem('sae_autonomy_lock');
+    } catch {}
+
+    updateActiveMissionData(null);
+    setAutonomyLock(false);
+
+    try {
       await groundStationMissionService.deleteMission();
     } catch {}
 
@@ -254,8 +297,16 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
       phoneDroneMissionService.reset();
     } catch {}
 
+    try {
+      fetchWithFallback('/api/missions/active', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'RESET', isExecuting: false })
+      }).catch(() => {});
+    } catch {}
+
     audioService.playBeep(440, 150);
-    showNotification('🔄 Mission workflow reset safely. All waypoints, QR codes, and states cleared.');
+    showNotification('🔄 Mission workflow & timers reset safely. Ready for fresh preparation.');
   };
 
   const handleToggleArm = async (force: boolean = false) => {
@@ -423,7 +474,8 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
 
       setAutonomyLock(true);
       try { localStorage.setItem('sae_autonomy_lock', 'true'); } catch {}
-      setActiveMissionData({
+      updateActiveMissionData({
+        startTime: now,
         elapsedSeconds: 0,
         remainingSeconds: timeLimitMin * 60,
         status: 'EXECUTING',

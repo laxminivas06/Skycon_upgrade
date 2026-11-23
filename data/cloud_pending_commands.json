@@ -1,8 +1,8 @@
 {
   "_schema_version": "2.0",
   "_collection": "cloud_pending_commands",
-  "_updated_at": "2026-11-23T04:38:10.634074+00:00",
-  "_checksum_sha256": "d4449808d56425dfb267c4ad2e7692f7e4db5740e660ba0bc8fe052697e6d69c",
+  "_updated_at": "2026-11-23T05:14:25.495059+00:00",
+  "_checksum_sha256": "f28be4faebda4ba3469d1c7eb8679075757adc506581b000f65f03195d08b8a4",
   "_data": [
     {
       "id": "CMD_1795400137467",
@@ -126,6 +126,47 @@
         "reason": "TEST_FAILSAFE"
       },
       "timestamp": 1795408690.634029
+    },
+    {
+      "id": "CMD_1795410864406",
+      "command": "ARM",
+      "params": {
+        "force": false
+      },
+      "timestamp": 1795410864.4378562
+    },
+    {
+      "id": "CMD_1795410864642",
+      "command": "ARM",
+      "params": {
+        "force": false
+      },
+      "timestamp": 1795410864.6634393
+    },
+    {
+      "id": "CMD_1795410864844",
+      "command": "TAKEOFF",
+      "params": {
+        "altitude": 10.0
+      },
+      "timestamp": 1795410864.8738182
+    },
+    {
+      "id": "CMD_1795410865046",
+      "command": "SET_MODE",
+      "params": {
+        "mode": "GUIDED"
+      },
+      "timestamp": 1795410865.077499
+    },
+    {
+      "id": "CMD_1795410865468",
+      "command": "RTL",
+      "params": {
+        "emergency": true,
+        "reason": "TEST_FAILSAFE"
+      },
+      "timestamp": 1795410865.4950135
     }
   ]
 }

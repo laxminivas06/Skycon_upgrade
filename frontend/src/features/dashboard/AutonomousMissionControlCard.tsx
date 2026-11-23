@@ -82,38 +82,79 @@ export const AutonomousMissionControlCard: React.FC<AutonomousMissionControlCard
   const [activeDeckTab, setActiveDeckTab] = useState<'MISSION' | 'FC_PARAMS' | 'TARGET_QUEUE'>('MISSION');
 
   // =========================================================================
-  // 1. BOUNDARY CONFIGURATION (User must manually define & confirm)
+  // 1. BOUNDARY CONFIGURATION (User must manually define & confirm, persists across reload)
   // =========================================================================
-  const [boundaryType, setBoundaryType] = useState<'SQUARE' | 'RECTANGLE' | 'CIRCLE' | 'POLYGON'>('RECTANGLE');
-  const [rectWidth, setRectWidth] = useState<number>(30);
-  const [rectHeight, setRectHeight] = useState<number>(20);
-  const [circleRadius, setCircleRadius] = useState<number>(15);
-  const [isBoundaryConfirmed, setIsBoundaryConfirmed] = useState<boolean>(false);
+  const [boundaryType, setBoundaryType] = useState<'SQUARE' | 'RECTANGLE' | 'CIRCLE' | 'POLYGON'>(() => {
+    try { return (localStorage.getItem('sae_boundary_type') as any) || 'RECTANGLE'; } catch { return 'RECTANGLE'; }
+  });
+  const [rectWidth, setRectWidth] = useState<number>(() => {
+    try { return parseInt(localStorage.getItem('sae_boundary_width') || '30', 10); } catch { return 30; }
+  });
+  const [rectHeight, setRectHeight] = useState<number>(() => {
+    try { return parseInt(localStorage.getItem('sae_boundary_height') || '20', 10); } catch { return 20; }
+  });
+  const [circleRadius, setCircleRadius] = useState<number>(() => {
+    try { return parseInt(localStorage.getItem('sae_boundary_radius') || '15', 10); } catch { return 15; }
+  });
+  const [isBoundaryConfirmed, setIsBoundaryConfirmed] = useState<boolean>(() => {
+    try { return localStorage.getItem('sae_boundary_confirmed') === 'true'; } catch { return false; }
+  });
   const [boundaryConfirmedNotice, setBoundaryConfirmedNotice] = useState<string | null>(null);
 
   // =========================================================================
-  // 2. SEARCH PATTERN SELECTION (User must manually select & confirm)
+  // 2. SEARCH PATTERN SELECTION (User must manually select & confirm, persists across reload)
   // =========================================================================
-  const [selectedPattern, setSelectedPattern] = useState<AutonomousSearchPattern | null>(null);
-  const [isPatternConfirmed, setIsPatternConfirmed] = useState<boolean>(false);
+  const [selectedPattern, setSelectedPattern] = useState<AutonomousSearchPattern | null>(() => {
+    try { return (localStorage.getItem('sae_selected_pattern') as any) || null; } catch { return null; }
+  });
+  const [isPatternConfirmed, setIsPatternConfirmed] = useState<boolean>(() => {
+    try { return localStorage.getItem('sae_pattern_confirmed') === 'true'; } catch { return false; }
+  });
 
   // Search Altitude (Envelope: 2m-50m, default 5m)
-  const [altitude, setAltitude] = useState<number>(5);
+  const [altitude, setAltitude] = useState<number>(() => {
+    try { return parseInt(localStorage.getItem('sae_search_altitude') || '5', 10); } catch { return 5; }
+  });
 
   // =========================================================================
   // 3. FLIGHT CONTROLLER CONFIGURATION (Non-waypoint direct trajectory & guided mode)
   // =========================================================================
   const [isFcConfiguring, setIsFcConfiguring] = useState<boolean>(false);
-  const [isFcConfigured, setIsFcConfigured] = useState<boolean>(false);
+  const [isFcConfigured, setIsFcConfigured] = useState<boolean>(() => {
+    try { return localStorage.getItem('sae_fc_configured') === 'true'; } catch { return false; }
+  });
   const [fcConfigNotice, setFcConfigNotice] = useState<string | null>(null);
 
   // =========================================================================
-  // 4. FOUR-MINUTE TARGET SEARCH TIMER (240s window)
+  // 4. FOUR-MINUTE TARGET SEARCH TIMER (240s window, persists seamlessly across page reload)
   // =========================================================================
   const SEARCH_WINDOW_LIMIT_SEC = 240; // Exactly 4 minutes
-  const [searchTimerActive, setSearchTimerActive] = useState<boolean>(false);
-  const [searchSecondsRemaining, setSearchSecondsRemaining] = useState<number>(SEARCH_WINDOW_LIMIT_SEC);
-  const [searchSecondsElapsed, setSearchSecondsElapsed] = useState<number>(0);
+  const [searchTimerActive, setSearchTimerActive] = useState<boolean>(() => {
+    try { return localStorage.getItem('sae_search_timer_active') === 'true'; } catch { return false; }
+  });
+  const [searchSecondsRemaining, setSearchSecondsRemaining] = useState<number>(() => {
+    try {
+      const startTime = parseInt(localStorage.getItem('sae_search_timer_start') || '0', 10);
+      if (startTime > 0 && localStorage.getItem('sae_search_timer_active') === 'true') {
+        const elapsed = Math.floor((Date.now() - startTime) / 1000);
+        return Math.max(0, SEARCH_WINDOW_LIMIT_SEC - elapsed);
+      }
+      return SEARCH_WINDOW_LIMIT_SEC;
+    } catch {
+      return SEARCH_WINDOW_LIMIT_SEC;
+    }
+  });
+  const [searchSecondsElapsed, setSearchSecondsElapsed] = useState<number>(() => {
+    try {
+      const startTime = parseInt(localStorage.getItem('sae_search_timer_start') || '0', 10);
+      if (startTime > 0 && localStorage.getItem('sae_search_timer_active') === 'true') {
+        return Math.floor((Date.now() - startTime) / 1000);
+      }
+      return 0;
+    } catch {
+      return 0;
+    }
+  });
   const [isSearchTimedOut, setIsSearchTimedOut] = useState<boolean>(false);
 
   // Target Lock Tracking
@@ -256,6 +297,14 @@ export const AutonomousMissionControlCard: React.FC<AutonomousMissionControlCard
     });
 
     setIsBoundaryConfirmed(true);
+    try {
+      localStorage.setItem('sae_boundary_confirmed', 'true');
+      localStorage.setItem('sae_boundary_type', boundaryType);
+      localStorage.setItem('sae_boundary_width', String(rectWidth));
+      localStorage.setItem('sae_boundary_height', String(rectHeight));
+      localStorage.setItem('sae_boundary_radius', String(circleRadius));
+      localStorage.setItem('sae_search_altitude', String(altitude));
+    } catch {}
     setBoundaryConfirmedNotice(`✓ Search Boundary Confirmed: ${boundaryArea} m² (${boundaryType}) bounded within geofence`);
     audioService.playBeep(920, 80);
     setTimeout(() => setBoundaryConfirmedNotice(null), 4000);
@@ -267,6 +316,10 @@ export const AutonomousMissionControlCard: React.FC<AutonomousMissionControlCard
   const handleSelectPattern = (pattern: AutonomousSearchPattern) => {
     setSelectedPattern(pattern);
     setIsPatternConfirmed(true);
+    try {
+      localStorage.setItem('sae_pattern_confirmed', 'true');
+      localStorage.setItem('sae_selected_pattern', pattern);
+    } catch {}
     audioService.playBeep(880, 60);
 
     // If boundary already confirmed, recompute trajectory
@@ -318,6 +371,7 @@ export const AutonomousMissionControlCard: React.FC<AutonomousMissionControlCard
 
       if (res.success) {
         setIsFcConfigured(true);
+        try { localStorage.setItem('sae_fc_configured', 'true'); } catch {}
         setFcConfigNotice(`✓ FC Configured: GUIDED mode ready, boundary committed (${altitude}m altitude).`);
       } else {
         setFcConfigNotice(`Configuration notice: ${res.message}`);
@@ -328,6 +382,43 @@ export const AutonomousMissionControlCard: React.FC<AutonomousMissionControlCard
       setIsFcConfiguring(false);
       setTimeout(() => setFcConfigNotice(null), 5000);
     }
+  };
+
+  // =========================================================================
+  // RESET MISSION HANDLER
+  // =========================================================================
+  const handleResetMission = () => {
+    audioService.playBeep(450, 80);
+    try {
+      localStorage.removeItem('sae_search_timer_active');
+      localStorage.removeItem('sae_search_timer_start');
+      localStorage.removeItem('sae_boundary_confirmed');
+      localStorage.removeItem('sae_pattern_confirmed');
+      localStorage.removeItem('sae_fc_configured');
+      localStorage.removeItem('sae_selected_pattern');
+      localStorage.removeItem('sae_mission_active_data');
+    } catch {}
+
+    setSearchTimerActive(false);
+    setSearchSecondsRemaining(SEARCH_WINDOW_LIMIT_SEC);
+    setSearchSecondsElapsed(0);
+    setIsSearchTimedOut(false);
+    setIsBoundaryConfirmed(false);
+    setIsPatternConfirmed(false);
+    setIsFcConfigured(false);
+    setSelectedPattern(null);
+    setTargetLockState('SEARCHING');
+    setLockedTargetCode(null);
+    setLockedTargetPayload(null);
+
+    groundStationMissionService.clearMission();
+
+    if (telemetry.isArmed && telemetry.altitudeMeters > 0.8) {
+      mavlinkService.setFlightMode('LOITER');
+    }
+
+    setFcConfigNotice('✓ Mission & Timers Reset. Ready for fresh preparation.');
+    setTimeout(() => setFcConfigNotice(null), 4000);
   };
 
   // =========================================================================
@@ -343,6 +434,12 @@ export const AutonomousMissionControlCard: React.FC<AutonomousMissionControlCard
 
     if (isMissionActive && isBoundaryConfirmed && isPatternConfirmed) {
       setSearchTimerActive(true);
+      try {
+        localStorage.setItem('sae_search_timer_active', 'true');
+        if (!localStorage.getItem('sae_search_timer_start')) {
+          localStorage.setItem('sae_search_timer_start', String(Date.now() - searchSecondsElapsed * 1000));
+        }
+      } catch {}
 
       timer = setInterval(() => {
         setSearchSecondsRemaining((prev) => {
@@ -361,8 +458,11 @@ export const AutonomousMissionControlCard: React.FC<AutonomousMissionControlCard
         setSearchSecondsElapsed((prev) => prev + 1);
       }, 1000);
     } else if (!isMissionActive) {
-      setSearchTimerActive(false);
-      if (timer) clearInterval(timer);
+      // If operator hasn't actively locked timer, keep saved state
+      if (localStorage.getItem('sae_search_timer_active') !== 'true') {
+        setSearchTimerActive(false);
+        if (timer) clearInterval(timer);
+      }
     }
 
     return () => {
@@ -556,8 +656,17 @@ export const AutonomousMissionControlCard: React.FC<AutonomousMissionControlCard
         <div className="flex items-center gap-2">
           <Clock className={`w-5 h-5 shrink-0 ${searchTimerActive ? 'animate-spin text-sky-400' : 'text-slate-500'}`} />
           <div>
-            <div className="text-[10px] text-slate-400 uppercase font-bold leading-tight">
-              4-MINUTE SEARCH WINDOW
+            <div className="text-[10px] text-slate-400 uppercase font-bold leading-tight flex items-center gap-2">
+              <span>4-MINUTE SEARCH WINDOW</span>
+              <button
+                type="button"
+                onClick={handleResetMission}
+                className="px-1.5 py-0.5 rounded bg-rose-950/80 hover:bg-rose-900 border border-rose-500/60 text-rose-300 hover:text-white text-[9px] font-bold flex items-center gap-0.5 cursor-pointer transition active:scale-95 shadow-sm"
+                title="Reset mission timers, boundaries, and state back to preparation"
+              >
+                <RotateCcw className="w-2.5 h-2.5" />
+                <span>RESET</span>
+              </button>
             </div>
             <div className="text-lg font-black tracking-wider text-white">
               {formatSeconds(searchSecondsRemaining)}

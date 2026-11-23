@@ -1,8 +1,8 @@
 {
   "_schema_version": "2.0",
   "_collection": "detections",
-  "_updated_at": "2026-11-23T04:38:29.354324+00:00",
-  "_checksum_sha256": "d020da3f6a51297ed6e26a197163e89aa491b7f3782e121b1856a57feff89810",
+  "_updated_at": "2026-11-23T05:14:43.051887+00:00",
+  "_checksum_sha256": "8fc086b8644f70a67e9bf76f35b609c7f6f3508d829c7295983b01bbcb8156e4",
   "_data": [
     {
       "payload": "42",
@@ -1395,6 +1395,77 @@
       "lat": 13.0827,
       "lon": 80.2707,
       "timestamp": "2026-11-23T04:38:12.263978+00:00",
+      "verified": true,
+      "checksum_sha256": "743d4808900c5c2e6f6f2e55aeec40d975412e67e7bd02584a3bd4db031f42c4"
+    },
+    {
+      "twoDigitCode": "42",
+      "lat": 13.0827,
+      "lon": 80.2707
+    },
+    {
+      "twoDigitCode": "07"
+    },
+    {
+      "twoDigitCode": "42",
+      "confidence": 0.98,
+      "boxId": "BOX_TARGET_01",
+      "droneStateAtCapture": {
+        "lat": 13.0,
+        "lon": 80.0,
+        "alt": 10.0
+      }
+    },
+    {
+      "payload": "42",
+      "droneStateAtCapture": {
+        "lat": 13.0827,
+        "lon": 80.2707,
+        "alt": 10.0
+      },
+      "twoDigitCode": "42",
+      "verified": true
+    },
+    {
+      "payload": "42",
+      "droneStateAtCapture": {
+        "lat": 13.0827,
+        "lon": 80.2707,
+        "alt": 10.0
+      },
+      "twoDigitCode": "42",
+      "verified": true
+    },
+    {
+      "twoDigitCode": "56",
+      "confidence": 0.99,
+      "droneStateAtCapture": {
+        "lat": 13.0827,
+        "lon": 80.2707,
+        "alt": 10.0
+      }
+    },
+    {
+      "twoDigitCode": "73",
+      "confidence": 0.99,
+      "droneStateAtCapture": {
+        "lat": 13.0828,
+        "lon": 80.2708,
+        "alt": 10.0
+      }
+    },
+    {
+      "twoDigitCode": "42",
+      "lat": 13.0827,
+      "lon": 80.2707,
+      "verified": true
+    },
+    {
+      "observation_id": "QR_OBS_001",
+      "code": "42",
+      "lat": 13.0827,
+      "lon": 80.2707,
+      "timestamp": "2026-11-23T05:14:26.926505+00:00",
       "verified": true,
       "checksum_sha256": "743d4808900c5c2e6f6f2e55aeec40d975412e67e7bd02584a3bd4db031f42c4"
     },
