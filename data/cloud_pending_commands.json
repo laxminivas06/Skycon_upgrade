@@ -1,172 +1,172 @@
 {
   "_schema_version": "2.0",
   "_collection": "cloud_pending_commands",
-  "_updated_at": "2026-11-23T21:47:55.191331+00:00",
-  "_checksum_sha256": "def4d6bae11c85da6c1854ef7a1ecaecda3862891e5ea8b176cca4e45e78b945",
+  "_updated_at": "2026-11-24T03:32:56.285388+00:00",
+  "_checksum_sha256": "afefcd135936cb721cbb4f4c949468d7cdd8f671f8f114a84d63d1c29d864484",
   "_data": [
     {
-      "id": "CMD_1795400699852",
+      "id": "CMD_1795473645689",
       "command": "ARM",
       "params": {
         "force": false
       },
-      "timestamp": 1795400699.866626
+      "timestamp": 1795473645.701168
     },
     {
-      "id": "CMD_1795400699961",
+      "id": "CMD_1795473645786",
       "command": "ARM",
       "params": {
         "force": false
       },
-      "timestamp": 1795400699.9803612
+      "timestamp": 1795473645.7967992
     },
     {
-      "id": "CMD_1795400700069",
+      "id": "CMD_1795473645874",
       "command": "TAKEOFF",
       "params": {
         "altitude": 10.0
       },
-      "timestamp": 1795400700.0875082
+      "timestamp": 1795473645.8877268
     },
     {
-      "id": "CMD_1795400700180",
+      "id": "CMD_1795473646045",
       "command": "SET_MODE",
       "params": {
         "mode": "GUIDED"
       },
-      "timestamp": 1795400700.18968
+      "timestamp": 1795473646.0580442
     },
     {
-      "id": "CMD_1795400700359",
+      "id": "CMD_1795473646219",
       "command": "RTL",
       "params": {
         "emergency": true,
         "reason": "TEST_FAILSAFE"
       },
-      "timestamp": 1795400700.3679948
+      "timestamp": 1795473646.2359104
     },
     {
-      "id": "CMD_1795408688818",
+      "id": "CMD_1795473663014",
       "command": "ARM",
       "params": {
         "force": false
       },
-      "timestamp": 1795408688.8692236
+      "timestamp": 1795473663.0254993
     },
     {
-      "id": "CMD_1795408689251",
+      "id": "CMD_1795473663100",
       "command": "ARM",
       "params": {
         "force": false
       },
-      "timestamp": 1795408689.2917132
+      "timestamp": 1795473663.1097436
     },
     {
-      "id": "CMD_1795408689604",
+      "id": "CMD_1795473663173",
       "command": "TAKEOFF",
       "params": {
         "altitude": 10.0
       },
-      "timestamp": 1795408689.6394951
+      "timestamp": 1795473663.1862328
     },
     {
-      "id": "CMD_1795408689937",
+      "id": "CMD_1795473663247",
       "command": "SET_MODE",
       "params": {
         "mode": "GUIDED"
       },
-      "timestamp": 1795408689.9790373
+      "timestamp": 1795473663.2637398
     },
     {
-      "id": "CMD_1795408690591",
+      "id": "CMD_1795473663401",
       "command": "RTL",
       "params": {
         "emergency": true,
         "reason": "TEST_FAILSAFE"
       },
-      "timestamp": 1795408690.634029
+      "timestamp": 1795473663.4118354
     },
     {
-      "id": "CMD_1795410864406",
+      "id": "CMD_1795489981139",
       "command": "ARM",
       "params": {
         "force": false
       },
-      "timestamp": 1795410864.4378562
+      "timestamp": 1795489981.1447563
     },
     {
-      "id": "CMD_1795410864642",
+      "id": "CMD_1795489981291",
       "command": "ARM",
       "params": {
         "force": false
       },
-      "timestamp": 1795410864.6634393
+      "timestamp": 1795489981.3067782
     },
     {
-      "id": "CMD_1795410864844",
+      "id": "CMD_1795489981443",
       "command": "TAKEOFF",
       "params": {
         "altitude": 10.0
       },
-      "timestamp": 1795410864.8738182
+      "timestamp": 1795489981.4635258
     },
     {
-      "id": "CMD_1795410865046",
+      "id": "CMD_1795489981588",
       "command": "SET_MODE",
       "params": {
         "mode": "GUIDED"
       },
-      "timestamp": 1795410865.077499
+      "timestamp": 1795489981.6067486
     },
     {
-      "id": "CMD_1795410865468",
+      "id": "CMD_1795489981848",
       "command": "RTL",
       "params": {
         "emergency": true,
         "reason": "TEST_FAILSAFE"
       },
-      "timestamp": 1795410865.4950135
+      "timestamp": 1795489981.8590257
     },
     {
-      "id": "CMD_1795470474836",
+      "id": "CMD_1795491175869",
       "command": "ARM",
       "params": {
         "force": false
       },
-      "timestamp": 1795470474.8468301
+      "timestamp": 1795491175.8803513
     },
     {
-      "id": "CMD_1795470474920",
+      "id": "CMD_1795491175959",
       "command": "ARM",
       "params": {
         "force": false
       },
-      "timestamp": 1795470474.929253
+      "timestamp": 1795491175.9766703
     },
     {
-      "id": "CMD_1795470474983",
+      "id": "CMD_1795491176056",
       "command": "TAKEOFF",
       "params": {
         "altitude": 10.0
       },
-      "timestamp": 1795470474.9987402
+      "timestamp": 1795491176.0674968
     },
     {
-      "id": "CMD_1795470475062",
+      "id": "CMD_1795491176133",
       "command": "SET_MODE",
       "params": {
         "mode": "GUIDED"
       },
-      "timestamp": 1795470475.072761
+      "timestamp": 1795491176.1468713
     },
     {
-      "id": "CMD_1795470475180",
+      "id": "CMD_1795491176277",
       "command": "RTL",
       "params": {
         "emergency": true,
         "reason": "TEST_FAILSAFE"
       },
-      "timestamp": 1795470475.1913147
+      "timestamp": 1795491176.2853744
     }
   ]
 }

@@ -15,7 +15,9 @@ import {
   Octagon,
   Home,
   PlaneLanding,
-  Gamepad2
+  Gamepad2,
+  Clock,
+  Radio
 } from 'lucide-react';
 import { useDashboardTelemetry } from '../../hooks/useDashboardTelemetry';
 import { mavlinkService } from '../../services/mavlinkService';
@@ -50,6 +52,7 @@ import { FlightModeSelector } from '../../components/common/FlightModeSelector';
 import { SimpleConnectionIndicators } from '../../components/common/SimpleConnectionIndicators';
 import { GlobalErrorHUD } from '../../components/common/GlobalErrorHUD';
 import { systemAlertService } from '../../services/systemAlertService';
+import { gcsConnectionService } from '../../services/gcsConnectionService';
 import { AppRole } from '../../types/mission';
 
 interface DashboardPageProps {
@@ -90,6 +93,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
   const [showRtlModal, setShowRtlModal] = useState<boolean>(false);
   const [showPhoneMissionModal, setShowPhoneMissionModal] = useState<boolean>(false);
   const [rtlConfirmPending, setRtlConfirmPending] = useState<boolean>(false);
+  const [landConfirmPending, setLandConfirmPending] = useState<boolean>(false);
   const [actionNotice, setActionNotice] = useState<string | null>(null);
 
   // Synchronized active mission state (survives page refresh via localStorage & backend /api/missions/active)
@@ -132,6 +136,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
   };
 
   const [rtlTimerRef] = useState(() => ({ current: null as ReturnType<typeof setTimeout> | null }));
+  const [landTimerRef] = useState(() => ({ current: null as ReturnType<typeof setTimeout> | null }));
   const userSelectedModeRef = useRef<boolean>(false);
   const initialSyncDoneRef = useRef<boolean>(false);
 
@@ -198,6 +203,53 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
   // Live Optical Recon Detections Count
   const [confirmedQRs, setConfirmedQRs] = useState<number>(0);
   const [detectedBoxes, setDetectedBoxes] = useState<number>(0);
+
+  // Wi-Fi Status derived directly from verified connection service (never fake online)
+  const [wifiStatus, setWifiStatus] = useState<string>(() => gcsConnectionService.getState().wifiStatus);
+
+  // Official 5-minute Mission Window countdown (persists across refresh)
+  const [missionWindowSeconds, setMissionWindowSeconds] = useState<number>(300);
+  const [isMissionWindowExpired, setIsMissionWindowExpired] = useState<boolean>(false);
+  const [isMissionWindowActive, setIsMissionWindowActive] = useState<boolean>(false);
+
+  useEffect(() => {
+    const unsubWifi = gcsConnectionService.subscribe((st) => setWifiStatus(st.wifiStatus));
+
+    const checkTimer = () => {
+      try {
+        const endTs = parseInt(
+          localStorage.getItem('sae_mission_window_end') ||
+          localStorage.getItem('sae_search_timer_end') ||
+          '0',
+          10
+        );
+        const isActive =
+          localStorage.getItem('sae_mission_window_active') === 'true' ||
+          localStorage.getItem('sae_search_timer_active') === 'true';
+
+        if (endTs > 0) {
+          const rem = Math.max(0, Math.floor((endTs - Date.now()) / 1000));
+          setMissionWindowSeconds(rem);
+          setIsMissionWindowExpired(rem === 0);
+          setIsMissionWindowActive(rem > 0 && isActive);
+        } else {
+          setMissionWindowSeconds(300);
+          setIsMissionWindowExpired(false);
+          setIsMissionWindowActive(false);
+        }
+      } catch {
+        setMissionWindowSeconds(300);
+      }
+    };
+
+    checkTimer();
+    const interval = setInterval(checkTimer, 1000);
+
+    return () => {
+      unsubWifi();
+      clearInterval(interval);
+    };
+  }, []);
 
   useEffect(() => {
     const unsubDetections = reconDetectionService.subscribeDetections((records) => {
@@ -267,17 +319,41 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
       localStorage.removeItem('sae_active_mission_data');
       localStorage.removeItem('sae_search_timer_active');
       localStorage.removeItem('sae_search_timer_start');
+      localStorage.removeItem('sae_search_timer_end');
+      localStorage.removeItem('sae_mission_window_start');
+      localStorage.removeItem('sae_mission_window_end');
+      localStorage.removeItem('sae_mission_window_active');
       localStorage.removeItem('sae_boundary_confirmed');
       localStorage.removeItem('sae_pattern_confirmed');
       localStorage.removeItem('sae_fc_configured');
       localStorage.removeItem('sae_autonomy_lock');
       localStorage.removeItem('sae_mission_altitude');
       localStorage.removeItem('sae_circle_radius');
+      localStorage.removeItem('sae_circle_center');
       localStorage.removeItem('sae_search_algorithm');
+      localStorage.removeItem('sae_geofence_coords');
+      localStorage.removeItem('sae_drawn_polygon');
+      localStorage.removeItem('sae_custom_waypoints');
+      localStorage.removeItem('sae_last_mission_id');
+      localStorage.removeItem('sae_mission_time_limit');
+      localStorage.removeItem('sae_search_speed');
+      localStorage.removeItem('drone_last_two_digit_code');
+      localStorage.removeItem('runner_last_checkpoint_code');
+      localStorage.removeItem('SAE_P2P_SYNC_PACKET');
+      localStorage.removeItem('sae_detected_box_count');
+      localStorage.removeItem('sae_confirmed_qr_count');
     } catch {}
+
+    setMissionWindowSeconds(300);
+    setIsMissionWindowExpired(false);
+    setIsMissionWindowActive(false);
 
     updateActiveMissionData(null);
     setAutonomyLock(false);
+
+    try {
+      runnerCommService.reset();
+    } catch {}
 
     try {
       await groundStationMissionService.deleteMission();
@@ -304,12 +380,32 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
       phoneDroneMissionService.reset();
     } catch {}
 
+    // Complete backend reset of session, waypoints, detections, and multiplexer cache (Requirement 4 & 8)
+    try {
+      await fetchWithFallback('/api/mission/reset-all', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+    } catch {}
+
+    try {
+      await fetchWithFallback('/api/recon/detections', {
+        method: 'DELETE',
+      });
+    } catch {}
+
     try {
       fetchWithFallback('/api/missions/active', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: 'RESET', isExecuting: false })
       }).catch(() => {});
+    } catch {}
+
+    try {
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('sae:mission_reset'));
+      }
     } catch {}
 
     audioService.playBeep(440, 150);
@@ -544,6 +640,53 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
     }
   };
 
+  const handleEmergencyLand = async () => {
+    if (!landConfirmPending) {
+      // 1st Click: Prime LAND confirmation with 4-second timeout
+      setLandConfirmPending(true);
+      audioService.playBeep(450, 150);
+      showNotification('⚠️ CONFIRM LAND: Click the button a 2nd time within 4s to land aircraft!');
+      if (landTimerRef.current) clearTimeout(landTimerRef.current);
+      landTimerRef.current = setTimeout(() => {
+        setLandConfirmPending(false);
+      }, 4000);
+    } else {
+      // 2nd Click: Immediately execute LAND
+      if (landTimerRef.current) {
+        clearTimeout(landTimerRef.current);
+        landTimerRef.current = null;
+      }
+      setLandConfirmPending(false);
+      showNotification('🛬 VERTICAL LAND DISPATCHED — Pixhawk Descending (Awaiting Confirmation) ✓');
+      audioService.playBeep(600, 150);
+      try {
+        const ok = await mavlinkService.setFlightMode('LAND');
+        if (ok) {
+          showNotification('🛬 Flight Mode switched to LAND (Awaiting Pixhawk Confirmation) ✓');
+        } else {
+          showNotification('LAND command rejected by Pixhawk — Check safety conditions');
+        }
+      } catch (err: any) {
+        showNotification(`LAND failed: ${err?.message || 'Check MAVLink link'}`);
+      }
+    }
+  };
+
+  const handleCommandBrake = async () => {
+    audioService.playBeep(900, 120);
+    showNotification('🛑 ELECTRONIC AIR BRAKE DISPATCHED — Halting aircraft and holding position...');
+    try {
+      const ok = await mavlinkService.setFlightMode('BRAKE');
+      if (ok) {
+        showNotification('🛑 Flight Mode switched to BRAKE (Awaiting Pixhawk Confirmation) ✓');
+      } else {
+        showNotification('BRAKE command rejected by Pixhawk');
+      }
+    } catch (err: any) {
+      showNotification(`BRAKE failed: ${err?.message || 'Check MAVLink link'}`);
+    }
+  };
+
   const handleUploadWaypoints = async () => {
     const mission = groundStationMissionService.getCurrentMission();
     if (!mission || mission.waypoints.length === 0) {
@@ -615,6 +758,9 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
         rcOverrideEnabled={telemetry.rcOverrideEnabled}
         onOpenPhoneMission={() => setShowPhoneMissionModal(true)}
         onOpenDiagnostics={() => setIsComprehensiveDiagOpen(true)}
+        missionWindowSeconds={missionWindowSeconds}
+        isMissionWindowExpired={isMissionWindowExpired}
+        isMissionWindowActive={isMissionWindowActive}
       />
 
       {/* Alert Banners (Link Lost / Stale Heartbeat / Connecting) */}
@@ -747,176 +893,140 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
           />
         </aside>
 
-        {/* 2. CENTER PANEL: Mission Window & Tactical Map (Requirements 1 & 2) */}
+        {/* 2. CENTER PANEL: Tactical Map & Top Flight Action Toolbar (Requirements 1 & 2) */}
         <section
           className={`h-full min-h-0 w-full relative overflow-hidden bg-[#0D1117] flex flex-col ${
             mobileView === 'map' ? 'flex' : 'hidden lg:flex'
           }`}
         >
-          {/* Top Bar Beside/Above Mission Window: Manual/Autonomous Switch + Connection Symbols */}
-          <div className="shrink-0 z-20 bg-[#0c1322] border-b border-[var(--uav-card-border)] px-3 py-1.5 flex items-center justify-between gap-2 flex-wrap">
-            <div className="flex items-center gap-2 min-w-0">
-              <span className="font-orbitron font-extrabold text-[12px] tracking-wider text-slate-200 hidden sm:inline truncate">
-                MISSION WINDOW
-              </span>
-              {/* Manual / Autonomous Switching */}
-              <div className="flex items-center bg-[#11161F] p-0.5 rounded-lg border border-[var(--uav-card-border)] shrink-0">
-                <button
-                  type="button"
-                  onClick={() => setMissionMode('MANUAL')}
-                  className={`flex items-center gap-1 px-2.5 py-1 rounded text-[11px] font-bold font-sans transition cursor-pointer ${
-                    missionMode === 'MANUAL'
-                      ? 'bg-emerald-600 text-white shadow-sm'
-                      : 'text-slate-400 hover:text-white'
-                  }`}
-                  title="Manual Mission Planning: Draw and customize search path on map"
-                >
-                  <span>🧭</span>
-                  <span>MANUAL</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setMissionMode('AUTONOMOUS')}
-                  className={`flex items-center gap-1 px-2.5 py-1 rounded text-[11px] font-bold font-sans transition cursor-pointer ${
-                    missionMode === 'AUTONOMOUS'
-                      ? 'bg-emerald-600 text-white shadow-sm'
-                      : 'text-slate-400 hover:text-white'
-                  }`}
-                  title="Autonomous Search Mission: Generate search mission from altitude, radius, and algorithm"
-                >
-                  <span>🤖</span>
-                  <span>AUTONOMOUS</span>
-                </button>
-              </div>
-
-              {/* Optical Recon HUD Indicator */}
-              <div className="hidden md:flex items-center gap-1.5 px-2 py-0.5 rounded bg-[#11161F] border border-slate-800 text-[10px] font-mono">
-                <span className="text-sky-300 font-bold flex items-center gap-1" title="Confirmed QR Codes">
-                  <span>🎯</span>
-                  <span>{confirmedQRs} QR</span>
-                </span>
-                <span className="text-slate-600">|</span>
-                <span className="text-amber-300 font-bold flex items-center gap-1" title="Target Cuboid Boxes">
-                  <span>📦</span>
-                  <span>{detectedBoxes} BOX</span>
-                </span>
-              </div>
-            </div>
-
-            {/* Connection Symbols Beside Mission Window */}
-            <div className="flex items-center gap-2 shrink-0">
-              <SimpleConnectionIndicators
-                isWifiConnected={typeof navigator !== 'undefined' ? navigator.onLine : true}
-                isMavlinkConnected={telemetry.isConnected}
-                isPixhawkConnected={telemetry.isConnected}
-              />
-              {/* GPS Status Indicator */}
-              <div className="px-2 py-0.5 rounded bg-[#11161F] border border-slate-800 text-[10px] font-mono font-bold flex items-center gap-1.5">
-                <span className={`w-1.5 h-1.5 rounded-full ${telemetry.gpsFixType && telemetry.gpsFixType !== 'NO_FIX' ? 'bg-emerald-400' : 'bg-rose-500'}`} />
-                <span className="text-slate-300">{telemetry.gpsFixType ? telemetry.gpsFixType.replace('_', ' ') : 'NO GPS'}</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Central Map Canvas (Fixed In Place, No Layout Jumping) */}
-          <MapPanel
-            telemetry={telemetry}
-            className="h-full w-full min-h-0 flex-1 border-0 rounded-none"
-            onWaypointAdded={(_lat, _lon) => {
-              if (autonomyLock) {
-                showNotification('🔒 Autonomy Lock Active (ADDC Rule 3.3.1): Manual waypoint editing disabled.');
-                return;
-              }
-              showNotification('Waypoint added to mission plan');
-            }}
-          />
-
-          {/* Bottom Bar Below Mission Window: Mode Selector & RC ON (Left-Aligned, Space Utilized, No downward shift) */}
-          <div className="shrink-0 z-30 bg-[#0A0E14] border-t border-[var(--uav-card-border)] px-3 py-1.5 flex items-center justify-between gap-2 overflow-visible min-h-[44px]">
-            {/* Left-Aligned Controls: Mode Selector, RC ON, Reset, Emergency Overrides */}
-            <div className="flex items-center gap-2 justify-start shrink-0 flex-nowrap overflow-visible">
-              {/* Flight Mode Selector (direction="up" so opening never shifts controls downward) */}
+          {/* Top Flight Action Toolbar: Compact, responsive, no horizontal overflow */}
+          <div className="shrink-0 z-30 bg-[#0A0E14] border-b border-[var(--uav-card-border)] px-2.5 py-1.5 flex flex-wrap items-center justify-between gap-1.5 sm:gap-2">
+            {/* Left group: Flight Mode, RC Status, Flight Action Controls */}
+            <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap shrink-0">
+              {/* Flight Mode Selector (direction="down" as it is placed at the top of map) */}
               <FlightModeSelector
                 variant="dropdown"
-                direction="up"
-                onModeChanged={(mode) => showNotification(`Flight Mode switched to ${mode} ✓`)}
+                direction="down"
+                onModeChanged={(mode) => showNotification(`Flight Mode switch requested: ${mode} (Awaiting Pixhawk Confirmation)`)}
               />
 
-              {/* RC ON / OFF Status & Override Toggle */}
-              <button
-                type="button"
-                onClick={handleToggleRC}
-                title={
-                  telemetry.rcOverrideEnabled
-                    ? 'RC Manual Control: ENABLED (Click to Disable RC Override)'
-                    : 'RC Manual Control: DISABLED (Click to Enable RC Override)'
-                }
-                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-[8px] border text-[11px] font-mono transition-all active:scale-95 cursor-pointer shrink-0 ${
-                  telemetry.rcOverrideEnabled
-                    ? 'border-[#1b4d36] bg-[#0c2419] text-[#22C55E]'
-                    : 'border-[var(--uav-card-border)] bg-[#161B22] text-slate-400 hover:text-white hover:bg-[#21262D]'
+              {/* RC Status Indicator (Requirement 3: RC CONNECTED / ON, RC DISCONNECTED / OFF, RC SIGNAL LOST, RC STATUS UNKNOWN) */}
+              <div
+                title={`RC Receiver Telemetry: ${telemetry.rcStatus} (RSSI: ${telemetry.rcRssi}%)`}
+                className={`flex items-center gap-1.5 px-2 py-1 rounded-[6px] border text-[10.5px] font-mono font-bold shrink-0 transition-all ${
+                  telemetry.rcStatus === 'RC CONNECTED / ON'
+                    ? 'border-emerald-500/50 bg-emerald-950/60 text-emerald-400'
+                    : telemetry.rcStatus === 'RC SIGNAL LOST'
+                    ? 'border-rose-500/80 bg-rose-950/80 text-rose-300 animate-pulse'
+                    : telemetry.rcStatus === 'RC DISCONNECTED / OFF'
+                    ? 'border-amber-500/50 bg-amber-950/60 text-amber-400'
+                    : 'border-slate-800 bg-[#161B22] text-slate-400'
                 }`}
               >
-                <Gamepad2
+                <Radio
                   className={`w-3.5 h-3.5 ${
-                    telemetry.rcOverrideEnabled ? 'text-[#22C55E]' : 'text-slate-400'
+                    telemetry.rcStatus === 'RC CONNECTED / ON'
+                      ? 'text-emerald-400'
+                      : telemetry.rcStatus === 'RC SIGNAL LOST'
+                      ? 'text-rose-400 animate-ping'
+                      : telemetry.rcStatus === 'RC DISCONNECTED / OFF'
+                      ? 'text-amber-400'
+                      : 'text-slate-500'
                   }`}
                 />
-                <span className="font-semibold">
-                  RC: {telemetry.rcOverrideEnabled ? 'ON' : 'OFF'}
+                <span className="truncate max-w-[150px] sm:max-w-none">
+                  {telemetry.rcStatus}
                 </span>
+              </div>
+
+              {/* BRAKE Control (Immediate electronic air brake to halt movement & hold position) */}
+              <button
+                type="button"
+                onClick={handleCommandBrake}
+                className={`flex items-center gap-1 px-2.5 py-1 rounded-[6px] border text-[11px] font-mono font-bold transition cursor-pointer shrink-0 active:scale-95 ${
+                  telemetry.flightMode === 'BRAKE'
+                    ? 'bg-red-600 text-white border-white animate-pulse'
+                    : 'bg-red-950/80 border-red-600/60 hover:bg-red-900 text-red-200'
+                }`}
+                title="Electronic Air Brake: Immediately halt all motion and loiter in place"
+              >
+                <Octagon className="w-3.5 h-3.5 text-red-400" />
+                <span>BRAKE</span>
               </button>
 
-              {/* Safe Reset Mission Workflow Button (Requirement 3) */}
+              {/* RTL Control (Safety Confirmation Required) */}
+              <button
+                type="button"
+                onClick={handleEmergencyRTL}
+                className={`flex items-center gap-1 px-2.5 py-1 rounded-[6px] border text-[11px] font-mono font-bold transition cursor-pointer shrink-0 active:scale-95 ${
+                  rtlConfirmPending
+                    ? 'bg-amber-500 text-black border-white animate-pulse font-extrabold'
+                    : telemetry.flightMode === 'RTL'
+                    ? 'bg-amber-600 text-white border-amber-300 animate-pulse'
+                    : 'bg-amber-950/80 border-amber-600/60 hover:bg-amber-900 text-amber-200'
+                }`}
+                title={rtlConfirmPending ? 'Click again within 4s to confirm Return to Launch' : 'Return To Launch (Safety Confirmed)'}
+              >
+                <Home className={`w-3.5 h-3.5 ${rtlConfirmPending ? 'text-black animate-spin' : 'text-amber-400'}`} />
+                <span>{rtlConfirmPending ? 'CONFIRM RTL' : 'RTL'}</span>
+              </button>
+
+              {/* LAND Control (Safety Confirmation Required) */}
+              <button
+                type="button"
+                onClick={handleEmergencyLand}
+                className={`flex items-center gap-1 px-2.5 py-1 rounded-[6px] border text-[11px] font-mono font-bold transition cursor-pointer shrink-0 active:scale-95 ${
+                  landConfirmPending
+                    ? 'bg-rose-500 text-white border-white animate-pulse font-extrabold'
+                    : telemetry.flightMode === 'LAND'
+                    ? 'bg-rose-600 text-white border-rose-300 animate-pulse'
+                    : 'bg-rose-950/80 border-rose-600/60 hover:bg-rose-900 text-rose-200'
+                }`}
+                title={landConfirmPending ? 'Click again within 4s to confirm Landing' : 'Immediate Vertical Land (Safety Confirmed)'}
+              >
+                <PlaneLanding className={`w-3.5 h-3.5 ${landConfirmPending ? 'text-white animate-bounce' : 'text-rose-400'}`} />
+                <span>{landConfirmPending ? 'CONFIRM LAND' : 'LAND'}</span>
+              </button>
+
+              {/* RESET Mission Workflow Button (Preserved exactly as requested) */}
               <button
                 type="button"
                 onClick={handleResetMissionWorkflow}
-                className="flex items-center gap-1.5 px-2.5 py-1 rounded-[8px] border border-amber-500/50 bg-amber-950/40 hover:bg-amber-900/60 text-amber-300 text-[11px] font-mono font-bold transition shadow-sm cursor-pointer shrink-0 active:scale-95"
+                className="flex items-center gap-1 px-2 py-1 rounded-[6px] border border-amber-500/40 bg-amber-950/30 hover:bg-amber-900/50 text-amber-300 text-[10.5px] font-mono font-semibold transition cursor-pointer shrink-0 active:scale-95"
                 title="Restart mission workflow from beginning: Clears previous waypoints, state, and QR code safely"
               >
-                <RotateCcw className="w-3.5 h-3.5 text-amber-400" />
+                <RotateCcw className="w-3 h-3 text-amber-400" />
                 <span>RESET</span>
-              </button>
-
-              {/* Emergency Quick Actions */}
-              <button
-                type="button"
-                onClick={() => mavlinkService.setFlightMode('BRAKE')}
-                className="flex items-center gap-1 px-2 py-1 rounded-[6px] bg-red-950/80 border border-red-600/60 hover:bg-red-900 text-red-200 text-[10.5px] font-mono font-bold transition cursor-pointer shrink-0"
-                title="Instant Electronic Air Brake"
-              >
-                <Octagon className="w-3 h-3 text-red-400" />
-                <span>BRAKE</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => mavlinkService.setFlightMode('RTL')}
-                className="flex items-center gap-1 px-2 py-1 rounded-[6px] bg-amber-950/80 border border-amber-600/60 hover:bg-amber-900 text-amber-200 text-[10.5px] font-mono font-bold transition cursor-pointer shrink-0"
-                title="Return To Launch"
-              >
-                <Home className="w-3 h-3 text-amber-400" />
-                <span>RTL</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => mavlinkService.setFlightMode('LAND')}
-                className="flex items-center gap-1 px-2 py-1 rounded-[6px] bg-rose-950/80 border border-rose-600/60 hover:bg-rose-900 text-rose-200 text-[10.5px] font-mono font-bold transition cursor-pointer shrink-0"
-                title="Vertical Landing"
-              >
-                <PlaneLanding className="w-3 h-3 text-rose-400" />
-                <span>LAND</span>
               </button>
             </div>
 
-            {/* Right-Aligned Coordinates & Altitude (Space Utilized Efficiently) */}
-            <div className="hidden sm:flex items-center gap-2 text-[10px] font-mono text-slate-400 shrink-0">
-              <span className="px-2 py-0.5 rounded bg-[#161B22] border border-slate-800">
+            {/* Right group: Pixhawk FC Mode acknowledgement & Coordinates */}
+            <div className="flex items-center gap-1.5 text-[10px] font-mono text-slate-400 shrink-0 ml-auto">
+              <span className="px-2 py-0.5 rounded bg-[#161B22] border border-slate-800 text-cyan-400 font-semibold" title="Pixhawk Flight Controller Confirmed Mode">
+                FC: {telemetry.flightMode || 'DISARMED'}
+              </span>
+              <span className="hidden md:inline px-2 py-0.5 rounded bg-[#161B22] border border-slate-800">
                 POS: {telemetry.latitude !== 0 ? `${telemetry.latitude.toFixed(4)}, ${telemetry.longitude.toFixed(4)}` : 'ACQUIRING GPS'}
               </span>
               <span className="px-2 py-0.5 rounded bg-[#161B22] border border-slate-800 text-emerald-400">
                 ALT: {(telemetry.altitudeMeters || 0).toFixed(1)}m
               </span>
             </div>
+          </div>
+
+          {/* Central Map Canvas: Contained within available space, no vertical scrolling or overflow */}
+          <div className="flex-1 min-h-0 w-full h-full relative overflow-hidden">
+            <MapPanel
+              telemetry={telemetry}
+              className="h-full w-full min-h-0 border-0 rounded-none"
+              onWaypointAdded={(_lat, _lon) => {
+                if (autonomyLock) {
+                  showNotification('🔒 Autonomy Lock Active (ADDC Rule 3.3.1): Manual waypoint editing disabled.');
+                  return;
+                }
+                showNotification('Waypoint added to mission plan');
+              }}
+            />
           </div>
         </section>
 
@@ -930,7 +1040,10 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
           <div className="flex flex-col gap-3">
             {missionMode === 'MANUAL' ? (
               <>
-                {/* MODE A: Manual Mission Planning & Controls */}
+                {/* 1. FLIGHT PARAMETERS (Requirement 3: Workflow Order 1) */}
+                <FlightParams className="w-full shrink-0" />
+
+                {/* 2. MANUAL MISSION (Requirement 3: Workflow Order 2) */}
                 <ManualMissionControlCard
                   telemetry={telemetry}
                   onOpenPreflightModal={() => setShowPreflightModal(true)}
@@ -939,7 +1052,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                   rtlConfirmPending={rtlConfirmPending}
                 />
 
-                {/* Waypoint Management Table */}
+                {/* 3. WAYPOINTS MANAGER (Requirement 3: Workflow Order 3) */}
                 <WaypointManager
                   className="w-full shrink-0"
                   onClearAll={() => showNotification('Mission waypoints cleared')}
@@ -949,7 +1062,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
               </>
             ) : (
               <>
-                {/* MODE B: Autonomous Search Mission (4 Configurable Fields) */}
+                {/* MODE B: Autonomous Search Mission (Requirement 4-7: Autonomous Workflow) */}
                 <AutonomousMissionControlCard
                   telemetry={telemetry}
                   onOpenPreflightModal={() => setShowPreflightModal(true)}
@@ -961,12 +1074,6 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                 />
               </>
             )}
-
-            {/* C. Geofence Enforcement Panel */}
-            <GeofencePanel className="w-full shrink-0" />
-
-            {/* D. Flight Parameters */}
-            <FlightParams className="w-full shrink-0" />
           </div>
         </aside>
 

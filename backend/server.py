@@ -480,6 +480,37 @@ def delete_active_mission():
     return {"success": True, "cleared": cleared}
 
 
+@app.post("/api/mission/reset-all")
+def reset_all_mission_data():
+    """
+    RESET ALL: Completely clears previous mission session data in the backend:
+    - Resets mission state machine to IDLE and STAGE_1_MARSHAL_AUTH
+    - Clears multiplexer uploaded waypoints
+    - Resets spatial coverage tracker cells
+    - Clears previous mission codes, search results, cache unlocks, detections
+    Does NOT delete project files, saved application settings, or ArduPilot parameters.
+    Does NOT reboot hardware or disarm active airborne flights.
+    """
+    mission_engine.reset_mission()
+    coverage_tracker.reset()
+    with mavlink_mux._lock:
+        mavlink_mux._uploaded_waypoints = []
+
+    missions = json_store.load("missions", [])
+    for m in missions:
+        if m.get("status") in ("EXECUTING", "ACTIVE", "PAUSED", "READY"):
+            m["status"] = "CLEARED"
+            m["clearedAt"] = time.time()
+    json_store.save("missions", missions)
+    json_store.save("detections", [])
+    json_store.save("access_code", {})
+    json_store.save("decoded_payloads", [])
+    json_store.save("cache_unlock", {})
+    json_store.save("package_retrieval", {})
+
+    return {"success": True, "message": "Mission session and all associated data safely reset to initial defaults."}
+
+
 @app.post("/api/missions/start")
 def start_mission():
     result = mission_engine.start_mission()

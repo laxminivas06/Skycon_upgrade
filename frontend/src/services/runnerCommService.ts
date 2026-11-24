@@ -195,6 +195,27 @@ class RunnerCommService {
     }
   }
 
+  public reset(): void {
+    this.state.latestReceivedQR = undefined;
+    this.state.latestAckDispatched = false;
+    this.state.lastAckTime = undefined;
+    this.state.packetsSent = 0;
+    this.state.packetsReceived = 0;
+    this.pendingPayload = null;
+    this.ackCallback = null;
+    if (this.retransmitTimer) {
+      clearInterval(this.retransmitTimer);
+      this.retransmitTimer = null;
+    }
+    if (typeof window !== 'undefined' && window.localStorage) {
+      try {
+        window.localStorage.removeItem('SAE_P2P_SYNC_PACKET');
+        window.localStorage.removeItem('runner_last_checkpoint_code');
+      } catch {}
+    }
+    this.notifyState();
+  }
+
   private notifyMessage(msg: any) {
     this.messageListeners.forEach((fn) => fn(msg));
   }

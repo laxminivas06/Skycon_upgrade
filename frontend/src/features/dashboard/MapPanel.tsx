@@ -206,6 +206,18 @@ export const MapPanel: React.FC<MapPanelProps> = ({
         setIsDrawingFreehand(false);
         setIsPlacingCircle(false);
         setIsPlacingConcentric(false);
+        setIsDrawingPolygonGeofence(false);
+      } else if (tool === 'polygon') {
+        setIsDrawingPolygonGeofence(true);
+        setIsPlacingCircle(false);
+        setIsPlacingConcentric(false);
+        setIsDrawingFreehand(false);
+        setIsPinningWp(false);
+        setIsMeasuring(false);
+        polygonGeofencePtsRef.current = [];
+        setPolygonGeofenceCount(0);
+        showTemporaryNotice('🛡️ Draw Polygon Boundary: Click map to place vertices (minimum 3 points)');
+        audioService.playBeep(920, 80);
       }
     });
 

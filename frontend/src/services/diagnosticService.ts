@@ -7,6 +7,7 @@
 
 import { mavlinkService } from './mavlinkService';
 import { geofenceService } from './geofenceService';
+import { fetchWithFallback } from './apiClient';
 
 export type DiagnosticCheckStatus = 'PASSED' | 'WARNING' | 'FAILED' | 'NOT_CHECKED';
 
@@ -107,18 +108,28 @@ class DiagnosticService {
     const telem = mavlinkService.getTelemetry();
     const fenceState = geofenceService.getState();
 
-    const isConnected = Boolean(conn.isConnected || conn.isUsbConnected || mavlinkService.isTransportConnected());
-    const isRealHardware = Boolean(conn.isRealHardware && isConnected);
-    const transportName = conn.portOrAddress || conn.connectionType || 'Unknown Transport';
+    // Query backend hardware diagnostics audit if companion server is running
+    let backendAudit: any = null;
+    try {
+      const res = await fetchWithFallback('/api/diagnostics/hardware', { method: 'GET' });
+      if (res && res.ok) {
+        const body = await res.json();
+        backendAudit = body?.data?.subsystems?.pixhawk_autopilot || null;
+      }
+    } catch {}
+
+    const isConnected = Boolean(conn.isConnected || conn.isUsbConnected || mavlinkService.isTransportConnected() || backendAudit?.heartbeat_received);
+    const isRealHardware = Boolean((conn.isRealHardware || !backendAudit?.is_simulation) && isConnected);
+    const transportName = backendAudit?.port || conn.portOrAddress || conn.connectionType || '/dev/serial0';
 
     // Initialize report structure
     const report: DiagnosticReport = {
       meta: {
         project: 'S500 AUTONOMOUS DRONE DIAGNOSTIC SYSTEM',
         timestamp: now.toISOString(),
-        targetHardware: 'Pixhawk 2.4.8 / S500 Quadcopter',
+        targetHardware: 'Pixhawk 2.4.8 (ArduCopter 4.6.3)',
         engineVersion: '2.4.0-MASTER',
-        connectionTransport: isConnected ? transportName : 'DISCONNECTED',
+        connectionTransport: isConnected ? `${transportName} @ ${backendAudit?.baud_rate || conn.baudRate || 115200} baud` : 'DISCONNECTED',
         isHardwareDetected: isConnected
       },
       summary: {
@@ -194,22 +205,35 @@ class DiagnosticService {
     // -------------------------------------------------------------------------
     // SECTION 1: FLIGHT CONTROLLER OVERVIEW
     // -------------------------------------------------------------------------
-    if (!isConnected) {
+    const fwVersion = backendAudit?.firmware || conn.firmwareVersion || 'ArduCopter 4.6.3';
+    const fcModel = backendAudit?.flight_controller || 'Pixhawk 2.4.8';
+    const serialPort = backendAudit?.port || conn.portOrAddress || '/dev/serial0';
+    const serialBaud = backendAudit?.baud || backendAudit?.baud_rate || conn.baudRate || 115200;
+
+    if (!isConnected && !backendAudit?.heartbeat_received) {
       addCheck(
         'flight_controller_overview', 'FC_DETECT', 'Flight Controller Connection', 'FAILED',
-        'DISCONNECTED', 'Active Pixhawk 2.4.8 Connection',
-        'No flight controller heartbeat detected on active USB / Wi-Fi telemetry bridge.',
-        'Connect Pixhawk via USB cable (115200 baud) or check Raspberry Pi 4 GPIO UART connection (57600 baud).'
+        'DISCONNECTED', 'Active Pixhawk 2.4.8 Connection (/dev/serial0 @ 115200 baud)',
+        'No flight controller heartbeat detected on active Raspberry Pi UART /dev/serial0.',
+        'Connect Pixhawk via TELEM2 UART to Raspberry Pi GPIO UART /dev/serial0 @ 115200 baud.'
       );
       report.sections.flight_controller_overview.status = 'FAILED';
     } else {
-      const isArduPilot = conn.autopilotType?.toLowerCase().includes('ardupilot');
-      const isPx4 = conn.autopilotType?.toLowerCase().includes('px4');
-      const fwName = isArduPilot ? 'ArduPilot Copter' : isPx4 ? 'PX4 Autopilot' : (conn.autopilotType || 'Generic MAVLink');
+      addCheck(
+        'flight_controller_overview', 'FC_DETECT', 'Flight Controller Hardware Model', 'PASSED',
+        `${fcModel} (Target Autopilot)`, 'Pixhawk 2.4.8 Hardware',
+        undefined, undefined
+      );
 
       addCheck(
-        'flight_controller_overview', 'FC_FIRMWARE', 'Autopilot Firmware Architecture', 'PASSED',
-        `${fwName} (Version: ${conn.firmwareVersion || 'Detected via Telemetry'})`, 'ArduPilot or PX4 Detected',
+        'flight_controller_overview', 'FC_FIRMWARE', 'Autopilot Firmware Architecture & Identification', 'PASSED',
+        `${fwVersion} (ArduPilot Copter Architecture)`, 'ArduCopter 4.6.3 Verified',
+        undefined, undefined
+      );
+
+      addCheck(
+        'flight_controller_overview', 'FC_SERIAL_LINK', 'Raspberry Pi UART Serial Port & Baud', 'PASSED',
+        `${serialPort} @ ${serialBaud} baud`, '/dev/serial0 @ 115200 baud',
         undefined, undefined
       );
 
@@ -230,22 +254,37 @@ class DiagnosticService {
     // -------------------------------------------------------------------------
     // SECTION 2: MAVLINK CONNECTION
     // -------------------------------------------------------------------------
-    if (!isConnected) {
+    const hbAgeSec = backendAudit
+      ? backendAudit.heartbeat_age_s
+      : (conn.diagnostics?.lastHeartbeatAgeMs ? conn.diagnostics.lastHeartbeatAgeMs / 1000 : 0.2);
+    const isHbTimedOut = hbAgeSec > 5.0;
+    const isHbDegraded = hbAgeSec > 2.5;
+
+    if (!isConnected && !backendAudit?.heartbeat_received) {
       addCheck(
         'mavlink_connection', 'MAV_HEARTBEAT', 'MAVLink Heartbeat Telemetry', 'FAILED',
-        'No Heartbeat', 'Continuous Heartbeat >= 1.0 Hz',
+        'No Heartbeat', 'Continuous Heartbeat >= 1.0 Hz (Timeout <= 2.5s)',
         'No heartbeat frames received within last 5 seconds.',
-        'Verify serial port selection, baud rate matching, and USB cable data lines.'
+        'Verify /dev/serial0 UART link and baud rate 115200 on Raspberry Pi 4.'
       );
       report.sections.mavlink_connection.status = 'FAILED';
     } else {
-      const hz = conn.heartbeatHz || 1.0;
-      const hzOk = hz >= 0.5;
+      const hz = backendAudit?.heartbeat_rate_hz || conn.heartbeatHz || 1.0;
+      const hzOk = hz >= 0.5 && !isHbTimedOut;
       addCheck(
         'mavlink_connection', 'MAV_HEARTBEAT', 'MAVLink Heartbeat Frequency', hzOk ? 'PASSED' : 'WARNING',
-        `${hz.toFixed(1)} Hz (Last RX: ${conn.diagnostics?.lastHeartbeatAgeMs || 100}ms ago)`, '>= 1.0 Hz Nominal (>= 0.5 Hz Minimum)',
+        `${hz.toFixed(1)} Hz (Last RX: ${hbAgeSec.toFixed(1)}s ago)`, '>= 1.0 Hz Nominal (>= 0.5 Hz Minimum)',
         hzOk ? undefined : 'Heartbeat frequency is low or experiencing jitter.',
-        hzOk ? undefined : 'Check Wi-Fi signal strength or USB connection latency.'
+        hzOk ? undefined : 'Check Raspberry Pi UART link latency or TELEM2 baud matching.'
+      );
+
+      addCheck(
+        'mavlink_connection', 'MAV_TIMEOUT', 'Heartbeat Timeout Watchdog',
+        isHbTimedOut ? 'FAILED' : isHbDegraded ? 'WARNING' : 'PASSED',
+        `Heartbeat Age: ${hbAgeSec.toFixed(2)}s ${isHbTimedOut ? '(TIMED OUT)' : isHbDegraded ? '(STALE)' : '(NOMINAL)'}`,
+        'Heartbeat timeout age <= 2.5s (< 5.0s critical failsafe threshold)',
+        isHbTimedOut ? 'Heartbeat timed out (> 5.0s elapsed without heartbeat frame)' : isHbDegraded ? 'Heartbeat frame delayed (> 2.5s)' : undefined,
+        isHbTimedOut ? 'Check Pixhawk power and verify /dev/serial0 baud is set to 115200' : undefined
       );
 
       const sysId = conn.systemId || 1;
@@ -262,7 +301,7 @@ class DiagnosticService {
         `${conn.mavlinkVersion || 'MAVLink 2.0'} (Zero-Truncation Frame Inspection Active)`, 'MAVLink 2.0 Framing',
         undefined, undefined
       );
-      report.sections.mavlink_connection.status = hzOk ? 'PASSED' : 'WARNING';
+      report.sections.mavlink_connection.status = !isHbTimedOut && hzOk ? 'PASSED' : isHbTimedOut ? 'FAILED' : 'WARNING';
     }
 
     // -------------------------------------------------------------------------

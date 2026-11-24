@@ -386,7 +386,125 @@ class RouteValidator:
                         }
                 return {"valid": True}
 
+        elif b_type == "POLYGON":
+            raw_coords = boundary_dict.get("coordinates", boundary_dict.get("polygon", []))
+            poly_coords = []
+            for pt in raw_coords:
+                if isinstance(pt, (list, tuple)) and len(pt) >= 2:
+                    poly_coords.append((float(pt[0]), float(pt[1])))
+                elif isinstance(pt, dict) and "lat" in pt:
+                    poly_coords.append((float(pt["lat"]), float(pt.get("lon", pt.get("lng", 0.0)))))
+
+            if len(poly_coords) < 3:
+                return {"valid": False, "reason": "Polygon boundary requires at least 3 vertices."}
+
+            # Check self-intersection (Requirement G.5: reject self-intersecting polygons)
+            self_inter, msg = check_polygon_self_intersection(poly_coords)
+            if self_inter:
+                return {"valid": False, "reason": msg}
+
+            # Validate against circular geofence
+            if gf_type == "CIRCLE":
+                if "lat" in gf_center and "lon" in gf_center:
+                    for idx, (plat, plon) in enumerate(poly_coords):
+                        d = haversine_distance(plat, plon, gf_center["lat"], gf_center["lon"])
+                        if d > gf_radius:
+                            excess = d - gf_radius
+                            return {
+                                "valid": False,
+                                "reason": f"Polygon vertex #{idx + 1} exceeds circular geofence boundary by {excess:.1f}m."
+                            }
+                return {"valid": True}
+            elif gf_type == "POLYGON":
+                raw_poly = geofence.get("polygon", [])
+                gf_poly = []
+                for pt in raw_poly:
+                    if isinstance(pt, (list, tuple)) and len(pt) >= 2:
+                        gf_poly.append((float(pt[0]), float(pt[1])))
+                    elif isinstance(pt, dict) and "lat" in pt:
+                        gf_poly.append((float(pt["lat"]), float(pt.get("lon", pt.get("lng", 0.0)))))
+                if len(gf_poly) >= 3:
+                    for idx, (plat, plon) in enumerate(poly_coords):
+                        if not point_in_polygon(plat, plon, gf_poly):
+                            return {
+                                "valid": False,
+                                "reason": f"Polygon vertex #{idx + 1} lies outside the geofence perimeter."
+                            }
+                return {"valid": True}
+
         return {"valid": True}
+
+
+def check_polygon_self_intersection(poly: List[Tuple[float, float]]) -> Tuple[bool, str]:
+    """Tests if 2D edges of a polygon cross each other (rejecting self-intersecting figures)."""
+    n = len(poly)
+    if n < 4:
+        return False, ""
+
+    def ccw(a, b, c):
+        return (c[0] - a[0]) * (b[1] - a[1]) - (c[1] - a[1]) * (b[0] - a[0])
+
+    def intersect(p1, p2, p3, p4):
+        ccw1 = ccw(p1, p3, p4)
+        ccw2 = ccw(p2, p3, p4)
+        ccw3 = ccw(p1, p2, p3)
+        ccw4 = ccw(p1, p2, p4)
+        return (((ccw1 > 0 and ccw2 < 0) or (ccw1 < 0 and ccw2 > 0)) and
+                ((ccw3 > 0 and ccw4 < 0) or (ccw3 < 0 and ccw4 > 0)))
+
+    for i in range(n):
+        p1 = poly[i]
+        p2 = poly[(i + 1) % n]
+        for j in range(i + 1, n):
+            if j == i or j == (i + 1) % n or (j + 1) % n == i:
+                continue
+            p3 = poly[j]
+            p4 = poly[(j + 1) % n]
+            if intersect(p1, p2, p3, p4):
+                return True, f"Self-intersecting polygon rejected: Edge [{i+1}-{(i+1)%n+1}] crosses edge [{j+1}-{(j+1)%n+1}]."
+    return False, ""
+
+
+def calculate_polygon_area_m2(poly: List[Tuple[float, float]]) -> float:
+    """Calculates spherical surface area of polygon in square metres."""
+    if len(poly) < 3:
+        return 0.0
+    r = 6378137.0
+    total = 0.0
+    n = len(poly)
+    for i in range(n):
+        j = (i + 1) % n
+        lat1 = math.radians(poly[i][0])
+        lat2 = math.radians(poly[j][0])
+        lon1 = math.radians(poly[i][1])
+        lon2 = math.radians(poly[j][1])
+        total += (lon2 - lon1) * (2.0 + math.sin(lat1) + math.sin(lat2))
+    return abs((total * r * r) / 2.0)
+
+
+def auto_select_search_pattern(boundary_type: str, vertices: Optional[List[Tuple[float, float]]] = None) -> Dict[str, str]:
+    """
+    Analyzes boundary shape and automatically selects the optimal search algorithm with scientific justification.
+    """
+    b_type = (boundary_type or "CIRCLE").upper()
+    if b_type == "CIRCLE":
+        return {
+            "algorithm": "INWARD_SPIRAL",
+            "name": "Inward Archimedean Spiral",
+            "reason": "Circular boundary detected. Inward Archimedean spiral provides continuous curvature search, eliminating abrupt 90-degree yaw stops and maintaining constant target ground box visibility."
+        }
+    elif b_type == "RECTANGLE":
+        return {
+            "algorithm": "BOUSTROPHEDON",
+            "name": "Boustrophedon (Lawnmower) Sweep",
+            "reason": "Rectangular boundary detected. Parallel sweep lanes aligned to the primary axis deliver uniform 100% optical swath coverage and optimal flight battery efficiency."
+        }
+    else:
+        return {
+            "algorithm": "BOUSTROPHEDON",
+            "name": "Polygon-Clipped Coverage Sweep",
+            "reason": "Irregular polygon boundary detected. Using dynamic sweep tracks clipped strictly within polygon vertices with Sony IMX477 camera swath overlap."
+        }
 
 
 # Global singleton validator

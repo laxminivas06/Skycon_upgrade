@@ -1014,6 +1014,28 @@ def missions_active():
     return api_response(data=state, code=200)
 
 
+@app.route("/api/mission/reset-all", methods=["POST"])
+def flask_reset_all_mission_data():
+    mission_engine.reset_mission()
+    coverage_tracker.reset()
+    with mavlink_mux._lock:
+        mavlink_mux._uploaded_waypoints = []
+
+    missions = json_store.load("missions", [])
+    for m in missions:
+        if m.get("status") in ("EXECUTING", "ACTIVE", "PAUSED", "READY"):
+            m["status"] = "CLEARED"
+            m["clearedAt"] = time.time()
+    json_store.save("missions", missions)
+    json_store.save("detections", [])
+    json_store.save("access_code", {})
+    json_store.save("decoded_payloads", [])
+    json_store.save("cache_unlock", {})
+    json_store.save("package_retrieval", {})
+
+    return api_response(data={"message": "Mission session and all associated data safely reset to initial defaults."}, code=200)
+
+
 @app.route("/api/missions/start", methods=["POST"])
 def missions_start():
     body = request.get_json(silent=True) or {}

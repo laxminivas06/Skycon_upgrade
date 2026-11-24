@@ -158,6 +158,8 @@ export interface DroneTelemetry {
   vibrationLevels?: { x: number; y: number; z: number; clipping: number };
   vehicleState?: 'ARMED' | 'DISARMED' | 'ARMING' | 'DISARMING' | 'UNKNOWN';
   controlMode?: 'RC' | 'NO_RC';
+  rcConnected?: boolean;
+  rcFailsafe?: boolean;
   rcSignalDetected?: boolean;
   rcOverrideEnabled?: boolean;
   rcRssi?: number;

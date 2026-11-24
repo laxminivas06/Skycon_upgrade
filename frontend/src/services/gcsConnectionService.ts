@@ -203,48 +203,45 @@ class GCSConnectionService {
     this.notify();
 
     try {
-      if (typeof window !== 'undefined' && !navigator.onLine) {
-        this.state.wifiStatus = 'FAILED';
-        this.isCheckingNetwork = false;
-        this.notify();
-        return false;
-      }
-
-      // If MAVLink transport is already open or receiving data, network is verified
+      // If MAVLink transport is already connected and receiving telemetry, network is verified
       const conn = mavlinkService.getConnectionState();
-      if (conn.isConnected || conn.isUsbConnected || conn.isReceivingTelemetry || conn.connectionType === 'SIMULATED') {
+      if ((conn.isConnected || conn.isUsbConnected || conn.isReceivingTelemetry) && (conn.bytesReceived > 0 || conn.heartbeatHz > 0)) {
         this.state.wifiStatus = 'VERIFIED';
         this.isCheckingNetwork = false;
         this.notify();
         return true;
       }
 
-      // Ping backend API with generous timeout, with immediate fallback to edge static asset
+      // Check backend API network status endpoint with timeout
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 10000);
+      const timeout = setTimeout(() => controller.abort(), 4000);
 
-      const res = await fetchWithFallback('/api/recon/detections/latest', {
+      const res = await fetchWithFallback('/api/network/status', {
         method: 'GET',
         signal: controller.signal,
         headers: { 'Cache-Control': 'no-cache' }
       }).catch(async () => {
-        // Fallback to edge /index.html check to verify network reachability if Render is cold-starting
-        return await fetch('/index.html', { method: 'HEAD', signal: controller.signal }).catch(() => null);
+        // Fallback probe to companion backend /health endpoint
+        return await fetchWithFallback('/health', {
+          method: 'GET',
+          signal: controller.signal,
+          headers: { 'Cache-Control': 'no-cache' }
+        }).catch(() => null);
       });
 
       clearTimeout(timeout);
 
-      const isOnline = Boolean(res && (res.ok || res.status < 500)) || (typeof navigator !== 'undefined' && navigator.onLine);
-      this.state.wifiStatus = isOnline ? 'VERIFIED' : 'FAILED';
+      // Section C: Strictly verify connection from companion backend (Never show fake green via navigator.onLine)
+      const isVerified = Boolean(res && res.ok);
+      this.state.wifiStatus = isVerified ? 'VERIFIED' : 'FAILED';
       this.notify();
       this.isCheckingNetwork = false;
-      return isOnline;
+      return isVerified;
     } catch {
-      const fallback = typeof navigator !== 'undefined' && navigator.onLine;
-      this.state.wifiStatus = fallback ? 'VERIFIED' : 'FAILED';
+      this.state.wifiStatus = 'FAILED';
       this.isCheckingNetwork = false;
       this.notify();
-      return fallback;
+      return false;
     }
   }
 

@@ -37,10 +37,10 @@ class Settings:
     ALLOW_PHYSICAL_ARMING: bool = os.environ.get("SKYCON_ALLOW_ARMING", "False").lower() in ("true", "1")
     REQUIRE_AUTH: bool = os.environ.get("SKYCON_REQUIRE_AUTH", "False").lower() in ("true", "1")
 
-    # MAVLink Serial Port & Baud
-    MAVLINK_PORT: Optional[str] = os.environ.get("MAVLINK_PORT", None)
-    MAVLINK_BAUD: int = int(os.environ.get("MAVLINK_BAUD", 921600))  # TELEM1 default high-speed
-    FALLBACK_BAUD: int = 57600  # Standard bench baud
+    # MAVLink Serial Port & Baud (Pixhawk 2.4.8 on RPi 4 UART /dev/serial0 @ 115200 baud)
+    MAVLINK_PORT: Optional[str] = os.environ.get("MAVLINK_PORT", "/dev/serial0" if os.path.exists("/dev/serial0") else None)
+    MAVLINK_BAUD: int = int(os.environ.get("MAVLINK_BAUD", 115200))  # Raspberry Pi UART default 115200
+    FALLBACK_BAUD: int = 57600  # Standard bench fallback baud
 
     # Camera & Video Ingestion
     CAMERA_SOURCE: str = os.environ.get("CAMERA_SOURCE", "synthetic")  # "synthetic", "/dev/video0", or "push"

@@ -6,16 +6,17 @@ import {
   ArrowUp, 
   ArrowDown, 
   Gauge, 
-  AlertTriangle,
-  Radio,
   Activity,
-  Shield,
-  ShieldCheck,
-  ShieldAlert,
-  Power,
   Play,
+  Power,
   Loader2,
-  CheckCircle2
+  ShieldAlert,
+  ShieldCheck,
+  Mountain,
+  Satellite,
+  Battery,
+  Clock,
+  Radio
 } from 'lucide-react';
 import { mavlinkService } from '../../services/mavlinkService';
 import { audioService } from '../../services/audioService';
@@ -56,14 +57,14 @@ export const TelemetryPanel: React.FC<TelemetryPanelProps> = ({
 
   const isBusy = isArming || isDisarming;
 
-  const handleArm = async () => {
+  const handleArmClick = async () => {
     if (telemetry.isArmed || isBusy) return;
 
-    // Enforce Geofence Safety: Prevent arming if drone is outside configured geofence
+    // Preserve all ArduPilot pre-arm safety checks & geofence validation
     const geofenceCheck = geofenceService.canArmVehicle(telemetry.latitude, telemetry.longitude);
     if (!geofenceCheck.canArm && !forceArm) {
       audioService.playBeep(350, 200);
-      setArmFeedback('ARM BLOCKED: Drone is outside Geofence!');
+      setArmFeedback('ARM REJECTED: Outside geofence boundary');
       onNotification?.(`❌ ${geofenceCheck.reason}`);
       return;
     }
@@ -83,15 +84,15 @@ export const TelemetryPanel: React.FC<TelemetryPanelProps> = ({
 
       if (success) {
         audioService.playBeep(1100, 150);
-        setArmFeedback('Arm command sent to Pixhawk... (Awaiting physical motor spin)');
-        onNotification?.('Arm command sent to Pixhawk... (Awaiting physical motor spin)');
+        setArmFeedback('Arm command dispatched — Awaiting Pixhawk confirmation...');
+        onNotification?.('Arm command dispatched — Awaiting Pixhawk motor spin ✓');
       } else {
         const failReason = mavlinkService.getConnectionState().preArmFailReason;
         const msg = failReason
           ? `Arm rejected: ${failReason}`
-          : 'Arm rejected by Pixhawk. Check safety switch or use Force Arm.';
+          : 'Arm rejected by Pixhawk. Check safety switch, GPS 3D fix, or use Force Arm.';
         setArmFeedback(msg);
-        onNotification?.(msg);
+        onNotification?.(`❌ ${msg}`);
       }
     } catch (err: any) {
       setArmFeedback(`Arm failed: ${err?.message || 'Check pre-arm conditions'}`);
@@ -101,7 +102,7 @@ export const TelemetryPanel: React.FC<TelemetryPanelProps> = ({
     }
   };
 
-  const handleDisarm = async (force: boolean = forceArm) => {
+  const handleDisarmClick = async () => {
     if (isBusy) return;
     setIsDisarming(true);
     setArmFeedback(null);
@@ -110,16 +111,16 @@ export const TelemetryPanel: React.FC<TelemetryPanelProps> = ({
     try {
       let success = false;
       if (onDisarm) {
-        const res = await onDisarm(force);
+        const res = await onDisarm(forceArm);
         success = res !== false;
       } else {
-        success = await mavlinkService.sendDisarmCommand(force);
+        success = await mavlinkService.sendDisarmCommand(forceArm);
       }
 
       if (success) {
         audioService.playBeep(350, 150);
         setArmFeedback('Vehicle Disarmed ✓');
-        onNotification?.('Vehicle Disarmed ✓');
+        onNotification?.('Vehicle Disarmed ✓ (Motors Safe)');
       } else {
         setArmFeedback('Disarm rejected by Pixhawk (Use Force Disarm if landed)');
         onNotification?.('Disarm rejected by Pixhawk (Confirm vehicle is landed or use Force Disarm)');
@@ -154,25 +155,25 @@ export const TelemetryPanel: React.FC<TelemetryPanelProps> = ({
     <div className={`flex flex-col gap-3 w-full select-none ${className}`}>
       
       {/* ------------------------------------------------------------- */}
-      {/* A. MOTOR ARM / DISARM CONTROL CARD (Upper Dashboard Flight Control) */}
+      {/* 1. MOTOR ARM / DISARM CONTROLS (Requirement 1: Left Control Panel) */}
       {/* ------------------------------------------------------------- */}
       <Card
-        title="MOTOR ARM / DISARM"
+        title="MOTOR CONTROLS"
         action={
           <span
-            className={`text-[9.5px] font-mono font-bold px-1.5 py-0.5 rounded tracking-wider ${
+            className={`text-[9.5px] font-mono font-bold px-2 py-0.5 rounded tracking-wider border ${
               telemetry.isArmed
-                ? 'bg-rose-950/80 text-rose-300 border border-rose-500 animate-pulse'
-                : 'bg-emerald-950/60 text-emerald-300 border border-emerald-500/40'
+                ? 'bg-rose-950/90 text-rose-300 border-rose-500 animate-pulse'
+                : 'bg-emerald-950/70 text-emerald-300 border-emerald-500/40'
             }`}
           >
-            {telemetry.isArmed ? '● ARMED (ACTIVE)' : '○ DISARMED (SAFE)'}
+            {telemetry.isArmed ? '● ARMED (MOTORS ACTIVE)' : '○ DISARMED (SAFE)'}
           </span>
         }
         className="shrink-0 bg-[#0E131A] border-[var(--uav-card-border)] shadow-md"
         contentClassName="p-3 flex flex-col gap-2.5"
       >
-        {/* Dynamic Status Banner */}
+        {/* Dynamic Live Status Banner Driven by Actual Hardware Confirmation */}
         <div
           className={`p-2 rounded-lg border text-[11px] font-mono flex items-center justify-between gap-2 ${
             telemetry.isArmed
@@ -190,22 +191,22 @@ export const TelemetryPanel: React.FC<TelemetryPanelProps> = ({
               {telemetry.isArmed ? 'MOTORS ARMED' : 'MOTORS DISARMED'}
             </span>
           </div>
-          <span className="text-[10px] text-slate-400">
-            {isTelemActive ? (telemetry.flightMode || 'DISARMED') : 'WAITING FOR TELEMETRY'}
+          <span className="text-[10px] text-slate-400 font-bold">
+            {isTelemActive ? (telemetry.flightMode || 'DISARMED') : 'WAITING TELEMETRY'}
           </span>
         </div>
 
-        {/* Arm / Disarm Action Buttons */}
+        {/* Both ARM and DISARM Buttons Always Accessible */}
         <div className="grid grid-cols-2 gap-2">
-          {/* ARM BUTTON */}
+          {/* MOTOR ARM BUTTON */}
           <button
             type="button"
-            onClick={handleArm}
+            onClick={handleArmClick}
             disabled={telemetry.isArmed || isBusy}
             title={
               telemetry.isArmed
-                ? 'Flight controller already armed'
-                : 'Send MAVLink ARM command (MAV_CMD_COMPONENT_ARM_DISARM param1=1)'
+                ? 'Autopilot already armed'
+                : 'Send MAVLink ARM command to Pixhawk (MAV_CMD_COMPONENT_ARM_DISARM param1=1)'
             }
             className={`flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg font-bold text-[11px] font-sans tracking-wide uppercase transition shadow-md cursor-pointer ${
               telemetry.isArmed
@@ -223,15 +224,15 @@ export const TelemetryPanel: React.FC<TelemetryPanelProps> = ({
             ) : (
               <>
                 <Play className="w-3.5 h-3.5 fill-current" />
-                <span>ARM MOTORS</span>
+                <span>MOTOR ARM</span>
               </>
             )}
           </button>
 
-          {/* DISARM BUTTON */}
+          {/* MOTOR DISARM BUTTON */}
           <button
             type="button"
-            onClick={() => handleDisarm(forceArm)}
+            onClick={handleDisarmClick}
             disabled={isBusy}
             title={
               isDisarming
@@ -247,7 +248,7 @@ export const TelemetryPanel: React.FC<TelemetryPanelProps> = ({
                 ? 'bg-rose-700 hover:bg-rose-600 active:bg-rose-800 text-white shadow-rose-950/60 border border-rose-400 ring-1 ring-rose-400'
                 : telemetry.isArmed
                 ? 'bg-rose-600 hover:bg-rose-500 active:bg-rose-700 text-white shadow-rose-950/50 border border-rose-400/50'
-                : 'bg-rose-950/40 hover:bg-rose-900/60 active:bg-rose-800/80 text-rose-300 border border-rose-800/60'
+                : 'bg-rose-950/50 hover:bg-rose-900/60 text-rose-300 border border-rose-800/60'
             }`}
           >
             {isDisarming ? (
@@ -258,13 +259,13 @@ export const TelemetryPanel: React.FC<TelemetryPanelProps> = ({
             ) : (
               <>
                 <Power className="w-3.5 h-3.5" />
-                <span>{forceArm ? 'FORCE DISARM' : 'DISARM'}</span>
+                <span>{forceArm ? 'FORCE DISARM' : 'MOTOR DISARM'}</span>
               </>
             )}
           </button>
         </div>
 
-        {/* Bench / Field Force Arm/Disarm Bypass Option */}
+        {/* Bench Force Bypass & Feedback */}
         <div className="flex items-center justify-between pt-1 border-t border-slate-800/80">
           <label className="flex items-center gap-1.5 text-[10px] font-mono text-slate-400 cursor-pointer select-none">
             <input
@@ -275,16 +276,14 @@ export const TelemetryPanel: React.FC<TelemetryPanelProps> = ({
               className="w-3 h-3 rounded bg-slate-900 border-slate-700 text-amber-500 focus:ring-0 cursor-pointer"
             />
             <span className={forceArm ? 'text-amber-300 font-bold' : ''}>
-              Force Bypass (Arm / Disarm)
+              Force Bypass (Bench/Emergency)
             </span>
           </label>
-
           <span className="text-[9px] font-mono text-slate-500">
-            {telemetry.isArmed ? 'PROPELLERS ACTIVE' : 'SAFE STANDBY'}
+            {telemetry.isArmed ? 'PROPELLERS SPINNING' : 'SAFE ON GROUND'}
           </span>
         </div>
 
-        {/* Feedback / Alert Notice */}
         {armFeedback && (
           <div className="p-1.5 rounded bg-slate-900/90 border border-slate-700 text-[10px] font-mono text-slate-300 flex items-center gap-1.5">
             <Activity className="w-3 h-3 text-amber-400 shrink-0" />
@@ -292,12 +291,76 @@ export const TelemetryPanel: React.FC<TelemetryPanelProps> = ({
           </div>
         )}
       </Card>
-      
+
       {/* ------------------------------------------------------------- */}
-      {/* A. ALTITUDE TELEMETRY CARD (Strictly Altitude, Not Attitude)   */}
+      {/* 2. FLIGHT PARAMETERS (Requirement 2: Compass -> Altitude -> Speed) */}
       {/* ------------------------------------------------------------- */}
+
+      {/* 2.1 COMPASS / HEADING (Strictly 1st in Order) */}
       <Card
-        title="ALTITUDE"
+        title="1. COMPASS / HEADING"
+        action={
+          <span className="text-[10px] font-mono font-bold text-sky-400 bg-sky-950/40 border border-sky-500/30 px-1.5 py-0.5 rounded">
+            MAG HEADING
+          </span>
+        }
+        className="shrink-0 bg-[#0E131A] border-[var(--uav-card-border)] shadow-md"
+        contentClassName="p-3 flex items-center justify-between gap-2"
+      >
+        {/* Real-Time Compass Rose with Rotating Needle */}
+        <div className="w-20 h-20 rounded-full border-2 border-slate-800 bg-[#090D13] relative flex items-center justify-center shrink-0 shadow-[inset_0_0_12px_rgba(0,0,0,0.9)]">
+          <span className="absolute top-1 text-[9px] font-black text-rose-500 font-mono">N</span>
+          <span className="absolute right-1 text-[9px] font-bold text-slate-400 font-mono">E</span>
+          <span className="absolute bottom-1 text-[9px] font-bold text-slate-400 font-mono">S</span>
+          <span className="absolute left-1 text-[9px] font-bold text-slate-400 font-mono">W</span>
+
+          <div
+            className="w-2 h-14 relative flex flex-col items-center justify-between transition-transform duration-150 ease-out"
+            style={{ transform: `rotate(${heading}deg)` }}
+          >
+            <div className="w-0 h-0 border-l-[4px] border-l-transparent border-r-[4px] border-r-transparent border-b-[20px] border-b-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.7)]" />
+            <div className="w-2.5 h-2.5 rounded-full bg-white z-10 border border-slate-900" />
+            <div className="w-0 h-0 border-l-[4px] border-l-transparent border-r-[4px] border-r-transparent border-t-[20px] border-t-slate-400" />
+          </div>
+        </div>
+
+        {/* Heading Value & Orientation */}
+        <div className="flex flex-col items-start justify-center flex-1 min-w-0 pl-2">
+          <span className="text-[10px] text-slate-400 font-mono block truncate">DRONE HEADING</span>
+          <div className="flex items-baseline gap-1">
+            <span className="text-2xl sm:text-3xl font-black font-orbitron text-transparent bg-clip-text bg-gradient-to-r from-sky-400 via-teal-200 to-amber-300 leading-none">
+              {isTelemActive ? `${heading}°` : '--°'}
+            </span>
+          </div>
+          <span className="text-[11px] font-bold text-amber-300 font-mono uppercase mt-1 truncate">
+            {isTelemActive ? getHeadingCardinal(heading) : 'WAITING TELEMETRY'}
+          </span>
+
+          <div className="flex items-center gap-1.5 mt-2 text-[9.5px] font-mono text-slate-400">
+            <span
+              className={`w-1.5 h-1.5 rounded-full ${
+                !isTelemActive
+                  ? 'bg-slate-500'
+                  : telemetry.isCompassHealthy
+                  ? 'bg-emerald-400 shadow-[0_0_4px_#34d399]'
+                  : 'bg-amber-400 animate-pulse'
+              }`}
+            />
+            <span>
+              {!isTelemActive
+                ? 'UNAVAILABLE'
+                : telemetry.isCompassHealthy
+                ? 'CALIBRATED'
+                : 'UNCALIBRATED'}
+            </span>
+            {isTelemActive && <span className="text-slate-500">({telemetry.magFieldStrength || 480}mG)</span>}
+          </div>
+        </div>
+      </Card>
+
+      {/* 2.2 ALTITUDE (Strictly 2nd in Order) */}
+      <Card
+        title="2. ALTITUDE"
         action={
           <div className="flex items-center gap-1.5">
             <button
@@ -308,7 +371,7 @@ export const TelemetryPanel: React.FC<TelemetryPanelProps> = ({
                   ? 'text-amber-400 bg-amber-950/60 border-amber-500/50 hover:bg-amber-900/60'
                   : 'text-cyan-400 bg-cyan-950/60 border-cyan-500/50 hover:bg-cyan-900/60'
               }`}
-              title="Click to toggle between AGL (Above Ground Level) and MSL (Mean Sea Level) altitude"
+              title="Click to toggle between AGL (Above Ground Level) and MSL (Mean Sea Level)"
             >
               {altDisplayMode === 'AGL' ? 'AGL (0-25m)' : 'MSL (Sea Level)'}
             </button>
@@ -329,7 +392,6 @@ export const TelemetryPanel: React.FC<TelemetryPanelProps> = ({
         contentClassName="p-3 flex flex-col gap-2.5"
       >
         <div className="flex items-center justify-between">
-          {/* Radial Altitude Dial */}
           <div className="w-20 h-20 relative flex items-center justify-center shrink-0">
             <svg className="w-full h-full -rotate-90" viewBox="0 0 76 76">
               <circle
@@ -363,7 +425,6 @@ export const TelemetryPanel: React.FC<TelemetryPanelProps> = ({
             </div>
           </div>
 
-          {/* Metric Details */}
           <div className="flex flex-col justify-center gap-1.5 flex-1 pl-3">
             <div>
               <div className="flex items-center justify-between">
@@ -389,13 +450,12 @@ export const TelemetryPanel: React.FC<TelemetryPanelProps> = ({
                   </>
                 ) : (
                   <span className="text-sm font-bold font-mono text-amber-400">
-                    WAITING FOR TELEMETRY
+                    WAITING TELEMETRY
                   </span>
                 )}
               </div>
             </div>
 
-            {/* Vertical Climb / Descent Rate */}
             <div className="flex items-center gap-1.5 text-[11px] font-mono">
               <span className="text-slate-400 text-[10px]">V-SPEED:</span>
               <span
@@ -426,7 +486,6 @@ export const TelemetryPanel: React.FC<TelemetryPanelProps> = ({
           </div>
         </div>
 
-        {/* Altitude Visual Range Bar */}
         <div className="space-y-1 pt-1 border-t border-slate-800/80">
           <div className="flex justify-between text-[9px] font-mono text-slate-400">
             <span>GROUND 0m</span>
@@ -441,80 +500,9 @@ export const TelemetryPanel: React.FC<TelemetryPanelProps> = ({
         </div>
       </Card>
 
-      {/* ------------------------------------------------------------- */}
-      {/* B. COMPASS TELEMETRY CARD (Real-Time Heading Dial)             */}
-      {/* ------------------------------------------------------------- */}
+      {/* 2.3 SPEED (Strictly 3rd in Order) */}
       <Card
-        title="COMPASS"
-        action={
-          <span className="text-[10px] font-mono font-bold text-sky-400 bg-sky-950/40 border border-sky-500/30 px-1.5 py-0.5 rounded">
-            MAG HEADING
-          </span>
-        }
-        className="shrink-0 bg-[#0E131A] border-[var(--uav-card-border)] shadow-md"
-        contentClassName="p-3 flex items-center justify-between gap-2"
-      >
-        {/* Real-Time Compass Rose with Rotating Needle */}
-        <div className="w-22 h-22 rounded-full border-2 border-slate-800 bg-[#090D13] relative flex items-center justify-center shrink-0 shadow-[inset_0_0_12px_rgba(0,0,0,0.9)]">
-          {/* Static Cardinal Lettering */}
-          <span className="absolute top-1 text-[9px] font-black text-rose-500 font-mono">N</span>
-          <span className="absolute right-1 text-[9px] font-bold text-slate-400 font-mono">E</span>
-          <span className="absolute bottom-1 text-[9px] font-bold text-slate-400 font-mono">S</span>
-          <span className="absolute left-1 text-[9px] font-bold text-slate-400 font-mono">W</span>
-
-          {/* Compass Dial Needle that tracks headingDeg */}
-          <div
-            className="w-2 h-16 relative flex flex-col items-center justify-between transition-transform duration-150 ease-out"
-            style={{ transform: `rotate(${heading}deg)` }}
-          >
-            {/* North Point (Red arrow with glow) */}
-            <div className="w-0 h-0 border-l-[4px] border-l-transparent border-r-[4px] border-r-transparent border-b-[22px] border-b-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.7)]" />
-            <div className="w-2.5 h-2.5 rounded-full bg-white z-10 border border-slate-900" />
-            {/* South Point (White/slate) */}
-            <div className="w-0 h-0 border-l-[4px] border-l-transparent border-r-[4px] border-r-transparent border-t-[22px] border-t-slate-400" />
-          </div>
-        </div>
-
-        {/* Heading Value & Orientation */}
-        <div className="flex flex-col items-start justify-center flex-1 pl-2">
-          <span className="text-[10px] text-slate-400 font-mono block">DRONE HEADING</span>
-          <div className="flex items-baseline gap-1">
-            <span className="text-3xl font-black font-orbitron text-transparent bg-clip-text bg-gradient-to-r from-sky-400 via-teal-200 to-amber-300 leading-none">
-              {isTelemActive ? `${heading}°` : '--°'}
-            </span>
-          </div>
-          <span className="text-[11px] font-bold text-amber-300 font-mono uppercase mt-1">
-            {isTelemActive ? getHeadingCardinal(heading) : 'WAITING FOR TELEMETRY'}
-          </span>
-
-          {/* Magnetometer status */}
-          <div className="flex items-center gap-1.5 mt-2 text-[9.5px] font-mono text-slate-400">
-            <span
-              className={`w-1.5 h-1.5 rounded-full ${
-                !isTelemActive
-                  ? 'bg-slate-500'
-                  : telemetry.isCompassHealthy
-                  ? 'bg-emerald-400 shadow-[0_0_4px_#34d399]'
-                  : 'bg-amber-400 animate-pulse'
-              }`}
-            />
-            <span>
-              {!isTelemActive
-                ? 'UNAVAILABLE'
-                : telemetry.isCompassHealthy
-                ? 'CALIBRATED'
-                : 'UNCALIBRATED'}
-            </span>
-            {isTelemActive && <span className="text-slate-500">({telemetry.magFieldStrength || 480}mG)</span>}
-          </div>
-        </div>
-      </Card>
-
-      {/* ------------------------------------------------------------- */}
-      {/* C. SPEED TELEMETRY CARD (Ground & Air Speed)                   */}
-      {/* ------------------------------------------------------------- */}
-      <Card
-        title="SPEED"
+        title="3. SPEED"
         action={
           <span className="text-[10px] font-mono font-bold text-emerald-400 bg-emerald-950/40 border border-emerald-500/30 px-1.5 py-0.5 rounded">
             GROUND SPEED
@@ -524,7 +512,6 @@ export const TelemetryPanel: React.FC<TelemetryPanelProps> = ({
         contentClassName="p-3 flex flex-col gap-2.5"
       >
         <div className="flex items-center justify-between">
-          {/* Radial Speed Dial */}
           <div className="w-20 h-20 relative flex items-center justify-center shrink-0">
             <svg className="w-full h-full -rotate-90" viewBox="0 0 76 76">
               <circle
@@ -556,7 +543,6 @@ export const TelemetryPanel: React.FC<TelemetryPanelProps> = ({
             </div>
           </div>
 
-          {/* Metric Details */}
           <div className="flex flex-col justify-center gap-1.5 flex-1 pl-3">
             <div>
               <span className="text-[10px] text-slate-400 font-mono block">VELOCITY</span>
@@ -573,7 +559,7 @@ export const TelemetryPanel: React.FC<TelemetryPanelProps> = ({
                   </>
                 ) : (
                   <span className="text-sm font-bold font-mono text-amber-400">
-                    WAITING FOR TELEMETRY
+                    WAITING TELEMETRY
                   </span>
                 )}
               </div>
@@ -588,7 +574,6 @@ export const TelemetryPanel: React.FC<TelemetryPanelProps> = ({
           </div>
         </div>
 
-        {/* Speed Visual Range Bar */}
         <div className="space-y-1 pt-1 border-t border-slate-800/80">
           <div className="flex justify-between text-[9px] font-mono text-slate-400">
             <span>0 m/s</span>
@@ -603,6 +588,76 @@ export const TelemetryPanel: React.FC<TelemetryPanelProps> = ({
         </div>
       </Card>
 
+      {/* ------------------------------------------------------------- */}
+      {/* 2.4 FLIGHT PARAMETERS STATUS (Requirement 1 & 2: Full State)   */}
+      {/* ------------------------------------------------------------- */}
+      <Card
+        title="FLIGHT PARAMETERS"
+        action={
+          <span className="text-[10px] font-mono font-bold text-slate-400 bg-slate-900 border border-slate-700 px-1.5 py-0.5 rounded">
+            VEHICLE STATUS
+          </span>
+        }
+        className="shrink-0 bg-[#0E131A] border-[var(--uav-card-border)] shadow-md"
+        contentClassName="p-3 flex flex-col gap-2 font-mono text-[11px]"
+      >
+        <div className="grid grid-cols-2 gap-2">
+          {/* Flight Mode */}
+          <div className="p-2 rounded bg-[#121820] border border-slate-800">
+            <span className="text-[9px] text-slate-400 uppercase block font-bold">FLIGHT MODE</span>
+            <span className="text-xs font-black text-emerald-400">
+              {isTelemActive ? (telemetry.flightMode || 'STABILIZE') : 'WAITING TELEMETRY'}
+            </span>
+          </div>
+
+          {/* GPS Fix */}
+          <div className="p-2 rounded bg-[#121820] border border-slate-800">
+            <span className="text-[9px] text-slate-400 uppercase block font-bold">GPS SATELLITES</span>
+            <span className={`text-xs font-black ${telemetry.isGpsValid ? 'text-sky-300' : 'text-rose-400'}`}>
+              {isTelemActive ? (
+                telemetry.isGpsValid ? `${telemetry.satellites} Sats (${telemetry.gpsFixType.replace('_', ' ')})` : 'NO FIX'
+              ) : (
+                'UNAVAILABLE'
+              )}
+            </span>
+          </div>
+
+          {/* Flight Time */}
+          <div className="p-2 rounded bg-[#121820] border border-slate-800">
+            <span className="text-[9px] text-slate-400 uppercase block font-bold">FLIGHT TIME</span>
+            <span className="text-xs font-black text-white">
+              {isTelemActive ? (telemetry.flightTimeStr || '00:00') : '--:--'}
+            </span>
+          </div>
+
+          {/* Battery Status */}
+          <div className="p-2 rounded bg-[#121820] border border-slate-800">
+            <span className="text-[9px] text-slate-400 uppercase block font-bold">BATTERY LEVEL</span>
+            <span className="text-xs font-black text-amber-300">
+              {isTelemActive && telemetry.batteryVoltage > 0 ? (
+                `${telemetry.batteryPercent}% (${telemetry.batteryVoltage.toFixed(1)}V)`
+              ) : (
+                'UNAVAILABLE'
+              )}
+            </span>
+          </div>
+        </div>
+
+        {/* Attitude Pitch & Roll */}
+        <div className="p-2 rounded bg-[#121820] border border-slate-800 flex items-center justify-between text-[10px]">
+          <span className="text-slate-400 uppercase font-bold">ATTITUDE (P / R / Y):</span>
+          <span className="text-slate-200 font-bold">
+            {isTelemActive ? (
+              `${(telemetry.pitchDeg || 0).toFixed(1)}° / ${(telemetry.rollDeg || 0).toFixed(1)}° / ${heading}°`
+            ) : (
+              '--.-° / --.-° / --°'
+            )}
+          </span>
+        </div>
+      </Card>
+
     </div>
   );
 };
+
+export default TelemetryPanel;

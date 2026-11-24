@@ -156,7 +156,21 @@ export const QrAlertHUD: React.FC = () => {
       }
     };
 
+    const handleMissionReset = () => {
+      setUavDigits('');
+      setRunnerDigits('');
+      setPrepSeconds(120);
+      setIsPrepRunning(false);
+      setMissionSeconds(300);
+      setIsMissionRunning(false);
+      try {
+        localStorage.removeItem('drone_last_two_digit_code');
+        localStorage.removeItem('runner_last_checkpoint_code');
+      } catch {}
+    };
+
     window.addEventListener('sae:qr_alert', handleQrEvent);
+    window.addEventListener('sae:mission_reset', handleMissionReset);
 
     // Subscribe to runner state for operative digits
     const unsubRunner = runnerCommService.subscribeState((runnerState) => {
@@ -184,6 +198,7 @@ export const QrAlertHUD: React.FC = () => {
 
     return () => {
       window.removeEventListener('sae:qr_alert', handleQrEvent);
+      window.removeEventListener('sae:mission_reset', handleMissionReset);
       unsubRunner();
     };
   }, [uavDigits]);

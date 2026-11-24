@@ -32,6 +32,8 @@ export interface DashboardTelemetryData {
   flightTimeStr: string;
   rcSignalDetected: boolean;
   rcOverrideEnabled: boolean;
+  rcRssi: number;
+  rcStatus: 'RC CONNECTED / ON' | 'RC DISCONNECTED / OFF' | 'RC SIGNAL LOST' | 'RC STATUS UNKNOWN';
   magFieldStrength: number;
   isCompassHealthy: boolean;
   isCompassCalibrated: boolean;
@@ -160,6 +162,8 @@ export const useDashboardTelemetry = (): DashboardTelemetryData => {
       flightTimeStr: '00:00',
       rcSignalDetected: false,
       rcOverrideEnabled: true,
+      rcRssi: 0,
+      rcStatus: 'RC DISCONNECTED / OFF',
       magFieldStrength: 480,
       isCompassHealthy: true,
       isCompassCalibrated: true,
@@ -230,6 +234,27 @@ export const useDashboardTelemetry = (): DashboardTelemetryData => {
 
   const isTelemetryAvailable = Boolean(isConnected && (connState.isReceivingTelemetry || connState.bytesReceived > 0));
 
+  // RC Receiver Status Evaluation based on actual Pixhawk MAVLink telemetry (Requirement 3)
+  let rcStatus: 'RC CONNECTED / ON' | 'RC DISCONNECTED / OFF' | 'RC SIGNAL LOST' | 'RC STATUS UNKNOWN' = 'RC STATUS UNKNOWN';
+  if (!isConnected) {
+    rcStatus = 'RC STATUS UNKNOWN';
+  } else {
+    const raw = telemetry;
+    const isFailsafe = Boolean(
+      raw.rcFailsafe ||
+      (connState.statusHistory && connState.statusHistory.some((s) => s.text.toLowerCase().includes('radio failsafe') || s.text.toLowerCase().includes('rc failsafe')))
+    );
+    const isDetected = Boolean(raw.rcConnected || raw.rcSignalDetected || (raw.rcRssi !== undefined && raw.rcRssi > 0));
+
+    if (isFailsafe) {
+      rcStatus = 'RC SIGNAL LOST';
+    } else if (isDetected) {
+      rcStatus = 'RC CONNECTED / ON';
+    } else {
+      rcStatus = 'RC DISCONNECTED / OFF';
+    }
+  }
+
   return {
     isFixture: false,
     isConnected,
@@ -262,6 +287,8 @@ export const useDashboardTelemetry = (): DashboardTelemetryData => {
     flightTimeStr: formatFlightTime(elapsedSeconds),
     rcSignalDetected: Boolean(telemetry.rcSignalDetected),
     rcOverrideEnabled: Boolean(connState.rcOverrideEnabled ?? telemetry.rcOverrideEnabled ?? true),
+    rcRssi: telemetry.rcRssi ?? 0,
+    rcStatus,
     magFieldStrength: telemetry.magFieldStrength ?? 480,
     isCompassHealthy: telemetry.isCompassHealthy ?? true,
     isCompassCalibrated: telemetry.isCompassCalibrated ?? true,

@@ -16,7 +16,8 @@ import {
   Menu,
   X,
   RotateCcw,
-  Power
+  Power,
+  Clock
 } from 'lucide-react';
 import { DashboardTelemetryData } from '../../hooks/useDashboardTelemetry';
 import { AppRole } from '../../types/mission';
@@ -42,6 +43,9 @@ interface HeaderProps {
   currentRole?: AppRole;
   onOpenPhoneMission?: () => void;
   onOpenDiagnostics?: () => void;
+  missionWindowSeconds?: number;
+  isMissionWindowExpired?: boolean;
+  isMissionWindowActive?: boolean;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -60,6 +64,9 @@ export const Header: React.FC<HeaderProps> = ({
   currentRole = 'GROUND_STATION',
   onOpenPhoneMission,
   onOpenDiagnostics,
+  missionWindowSeconds = 300,
+  isMissionWindowExpired = false,
+  isMissionWindowActive = false,
 }) => {
   const isArmed = telemetry.isArmed;
   const [connState, setConnState] = useState<GCSConnectionState>(() => gcsConnectionService.getState());
@@ -84,9 +91,8 @@ export const Header: React.FC<HeaderProps> = ({
     await gcsConnectionService.start();
   };
 
-  // 1. Wi-Fi Connection Indicator (Green: Connected, Red: Disconnected, Yellow: Connecting, Grey: Unavailable)
+  // 1. Wi-Fi Connection Indicator (Accurate states: CONNECTED, CONNECTING, DISCONNECTED, UNKNOWN)
   const getWifiBadgeConfig = () => {
-    const isOnline = typeof navigator !== 'undefined' ? navigator.onLine : false;
     if (connState.wifiStatus === 'CONNECTING') {
       return {
         bg: 'bg-[#2d2208] border-[#785412] text-amber-300',
@@ -95,7 +101,8 @@ export const Header: React.FC<HeaderProps> = ({
         pulse: true
       };
     }
-    if ((connState.isStarted && connState.wifiStatus === 'VERIFIED') || isOnline) {
+    // Only show green when connection is actually verified (not fake navigator.onLine)
+    if (connState.wifiStatus === 'VERIFIED') {
       return {
         bg: 'bg-[#0f291e] border-[#1b4d36] text-[#22C55E]',
         dot: 'bg-[#22C55E]',
@@ -103,7 +110,7 @@ export const Header: React.FC<HeaderProps> = ({
         pulse: false
       };
     }
-    if (connState.wifiStatus === 'FAILED' || !isOnline) {
+    if (connState.wifiStatus === 'FAILED') {
       return {
         bg: 'bg-[#3b1212] border-[#7f1d1d] text-rose-300',
         dot: 'bg-rose-500',
@@ -114,7 +121,7 @@ export const Header: React.FC<HeaderProps> = ({
     return {
       bg: 'bg-[#161B22] border-[var(--uav-card-border)] text-slate-400',
       dot: 'bg-slate-500',
-      label: 'WI-FI: STATUS UNAVAILABLE',
+      label: 'WI-FI: UNKNOWN',
       pulse: false
     };
   };
@@ -235,7 +242,7 @@ export const Header: React.FC<HeaderProps> = ({
     return {
       bg: 'bg-[#161B22] border-[var(--uav-card-border)] text-slate-400',
       dot: 'bg-slate-500',
-      label: 'GPS: STATUS UNAVAILABLE',
+      label: '',
       pulse: false
     };
   };
@@ -335,8 +342,9 @@ export const Header: React.FC<HeaderProps> = ({
           </span>
         </div>
 
-        {/* Section 3: TWO PRIMARY MISSION MODES (MANUAL vs AUTONOMOUS) + RESET ALL */}
+        {/* Section 3: TWO PRIMARY MISSION MODES (MANUAL vs AUTONOMOUS) + MISSION WINDOW COUNTDOWN + RESET ALL */}
         <div className="hidden lg:flex items-center gap-1.5 ml-1 sm:ml-2">
+          {/* Mission Mode Switcher */}
           <div className="flex items-center bg-[#11161F] p-0.5 rounded-lg border border-[var(--uav-card-border)]">
             <button
               type="button"
@@ -366,12 +374,31 @@ export const Header: React.FC<HeaderProps> = ({
             </button>
           </div>
 
-          {/* CLEARLY VISIBLE RESET ALL BUTTON (Requirement 3 & 4) */}
+          {/* Mission Window 5-Minute Countdown Badge (Requirement 3: In top header) */}
+          <div
+            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-[8px] font-mono text-[11px] font-bold border transition ${
+              isMissionWindowExpired
+                ? 'bg-rose-950/80 border-rose-500 text-rose-300 animate-pulse'
+                : isMissionWindowActive
+                ? 'bg-sky-950/80 border-sky-500/60 text-sky-300'
+                : 'bg-[#11161F] border-slate-800 text-slate-400'
+            }`}
+            title="5-Minute Mission Window Timer"
+          >
+            <Clock className={`w-3.5 h-3.5 ${isMissionWindowActive ? 'animate-spin text-sky-400' : 'text-slate-500'}`} />
+            <span>
+              {isMissionWindowExpired
+                ? 'MISSION WINDOW EXPIRED'
+                : `${Math.floor(missionWindowSeconds / 60).toString().padStart(2, '0')}:${(missionWindowSeconds % 60).toString().padStart(2, '0')} / 05:00`}
+            </span>
+          </div>
+
+          {/* CLEARLY VISIBLE RESET ALL BUTTON IMMEDIATELY AFTER MISSION WINDOW TIMER (Requirement 3 & 4) */}
           <button
             type="button"
             onClick={() => setShowResetConfirm(true)}
             className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-[8px] border border-amber-500/60 bg-amber-950/40 hover:bg-amber-900/60 text-amber-300 text-[11px] font-mono font-bold transition shadow-sm cursor-pointer active:scale-95"
-            title="RESET ALL: Clear mission UI, geofence drawings, waypoints, search results, and start fresh"
+            title="RESET ALL: Clear complete mission session, codes, configuration, waypoints, and start fresh"
           >
             <RotateCcw className="w-3.5 h-3.5 text-amber-400" />
             <span>RESET ALL</span>
@@ -412,10 +439,10 @@ export const Header: React.FC<HeaderProps> = ({
           )}
         </button>
 
-        {/* SITL Bench Simulator Toggle Button */}
+        {/* SITL Bench Simulator Toggle Button (Requirement 5: Diagnostics in top header) */}
         {telemetry.rawConnectionState.connectionType === 'SIMULATED' ? (
           <div
-            className="hidden lg:flex items-center gap-1.5 px-2.5 py-1.5 rounded-[8px] border border-cyan-500/50 bg-cyan-950/60 text-cyan-300 text-[11px] font-mono font-bold shadow-sm"
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-[8px] border border-cyan-500/50 bg-cyan-950/60 text-cyan-300 text-[11px] font-mono font-bold shadow-sm"
             title="Bench SITL Simulator active with simulated GPS, battery, and MAVLink"
           >
             <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
@@ -425,7 +452,7 @@ export const Header: React.FC<HeaderProps> = ({
           <button
             type="button"
             onClick={() => mavlinkService.switchToSimulationMode()}
-            className="hidden lg:flex items-center gap-1 px-2.5 py-1.5 rounded-[8px] border border-cyan-500/40 bg-cyan-950/30 hover:bg-cyan-900/50 text-cyan-400 text-[11px] font-mono font-bold transition shadow-sm cursor-pointer"
+            className="flex items-center gap-1 px-2.5 py-1.5 rounded-[8px] border border-cyan-500/40 bg-cyan-950/30 hover:bg-cyan-900/50 text-cyan-400 text-[11px] font-mono font-bold transition shadow-sm cursor-pointer"
             title="Activate SITL Simulator for complete desktop testing without physical drone hardware"
           >
             <span>⚡</span>
@@ -433,11 +460,11 @@ export const Header: React.FC<HeaderProps> = ({
           </button>
         )}
 
-        {/* TL Diagnostics System Button */}
+        {/* TL Diagnostics System Button (Requirement 5: Diagnostics in top header) */}
         <button
           type="button"
           onClick={onOpenDiagnostics}
-          className="hidden xl:flex items-center gap-1.5 px-2.5 py-1.5 rounded-[8px] border border-amber-500/50 bg-amber-950/40 hover:bg-amber-900/60 text-amber-300 text-[11px] font-mono font-bold transition shadow-sm cursor-pointer"
+          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-[8px] border border-amber-500/50 bg-amber-950/40 hover:bg-amber-900/60 text-amber-300 text-[11px] font-mono font-bold transition shadow-sm cursor-pointer"
           title="Open Telemetry Link (TL) & Complete Pixhawk 2.4.8 Diagnostic System"
         >
           <Activity className="w-3.5 h-3.5 text-amber-400" />
@@ -468,46 +495,19 @@ export const Header: React.FC<HeaderProps> = ({
           <FlightModeSelector variant="dropdown" />
         </div>
 
-        {/* MOTOR ARM / MOTOR DISARM CONTROLS IN UPPER DASHBOARD (Requirement 2) */}
-        {isArmed ? (
-          <div className="flex items-center gap-1">
-            <button
-              type="button"
-              onClick={() => onDisarmClick ? onDisarmClick(false) : onArmClick?.()}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-[8px] bg-rose-600 hover:bg-rose-500 active:bg-rose-700 text-white border border-rose-400 font-bold text-[11px] font-sans tracking-wide transition shadow-md shadow-rose-950/60 ring-1 ring-rose-400 cursor-pointer active:scale-95 animate-pulse"
-              title="EMERGENCY MOTOR DISARM: Click to disarm vehicle motors immediately"
-            >
-              <Power className="w-3.5 h-3.5" />
-              <span>MOTOR DISARM</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => onDisarmClick ? onDisarmClick(true) : onArmClick?.()}
-              className="hidden xl:flex items-center gap-1 px-2 py-1.5 rounded-[8px] bg-rose-950/80 hover:bg-rose-900 border border-rose-700 text-rose-300 font-mono text-[10px] font-bold transition cursor-pointer"
-              title="Force Disarm (Bypass check)"
-            >
-              <span>FORCE</span>
-            </button>
-          </div>
-        ) : (
-          <button
-            type="button"
-            onClick={onArmClick}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-[8px] bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white border border-emerald-400/50 font-bold text-[11px] font-sans tracking-wide transition shadow-md shadow-emerald-950/50 cursor-pointer active:scale-95"
-            title="MOTOR ARM: Click to Arm Vehicle Motors"
-          >
-            <Play className="w-3.5 h-3.5 fill-current" />
-            <span>MOTOR ARM</span>
-          </button>
-        )}
-
-        {/* GPS Status Indicator (Requirement 7: Retain GPS indicator) */}
-        <div className={`hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-[8px] border text-[11px] font-mono ${gpsConfig.bg}`}>
+        {/* GPS Status Indicator (Requirement 6: Satellite icon + status dot, no "GPS STATUS UNAVAILABLE" text) */}
+        <div
+          className={`flex items-center gap-1.5 px-2.5 py-1 rounded-[8px] border text-[11px] font-mono ${gpsConfig.bg}`}
+          title={gpsConfig.label ? `GPS: ${gpsConfig.label}` : 'GPS Status'}
+        >
+          <Satellite className="w-3.5 h-3.5 text-slate-300" />
           <span className={`w-2 h-2 rounded-full ${gpsConfig.dot}`} />
-          <span className="font-semibold">{gpsConfig.label}</span>
+          {gpsConfig.label ? (
+            <span className="font-semibold">{gpsConfig.label}</span>
+          ) : null}
         </div>
 
-        {/* Settings Button: Always visible and accessible across desktop, tablets, and mobile (Req 2) */}
+        {/* Settings Button: Always visible and accessible across desktop, tablets, and mobile */}
         <button
           type="button"
           onClick={onOpenSettings}
@@ -549,7 +549,18 @@ export const Header: React.FC<HeaderProps> = ({
           {/* A. Mode Switcher */}
           {/* A. Mode Switcher & Reset All */}
           <div className="space-y-1.5">
-            <div className="text-[10px] font-mono text-slate-400 uppercase tracking-wider font-bold">Mission Planning Mode:</div>
+            <div className="text-[10px] font-mono text-slate-400 uppercase tracking-wider font-bold">Mission Planning Mode & Session:</div>
+            <div className="flex items-center gap-2 mb-2 p-2 rounded-lg bg-[#11161F] border border-[var(--uav-card-border)]">
+              <Clock className={`w-3.5 h-3.5 ${isMissionWindowActive ? 'animate-spin text-sky-400' : 'text-slate-500'}`} />
+              <span className="text-[11px] font-mono font-bold text-slate-300">
+                MISSION WINDOW:{' '}
+                <span className={isMissionWindowExpired ? 'text-rose-400 animate-pulse' : 'text-sky-300'}>
+                  {isMissionWindowExpired
+                    ? 'EXPIRED'
+                    : `${Math.floor(missionWindowSeconds / 60).toString().padStart(2, '0')}:${(missionWindowSeconds % 60).toString().padStart(2, '0')} / 05:00`}
+                </span>
+              </span>
+            </div>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
               <button
                 type="button"
@@ -585,30 +596,7 @@ export const Header: React.FC<HeaderProps> = ({
           {/* B. GCS Engine Actions */}
           <div className="space-y-1.5">
             <div className="text-[10px] font-mono text-slate-400 uppercase tracking-wider font-bold">Flight & GCS Controls:</div>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-              {isArmed ? (
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (onDisarmClick) onDisarmClick(false);
-                    else onArmClick?.();
-                    setMobileMenuOpen(false);
-                  }}
-                  className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold font-sans transition active:scale-95 animate-pulse"
-                >
-                  <Power className="w-3.5 h-3.5" />
-                  <span>MOTOR DISARM</span>
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => { onArmClick?.(); setMobileMenuOpen(false); }}
-                  className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold font-sans transition active:scale-95 shadow-emerald-950/50"
-                >
-                  <Play className="w-3.5 h-3.5 fill-current" />
-                  <span>MOTOR ARM</span>
-                </button>
-              )}
+            <div className="grid grid-cols-3 gap-2">
               <button
                 type="button"
                 onClick={() => { handleStartConnections(); setMobileMenuOpen(false); }}

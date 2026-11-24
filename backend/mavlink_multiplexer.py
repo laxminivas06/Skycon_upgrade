@@ -176,7 +176,7 @@ class MavlinkMultiplexer:
     Raspberry Pi 4 Model B and Pixhawk 2.4.8 autopilot.
     """
 
-    def __init__(self, port: Optional[str] = None, baud: int = 57600):
+    def __init__(self, port: Optional[str] = None, baud: int = 115200):
         self.port = port
         self.baud = baud
         self.candidate_bauds = [921600, 115200, 57600]
@@ -452,8 +452,8 @@ class MavlinkMultiplexer:
             seen = set()
             ordered_ports = [p for p in candidate_ports if not (p in seen or seen.add(p)) and os.path.exists(p)]
 
-            # Prioritize 57600 (default ArduPilot TELEM2) first for rapid lock
-            ordered_bauds = [57600, 115200, 921600] if 57600 in self.candidate_bauds else self.candidate_bauds
+            # Prioritize 115200 (Raspberry Pi UART /dev/serial0) first for rapid lock
+            ordered_bauds = [115200, 57600, 921600] if 115200 in self.candidate_bauds else self.candidate_bauds
 
             connected = False
             for port in ordered_ports:
@@ -749,11 +749,14 @@ class MavlinkMultiplexer:
                     time_boot_ms, chancnt = struct.unpack('<IB', payload[:5])
                     channels = struct.unpack('<18H', payload[5:41])
                     self.telemetry["rc_channels"] = list(channels[:8])
-                    self.telemetry["rc_connected"] = True
+                    # Valid PWM signals on roll (ch1) and throttle (ch3)
+                    has_valid_pwm = (850 <= channels[0] <= 2150) and (850 <= channels[2] <= 2150)
+                    self.telemetry["rc_connected"] = has_valid_pwm
+                    self.telemetry["rc_failsafe"] = False
                     if len(payload) >= 42:
                         self.telemetry["rc_rssi"] = int(payload[41])
                     else:
-                        self.telemetry["rc_rssi"] = 99
+                        self.telemetry["rc_rssi"] = 99 if has_valid_pwm else 0
 
                     # Stick override: roll, pitch, throttle, yaw outside 1500 +- 80
                     deviated = any(abs(pwm - 1500) > 80 for pwm in channels[:4])
@@ -876,6 +879,10 @@ class MavlinkMultiplexer:
                         self.telemetry["statustext_history"] = self.telemetry["statustext_history"][:20]
                     if "prearm" in text.lower():
                         self.telemetry["prearm_errors"].append(text)
+                    if "failsafe" in text.lower() and ("radio" in text.lower() or "rc" in text.lower()):
+                        self.telemetry["rc_failsafe"] = True
+                        self.telemetry["rc_connected"] = False
+                        self.telemetry["rc_rssi"] = 0
 
         # Notify telemetry subscribers & update history
         snapshot = self.get_telemetry()
@@ -1177,6 +1184,11 @@ class MavlinkMultiplexer:
             logger.warning(f"[MAVLINK MUX] Mission upload rejected: {res_str}")
             return False, res_str, self._mission_ack_result
         return False, "MISSION_ACK_TIMEOUT", -1
+
+    def get_uploaded_waypoints(self) -> List[Dict[str, Any]]:
+        """Returns readback copy of the last uploaded waypoint sequence."""
+        with self._lock:
+            return list(self._uploaded_waypoints)
 
     def set_current_mission_item(self, seq: int) -> bool:
         """Sets active waypoint index on autopilot."""

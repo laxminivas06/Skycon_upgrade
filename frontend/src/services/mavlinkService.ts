@@ -697,7 +697,11 @@ class MAVLinkService {
     if (gs !== undefined) this.telemetry.groundSpeed = gs;
 
     if (telem.rc_connected !== undefined) {
+      this.telemetry.rcConnected = Boolean(telem.rc_connected);
       this.telemetry.rcOverrideEnabled = Boolean(telem.rc_override_active || telem.rc_connected);
+      this.telemetry.rcSignalDetected = Boolean(telem.rc_connected && (telem.rc_rssi === undefined || telem.rc_rssi > 0));
+      this.telemetry.rcRssi = telem.rc_rssi !== undefined ? telem.rc_rssi : (telem.rc_connected ? 99 : 0);
+      this.telemetry.rcFailsafe = Boolean(telem.rc_failsafe);
     }
 
     if (telem.statustext_history && Array.isArray(telem.statustext_history)) {

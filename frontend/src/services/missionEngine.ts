@@ -105,7 +105,7 @@ export function isPointInBoundary(lat: number, lng: number, boundary?: SearchBou
 class MissionEngine {
   private currentState: MissionState = 'IDLE';
   private commandAuthority: FlightCommandAuthority = 'NONE';
-  private missionDurationLimitSec: number = 240; // SAE INDIA Official 4-Minute Search Window (240s)
+  private missionDurationLimitSec: number = 300; // SAE INDIA Official 5-Minute Search Window (300s)
   private remainingSeconds: number = 240;
   private elapsedSeconds: number = 0;
   private missionStartTime: number = 0;
@@ -1276,8 +1276,9 @@ class MissionEngine {
   private handleMissionTimeout() {
     const mins = Math.round(this.missionDurationLimitSec / 60);
     const label = mins > 0 ? `${mins}-Minute` : `${this.missionDurationLimitSec}s`;
-    this.transitionTo('MISSION_TIMEOUT', `${label} Mission Window Expired. Automatic Fail-Safe RTL.`);
-    this.triggerEmergencyRTL(`Mission Timer (${label}) expired.`);
+    this.transitionTo('MISSION_TIMEOUT', `${label} Mission Window Expired.`);
+    // Requirement A.5: Do NOT automatically disarm motors, stop flight, trigger RTL or interrupt active search
+    audioService.playTimeoutWarning();
   }
 
   private startMasterTimer() {

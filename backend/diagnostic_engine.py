@@ -159,13 +159,31 @@ class S500DiagnosticEngine:
 
     def scan_and_connect(self) -> bool:
         """Attempt connection to Pixhawk via auto-detected COM port or configured target."""
+        # Section D: Check if MavlinkMultiplexer already manages /dev/serial0 to prevent port contention
+        try:
+            from backend.mavlink_multiplexer import mavlink_mux
+            if mavlink_mux.is_connected or mavlink_mux._serial_conn is not None:
+                self.is_connected = True
+                self.port = mavlink_mux.port or "/dev/serial0"
+                self.baud = mavlink_mux.baud or 115200
+                self.connection_transport = f"SERIAL ({self.port} @ {self.baud} baud - Shared MUX)"
+                self.results["meta"]["connection_transport"] = self.connection_transport
+                self.results["meta"]["is_hardware_detected"] = True
+                return True
+        except Exception:
+            pass
+
         if not HAS_PYMAVLINK:
             return False
 
         candidate_ports = []
         if self.port:
             candidate_ports.append(self.port)
-        elif HAS_SERIAL:
+        if os.path.exists("/dev/serial0"):
+            candidate_ports.append("/dev/serial0")
+        if os.path.exists("/dev/ttyAMA0"):
+            candidate_ports.append("/dev/ttyAMA0")
+        if HAS_SERIAL:
             ports = list_ports.comports()
             for p in ports:
                 # Prioritize Pixhawk / PX4 / STM32 CDC ACM
@@ -179,7 +197,7 @@ class S500DiagnosticEngine:
             if "COM22" not in candidate_ports and sys.platform.startswith("win"):
                 candidate_ports.append("COM22")
 
-        baud_candidates = [self.baud, 57600, 115200, 921600] if self.baud not in (57600, 115200) else [self.baud, 57600 if self.baud == 115200 else 115200]
+        baud_candidates = [115200, 57600, 921600]
 
         for p in candidate_ports:
             for b in baud_candidates:

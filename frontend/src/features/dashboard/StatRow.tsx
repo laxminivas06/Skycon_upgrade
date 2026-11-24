@@ -2,7 +2,6 @@ import React from 'react';
 import {
   ShieldCheck,
   Satellite,
-  Battery,
   Mountain,
   Gauge,
   Compass,
@@ -31,13 +30,6 @@ const getCardinal = (heading: number): string => {
 export const StatRow: React.FC<StatRowProps> = ({ telemetry, className = '' }) => {
   const isArmed = telemetry.isArmed;
 
-  const batteryColor =
-    telemetry.batteryPercent <= 20
-      ? 'text-[#EF4444]'
-      : telemetry.batteryPercent <= 35
-      ? 'text-[var(--uav-amber)]'
-      : 'text-[#22C55E]';
-
   const modeColor = !isArmed
     ? 'text-slate-400'
     : telemetry.flightMode === 'RTL'
@@ -46,55 +38,21 @@ export const StatRow: React.FC<StatRowProps> = ({ telemetry, className = '' }) =
 
   return (
     <div
-      className={`grid grid-cols-7 gap-3 h-[66px] items-stretch select-none ${className}`}
+      className={`grid grid-cols-6 gap-3 h-[66px] items-stretch select-none ${className}`}
     >
-      {/* 1. FLIGHT MODE */}
+      {/* 1. COMPASS / HEADING (Requirement 8: 1st) */}
       <StatTile
-        icon={
-          isArmed ? (
-            <ShieldCheck className="w-5 h-5 text-[#22C55E]" />
-          ) : (
-            <ShieldCheck className="w-5 h-5 text-slate-500" />
-          )
-        }
-        label="FLIGHT MODE"
+        icon={<Compass className="w-5 h-5 text-[var(--uav-icon-blue)]" />}
+        label="HEADING"
         value={
-          !telemetry.isConnected
-            ? 'WAITING FOR TELEMETRY'
-            : isArmed
-            ? telemetry.flightMode
-            : (telemetry.flightMode || 'DISARMED')
+          !telemetry.isConnected && !telemetry.isTelemetryAvailable
+            ? 'UNAVAILABLE'
+            : `${telemetry.headingDeg}° (${getCardinal(telemetry.headingDeg)})`
         }
-        valueClassName={modeColor}
+        valueClassName="text-[var(--uav-text)]"
       />
 
-      {/* 2. GPS */}
-      <StatTile
-        icon={<Satellite className={`w-5 h-5 ${telemetry.isGpsValid ? 'text-[var(--uav-icon-blue)]' : 'text-rose-400'}`} />}
-        label="GPS"
-        value={
-          !telemetry.isConnected
-            ? 'WAITING FOR TELEMETRY'
-            : telemetry.isGpsValid
-            ? `${telemetry.satellites} Sats (${telemetry.gpsFixType.replace('_', ' ')})`
-            : 'NO LOCK'
-        }
-        valueClassName={telemetry.isGpsValid ? 'text-[var(--uav-text)]' : 'text-rose-400 font-bold'}
-      />
-
-      {/* 3. BATTERY */}
-      <StatTile
-        icon={<Battery className={`w-5 h-5 ${batteryColor}`} />}
-        label="BATTERY"
-        value={
-          telemetry.batteryVoltage > 0
-            ? `${telemetry.batteryPercent}% (${telemetry.batteryVoltage.toFixed(1)}V)`
-            : 'UNAVAILABLE'
-        }
-        valueClassName={batteryColor}
-      />
-
-      {/* 4. ALTITUDE & ALTITUDE SPEED */}
+      {/* 2. ALTITUDE & ALTITUDE SPEED (Requirement 8: 2nd) */}
       <StatTile
         icon={<Mountain className="w-5 h-5 text-[var(--uav-icon-blue)]" />}
         label="ALTITUDE / V-SPD"
@@ -122,7 +80,7 @@ export const StatRow: React.FC<StatRowProps> = ({ telemetry, className = '' }) =
         valueClassName="text-[var(--uav-text)]"
       />
 
-      {/* 5. GROUND SPEED */}
+      {/* 3. GROUND SPEED (Requirement 8: 3rd) */}
       <StatTile
         icon={<Gauge className="w-5 h-5 text-[var(--uav-icon-blue)]" />}
         label="GROUND SPEED"
@@ -134,19 +92,41 @@ export const StatRow: React.FC<StatRowProps> = ({ telemetry, className = '' }) =
         valueClassName="text-[var(--uav-text)]"
       />
 
-      {/* 6. COMPASS HEADING */}
+      {/* 4. FLIGHT MODE */}
       <StatTile
-        icon={<Compass className="w-5 h-5 text-[var(--uav-icon-blue)]" />}
-        label="HEADING"
-        value={
-          !telemetry.isConnected && !telemetry.isTelemetryAvailable
-            ? 'UNAVAILABLE'
-            : `${telemetry.headingDeg}° (${getCardinal(telemetry.headingDeg)})`
+        icon={
+          isArmed ? (
+            <ShieldCheck className="w-5 h-5 text-[#22C55E]" />
+          ) : (
+            <ShieldCheck className="w-5 h-5 text-slate-500" />
+          )
         }
-        valueClassName="text-[var(--uav-text)]"
+        label="FLIGHT MODE"
+        value={
+          !telemetry.isConnected
+            ? 'WAITING FOR TELEMETRY'
+            : isArmed
+            ? telemetry.flightMode
+            : (telemetry.flightMode || 'DISARMED')
+        }
+        valueClassName={modeColor}
       />
 
-      {/* 7. FLIGHT TIME */}
+      {/* 5. GPS */}
+      <StatTile
+        icon={<Satellite className={`w-5 h-5 ${telemetry.isGpsValid ? 'text-[var(--uav-icon-blue)]' : 'text-rose-400'}`} />}
+        label="GPS"
+        value={
+          !telemetry.isConnected
+            ? 'WAITING FOR TELEMETRY'
+            : telemetry.isGpsValid
+            ? `${telemetry.satellites} Sats (${telemetry.gpsFixType.replace('_', ' ')})`
+            : 'NO LOCK'
+        }
+        valueClassName={telemetry.isGpsValid ? 'text-[var(--uav-text)]' : 'text-rose-400 font-bold'}
+      />
+
+      {/* 6. FLIGHT TIME */}
       <StatTile
         icon={<Clock className="w-5 h-5 text-[var(--uav-icon-blue)]" />}
         label="FLIGHT TIME"
@@ -156,3 +136,5 @@ export const StatRow: React.FC<StatRowProps> = ({ telemetry, className = '' }) =
     </div>
   );
 };
+
+export default StatRow;

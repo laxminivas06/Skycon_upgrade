@@ -117,6 +117,15 @@ export const RunnerDashboard: React.FC<RunnerDashboardProps> = ({
 
   // 2. Synchronize with ReconDetectionService (WebSockets & REST Relay)
   useEffect(() => {
+    const handleReset = () => {
+      setReceivedCode(null);
+      setLatestRecord(null);
+      setReceiptTimestamp(null);
+      setAckDispatched(false);
+      lastProcessedIdRef.current = null;
+    };
+    window.addEventListener('sae:mission_reset', handleReset);
+
     const unsubRecon = reconDetectionService.subscribeDetections((list, latest) => {
       if (latest && (latest.twoDigitCode || (latest.payload && latest.payload.trim().length > 0))) {
         if (latest.detectionId !== lastProcessedIdRef.current) {
@@ -175,6 +184,7 @@ export const RunnerDashboard: React.FC<RunnerDashboardProps> = ({
       isMounted = false;
       if (pollTimer) clearTimeout(pollTimer);
       unsubRecon();
+      window.removeEventListener('sae:mission_reset', handleReset);
     };
   }, []);
 
@@ -247,7 +257,7 @@ export const RunnerDashboard: React.FC<RunnerDashboardProps> = ({
             <span>P2P Direct ({runnerLink.signalStrengthDbm} dBm)</span>
           </div>
           <div className="bg-slate-950 px-2.5 py-1 rounded-lg border border-slate-800 text-emerald-400 font-bold text-xs">
-            ~12m Proximity
+            {intercept ? `~${intercept.distMeters}m Proximity` : 'Proximity: Standby'}
           </div>
         </div>
       </div>

@@ -933,7 +933,7 @@ class GeofenceService {
    * Requirement 4: Does NOT automatically change or clip the user's selected boundary.
    */
   public validateSearchBoundary(boundary: {
-    type: 'CIRCLE' | 'RECTANGLE' | 'POLYGON' | 'SQUARE';
+    type: 'CIRCLE' | 'RECTANGLE' | 'POLYGON' | 'SQUARE' | 'FREEHAND';
     circleCenter?: LatLngPoint | null;
     circleRadiusMeters?: number;
     coordinates?: LatLngPoint[];
@@ -1073,3 +1073,260 @@ class GeofenceService {
 }
 
 export const geofenceService = new GeofenceService();
+
+// ============================================================================
+// GEOMETRIC METRICS, POLYGON VALIDATION & AUTOMATIC PATTERN SELECTION
+// ============================================================================
+
+export interface BoundaryMetrics {
+  areaSquareMeters: number;
+  perimeterMeters: number;
+  approxLengthMeters: number;
+  approxWidthMeters: number;
+  center: LatLngPoint;
+  radiusMeters?: number;
+  diameterMeters?: number;
+  isCircle: boolean;
+  isSelfIntersecting: boolean;
+  validationError?: string;
+}
+
+export interface AutoPatternDecision {
+  algorithm: 'INWARD_SPIRAL' | 'BOUSTROPHEDON';
+  algorithmName: string;
+  reason: string;
+  swathWidthMeters: number;
+  trackSpacingMeters: number;
+  cameraFovDegrees: number;
+}
+
+/**
+ * Calculates spherical surface area of an arbitrary closed polygon in square metres.
+ */
+export function calculatePolygonArea(coords: LatLngPoint[]): number {
+  if (!coords || coords.length < 3) return 0;
+  const R = 6378137;
+  let total = 0;
+  for (let i = 0; i < coords.length; i++) {
+    const j = (i + 1) % coords.length;
+    const p1 = coords[i];
+    const p2 = coords[j];
+    const radLat1 = (p1.lat * Math.PI) / 180;
+    const radLat2 = (p2.lat * Math.PI) / 180;
+    const radLon1 = (p1.lng * Math.PI) / 180;
+    const radLon2 = (p2.lng * Math.PI) / 180;
+    total += (radLon2 - radLon1) * (2 + Math.sin(radLat1) + Math.sin(radLat2));
+  }
+  return Math.abs((total * R * R) / 2);
+}
+
+/**
+ * Calculates the perimeter of a polygon in metres.
+ */
+export function calculatePolygonPerimeter(coords: LatLngPoint[]): number {
+  if (!coords || coords.length < 2) return 0;
+  let total = 0;
+  for (let i = 0; i < coords.length; i++) {
+    const next = coords[(i + 1) % coords.length];
+    total += computeHaversine(coords[i].lat, coords[i].lng, next.lat, next.lng);
+  }
+  return Math.round(total * 10) / 10;
+}
+
+/**
+ * Calculates approximate length (major axis) and width (minor axis) in metres.
+ */
+export function calculateApproxDimensions(coords: LatLngPoint[]): { lengthMeters: number; widthMeters: number } {
+  if (!coords || coords.length === 0) return { lengthMeters: 0, widthMeters: 0 };
+  const center = getPolygonCentroid(coords);
+  const radLat = (center.lat * Math.PI) / 180;
+  let minX = Infinity, maxX = -Infinity;
+  let minY = Infinity, maxY = -Infinity;
+  for (const pt of coords) {
+    const x = (pt.lng - center.lng) * 111320 * Math.cos(radLat);
+    const y = (pt.lat - center.lat) * 111320;
+    if (x < minX) minX = x;
+    if (x > maxX) maxX = x;
+    if (y < minY) minY = y;
+    if (y > maxY) maxY = y;
+  }
+  const spanX = Math.max(0, maxX - minX);
+  const spanY = Math.max(0, maxY - minY);
+  return {
+    lengthMeters: Math.round(Math.max(spanX, spanY) * 10) / 10,
+    widthMeters: Math.round(Math.min(spanX, spanY) * 10) / 10,
+  };
+}
+
+/**
+ * Tests whether polygon edges intersect each other (rejecting self-intersecting figures).
+ */
+export function checkPolygonSelfIntersection(coords: LatLngPoint[]): { isSelfIntersecting: boolean; message?: string } {
+  if (!coords || coords.length < 4) {
+    return { isSelfIntersecting: false };
+  }
+  const n = coords.length;
+
+  const ccw = (a: LatLngPoint, b: LatLngPoint, c: LatLngPoint): number => {
+    return (c.lat - a.lat) * (b.lng - a.lng) - (b.lat - a.lat) * (c.lng - a.lng);
+  };
+
+  const segmentsIntersect = (a: LatLngPoint, b: LatLngPoint, c: LatLngPoint, d: LatLngPoint): boolean => {
+    const ccw1 = ccw(a, c, d);
+    const ccw2 = ccw(b, c, d);
+    const ccw3 = ccw(a, b, c);
+    const ccw4 = ccw(a, b, d);
+    return ((ccw1 > 0 && ccw2 < 0) || (ccw1 < 0 && ccw2 > 0)) &&
+           ((ccw3 > 0 && ccw4 < 0) || (ccw3 < 0 && ccw4 > 0));
+  };
+
+  for (let i = 0; i < n; i++) {
+    const p1 = coords[i];
+    const p2 = coords[(i + 1) % n];
+    for (let j = i + 1; j < n; j++) {
+      // Adjacent edges share a vertex, skip them
+      if (j === i || j === (i + 1) % n || (j + 1) % n === i) continue;
+      const p3 = coords[j];
+      const p4 = coords[(j + 1) % n];
+      if (segmentsIntersect(p1, p2, p3, p4)) {
+        return {
+          isSelfIntersecting: true,
+          message: `Self-intersecting polygon: Edge [${i + 1}-${((i + 1) % n) + 1}] crosses edge [${j + 1}-${((j + 1) % n) + 1}]. Please redraw a non-intersecting boundary.`,
+        };
+      }
+    }
+  }
+  return { isSelfIntersecting: false };
+}
+
+/**
+ * Calculates comprehensive metrics for user-defined circular or polygonal search boundaries.
+ */
+export function calculateBoundaryMetrics(boundary: {
+  type: 'CIRCLE' | 'POLYGON' | 'RECTANGLE' | 'FREEHAND';
+  circleCenter?: LatLngPoint;
+  circleRadiusMeters?: number;
+  coordinates?: LatLngPoint[];
+}): BoundaryMetrics {
+  const isCircle = boundary.type === 'CIRCLE';
+  if (isCircle) {
+    const radius = boundary.circleRadiusMeters || 15;
+    const center = boundary.circleCenter || { lat: 13.0827, lng: 80.2707 };
+    const area = Math.round(Math.PI * radius * radius * 10) / 10;
+    const perimeter = Math.round(2 * Math.PI * radius * 10) / 10;
+    const diameter = radius * 2;
+    return {
+      areaSquareMeters: area,
+      perimeterMeters: perimeter,
+      approxLengthMeters: diameter,
+      approxWidthMeters: diameter,
+      center,
+      radiusMeters: radius,
+      diameterMeters: diameter,
+      isCircle: true,
+      isSelfIntersecting: false,
+    };
+  }
+
+  const coords = boundary.coordinates || [];
+  if (coords.length < 3) {
+    return {
+      areaSquareMeters: 0,
+      perimeterMeters: 0,
+      approxLengthMeters: 0,
+      approxWidthMeters: 0,
+      center: coords[0] || { lat: 13.0827, lng: 80.2707 },
+      isCircle: false,
+      isSelfIntersecting: false,
+      validationError: 'At least 3 boundary vertices are required to define a valid search area.',
+    };
+  }
+
+  const selfInter = checkPolygonSelfIntersection(coords);
+  if (selfInter.isSelfIntersecting) {
+    return {
+      areaSquareMeters: 0,
+      perimeterMeters: calculatePolygonPerimeter(coords),
+      approxLengthMeters: 0,
+      approxWidthMeters: 0,
+      center: getPolygonCentroid(coords),
+      isCircle: false,
+      isSelfIntersecting: true,
+      validationError: selfInter.message || 'Polygon boundary is self-intersecting.',
+    };
+  }
+
+  const area = Math.round(calculatePolygonArea(coords) * 10) / 10;
+  const perimeter = calculatePolygonPerimeter(coords);
+  const dims = calculateApproxDimensions(coords);
+  const center = getPolygonCentroid(coords);
+
+  return {
+    areaSquareMeters: area,
+    perimeterMeters: perimeter,
+    approxLengthMeters: dims.lengthMeters,
+    approxWidthMeters: dims.widthMeters,
+    center,
+    isCircle: false,
+    isSelfIntersecting: false,
+  };
+}
+
+/**
+ * Automatically chooses the optimal search algorithm based on boundary shape analysis.
+ * (Requirement B: Do not ask user to select manually; display algorithm & scientific reason).
+ */
+export function autoSelectSearchPattern(
+  boundaryType: 'CIRCLE' | 'POLYGON' | 'RECTANGLE' | 'FREEHAND',
+  metrics: BoundaryMetrics,
+  altitudeMeters: number
+): AutoPatternDecision {
+  const CAMERA_FOV_DEG = 65.0; // Sony IMX477 camera horizontal FOV
+  // Downward ground swath W = 2 * h * tan(FOV/2)
+  const swathWidth = Math.round(2 * altitudeMeters * Math.tan((32.5 * Math.PI) / 180) * 100) / 100;
+  // 75% lane spacing (25% lateral overlap)
+  const trackSpacing = Math.round(swathWidth * 0.75 * 100) / 100;
+
+  if (boundaryType === 'CIRCLE' || metrics.isCircle) {
+    return {
+      algorithm: 'INWARD_SPIRAL',
+      algorithmName: 'Inward Archimedean Spiral',
+      reason: 'Circular boundary detected. Inward Archimedean spiral provides continuous curvature search, eliminating abrupt 90° yaw stops and maintaining constant target visibility.',
+      swathWidthMeters: swathWidth,
+      trackSpacingMeters: trackSpacing,
+      cameraFovDegrees: CAMERA_FOV_DEG,
+    };
+  }
+
+  if (boundaryType === 'RECTANGLE') {
+    return {
+      algorithm: 'BOUSTROPHEDON',
+      algorithmName: 'Boustrophedon (Lawnmower) Sweep',
+      reason: 'Rectangular boundary detected. Parallel sweep lanes aligned to the primary axis deliver uniform 100% optical swath coverage and optimal flight battery efficiency.',
+      swathWidthMeters: swathWidth,
+      trackSpacingMeters: trackSpacing,
+      cameraFovDegrees: CAMERA_FOV_DEG,
+    };
+  }
+
+  if (boundaryType === 'FREEHAND') {
+    return {
+      algorithm: 'BOUSTROPHEDON',
+      algorithmName: 'Polygon-Clipped Coverage Path',
+      reason: 'Freehand boundary detected. Using dynamic sweep tracks clipped strictly within boundary perimeter with Sony IMX477 camera swath overlap.',
+      swathWidthMeters: swathWidth,
+      trackSpacingMeters: trackSpacing,
+      cameraFovDegrees: CAMERA_FOV_DEG,
+    };
+  }
+
+  // POLYGON
+  return {
+    algorithm: 'BOUSTROPHEDON',
+    algorithmName: 'Polygon-Clipped Coverage Sweep',
+    reason: 'Irregular polygon boundary detected. Using dynamic sweep tracks clipped strictly within polygon vertices with Sony IMX477 camera swath overlap.',
+    swathWidthMeters: swathWidth,
+    trackSpacingMeters: trackSpacing,
+    cameraFovDegrees: CAMERA_FOV_DEG,
+  };
+}
